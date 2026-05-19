@@ -105,11 +105,18 @@ export default function ExecutiveDashboardPage() {
   const sparkMonthly = monthly.slice(-12);
   const goalProgress = Math.min(1.4, kpi.revenue / (kpi.previous.revenue * 1.08 || 1));
 
+  const greeting = React.useMemo(() => {
+    const h = new Date().getHours();
+    if (h < 12) return "Bom dia";
+    if (h < 18) return "Boa tarde";
+    return "Boa noite";
+  }, []);
+
   return (
     <div className="space-y-8">
       <PageHeader
         eyebrow="Visão executiva · ao vivo"
-        title="Boa noite, Rogério."
+        title={`${greeting}, Rogério.`}
         description={`Resumo comercial do período selecionado · ${formatNumber(orders.length)} pedidos analisados.`}
       >
         <Badge variant="positive" className="gap-1.5">
