@@ -1,0 +1,39 @@
+services:
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: dash-bi:latest
+    container_name: dash-bi-web
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - NEXT_PUBLIC_APP_NAME=Dash BI
+      - NEXT_PUBLIC_DEFAULT_CURRENCY=BRL
+    restart: unless-stopped
+
+  # Reserved for the future backend (NestJS + Postgres).
+  # Uncomment when the API layer is introduced.
+  #
+  # api:
+  #   build:
+  #     context: ./api
+  #   ports:
+  #     - "4000:4000"
+  #   environment:
+  #     - DATABASE_URL=postgresql://postgres:postgres@db:5432/dashbi
+  #
+  # db:
+  #   image: postgres:16-alpine
+  #   environment:
+  #     POSTGRES_USER: postgres
+  #     POSTGRES_PASSWORD: postgres
+  #     POSTGRES_DB: dashbi
+  #   volumes:
+  #     - dbdata:/var/lib/postgresql/data
+  #   ports:
+  #     - "5432:5432"
+
+# volumes:
+#   dbdata:

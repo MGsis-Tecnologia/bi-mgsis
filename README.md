@@ -1,54 +1,58 @@
-# Dash BI
+<div align="center">
+  <img src="https://via.placeholder.com/150/000000/FFFFFF/?text=Dash+BI" alt="Dash BI Logo" width="120" height="120" style="border-radius: 20px;">
+  <br />
+  <h1>📊 Dash BI</h1>
+  <p><strong>Plataforma de inteligência comercial executiva</strong></p>
+  <p>Análise de vendas, clientes, produtos e performance — com estética editorial corporativa estilo Linear / Stripe / Bloomberg.</p>
 
-> Plataforma de inteligência comercial executiva. Análise de vendas, clientes,
-> produtos e performance — com estética editorial corporativa estilo Linear /
-> Stripe / Bloomberg.
+  <p>
+    <img src="https://img.shields.io/badge/Next.js-15-000000?style=for-the-badge&logo=next.js" alt="Next.js 15" />
+    <img src="https://img.shields.io/badge/TypeScript-5-3178c6?style=for-the-badge&logo=typescript" alt="TypeScript 5" />
+    <img src="https://img.shields.io/badge/TailwindCSS-3.4-38bdf8?style=for-the-badge&logo=tailwind-css" alt="TailwindCSS" />
+  </p>
+</div>
 
-[![Next.js 15](https://img.shields.io/badge/Next.js-15-000000?logo=next.js)]()
-[![TypeScript 5](https://img.shields.io/badge/TypeScript-5-3178c6?logo=typescript)]()
-[![TailwindCSS](https://img.shields.io/badge/TailwindCSS-3.4-38bdf8?logo=tailwind-css)]()
+<hr />
 
----
+<div align="center">
+  <a href="#visão-geral">Visão geral</a> •
+  <a href="#arquitetura">Arquitetura</a> •
+  <a href="#stack">Stack</a> •
+  <a href="#estrutura">Estrutura</a> •
+  <a href="#como-executar">Como Executar</a> •
+  <a href="#funcionalidades">Funcionalidades</a> •
+  <a href="#roadmap">Roadmap</a>
+</div>
 
-## Sumário
+<hr />
 
-- [Visão geral](#visão-geral)
-- [Arquitetura](#arquitetura)
-- [Stack](#stack)
-- [Estrutura](#estrutura)
-- [Como executar](#como-executar)
-- [Funcionalidades](#funcionalidades)
-- [Sistema de design](#sistema-de-design)
-- [Dados mockados](#dados-mockados)
-- [Multimoeda](#multimoeda)
-- [Roadmap](#roadmap)
+## 👁️ Visão geral
 
----
+<p>
+  <b>Dash BI</b> é um dashboard gerencial corporativo voltado para análise de vendas e performance comercial. Esta entrega cobre o <b>frontend completo</b> com:
+</p>
 
-## Visão geral
+<ul>
+  <li><b>6 áreas operacionais</b> (Executivo, Vendas, Produtos, Clientes, Vendedores, Financeiro)</li>
+  <li><b>1 área operacional</b> (Importação Excel/CSV — stub funcional com pipeline)</li>
+  <li><b>Filtros globais com persistência</b> (período, região, canal, vendedor, categoria, moeda)</li>
+  <li><b>Multimoeda</b> (BRL, USD, EUR, GBP) com conversão em tempo real</li>
+  <li><b>Dataset mockado determinístico</b> (~5.000 pedidos / 12 meses / 500 clientes / 200 produtos / 20 vendedores)</li>
+  <li><b>Dark/Light mode</b> com transição limpa</li>
+  <li><b>Análises avançadas:</b> KPIs com comparativo, curva ABC (produtos e clientes), RFM, top performers, sazonalidade (heatmap), DRE simplificado, insights automáticos</li>
+</ul>
 
-**Dash BI** é um dashboard gerencial corporativo voltado para análise de vendas
-e performance comercial. Esta entrega cobre o **frontend completo** com:
+<blockquote>
+  <p>💡 O backend (NestJS + Prisma + PostgreSQL) e a importação Excel real são fases posteriores deste roadmap; o <b>frontend já está arquitetado para consumi-los</b> via uma camada de hooks (<code>src/lib/hooks/use-dataset.ts</code>) que pode ser plugada em React Query sem refatoração de componentes.</p>
+</blockquote>
 
-- 6 áreas operacionais (Executivo, Vendas, Produtos, Clientes, Vendedores, Financeiro)
-- 1 área operacional (Importação Excel/CSV — stub funcional com pipeline)
-- Filtros globais com persistência (período, região, canal, vendedor, categoria, moeda)
-- Multimoeda (BRL, USD, EUR, GBP) com conversão em tempo real
-- Dataset mockado **determinístico** (~5.000 pedidos / 12 meses / 500 clientes / 200 produtos / 20 vendedores)
-- Dark/Light mode com transição limpa
-- Análises: KPIs com comparativo, curva ABC (produtos e clientes), RFM, top performers,
-  sazonalidade (heatmap), DRE simplificado, insights automáticos
+## 🏗️ Arquitetura
 
-O backend (NestJS + Prisma + PostgreSQL) e a importação Excel real são fases
-posteriores deste roadmap; o **frontend já está arquitetado para consumi-los**
-via uma camada de hooks (`src/lib/hooks/use-dataset.ts`) que pode ser plugada
-em React Query sem refatoração de componentes.
+<details>
+<summary><b>Clique para ver a representação da arquitetura</b></summary>
+<br>
 
----
-
-## Arquitetura
-
-```
+<pre>
 ┌────────────────────────────────────────────────────────────┐
 │                       NEXT.JS 15 (RSC)                     │
 │  ┌────────────┐   ┌──────────────┐   ┌──────────────────┐  │
@@ -65,281 +69,133 @@ em React Query sem refatoração de componentes.
 │              ↑                                              │
 │   - swap por: REST / GraphQL / WebSocket / Prisma           │
 └────────────────────────────────────────────────────────────┘
-```
+</pre>
 
-**Princípios:**
+</details>
 
-- **Clean Architecture**: dados (`lib/mock`), análises (`lib/analytics`), apresentação (`components/`), composição (`app/`) — cada camada com responsabilidade única.
-- **Tipagem forte**: domínio modelado em `lib/types`, todos os módulos são tipados (sem `any`).
-- **Acoplamento mínimo**: charts, KPIs e tabelas consomem apenas tipos de `lib/types` — fácil substituir o mock por qualquer fonte real.
-- **Performance**: cálculos memoizados, dataset gerado uma vez por sessão, `optimizePackageImports` para charts/icons.
+<ul>
+  <li><b>Clean Architecture</b>: dados, análises, apresentação e composição — cada camada com responsabilidade única.</li>
+  <li><b>Tipagem forte</b>: domínio modelado em <code>lib/types</code>, sem o uso de <code>any</code>.</li>
+  <li><b>Acoplamento mínimo</b>: charts, KPIs e tabelas consomem apenas tipos isolados.</li>
+  <li><b>Performance</b>: cálculos memoizados, dataset gerado uma vez por sessão.</li>
+</ul>
 
----
+## 🛠️ Stack Tecnológico
 
-## Stack
+<div align="center">
+  <table>
+    <thead>
+      <tr>
+        <th>Camada</th>
+        <th>Tecnologia</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><b>Framework</b></td>
+        <td>Next.js 15 (App Router, RSC, Turbopack)</td>
+      </tr>
+      <tr>
+        <td><b>Linguagem</b></td>
+        <td>TypeScript 5.7</td>
+      </tr>
+      <tr>
+        <td><b>Estilização</b></td>
+        <td>TailwindCSS 3.4 + CSS Variables</td>
+      </tr>
+      <tr>
+        <td><b>UI & Charts</b></td>
+        <td>shadcn/ui (Radix), Recharts, TanStack Table</td>
+      </tr>
+      <tr>
+        <td><b>Estado & Form</b></td>
+        <td>Zustand, React Hook Form + Zod</td>
+      </tr>
+      <tr>
+        <td><b>Tema & Animação</b></td>
+        <td>next-themes, Framer Motion</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
 
-| Camada           | Tecnologia                                                |
-| ---------------- | --------------------------------------------------------- |
-| Framework        | Next.js 15 (App Router, RSC, Turbopack)                   |
-| Linguagem        | TypeScript 5.7                                            |
-| Estilo           | TailwindCSS 3.4 + CSS Variables + tailwind-merge          |
-| UI               | shadcn/ui style (Radix + cva) — componentes próprios      |
-| Charts           | Recharts                                                  |
-| Tabelas          | TanStack Table (planejado para vistas complexas)          |
-| Estado           | Zustand (com persist)                                     |
-| Formulários      | React Hook Form + Zod                                     |
-| Tema             | next-themes (dark/light)                                  |
-| Animações        | Framer Motion + Tailwind keyframes                        |
-| Tipografia       | Geist Sans · Geist Mono · Instrument Serif (numbers hero) |
-| Datas            | date-fns                                                  |
-| Ícones           | lucide-react                                              |
-| Container        | Docker (multi-stage build)                                |
+## 🚀 Como executar
 
----
+<h3>Requisitos</h3>
+<p>
+  <img src="https://img.shields.io/badge/Node.js-%E2%89%A5%2020-339933?style=flat-square&logo=node.js" alt="Node.js">
+  <img src="https://img.shields.io/badge/npm-%E2%89%A5%2010-CB3837?style=flat-square&logo=npm" alt="npm">
+</p>
 
-## Estrutura
-
-```
-src/
-├── app/
-│   ├── (dashboard)/
-│   │   ├── layout.tsx          # Sidebar + Topbar + main grid
-│   │   ├── loading.tsx         # Skeleton para rotas internas
-│   │   ├── dashboard/page.tsx  # 🌟 showpiece executivo
-│   │   ├── vendas/page.tsx
-│   │   ├── produtos/page.tsx
-│   │   ├── clientes/page.tsx
-│   │   ├── vendedores/page.tsx
-│   │   ├── financeiro/page.tsx
-│   │   └── importacao/page.tsx
-│   ├── globals.css             # tokens de cor, fontes, utilitários (hairline, grain, glass)
-│   ├── layout.tsx              # ThemeProvider + fonts
-│   ├── not-found.tsx
-│   └── page.tsx                # redirect → /dashboard
-│
-├── components/
-│   ├── charts/                 # Area, BarH, Donut, Heatmap, Sparkbars, defs/tooltip
-│   ├── dashboard/              # KpiCard, InsightCard, DeltaPill, Money
-│   ├── filters/                # DateRangePicker, CurrencySwitcher, GlobalFilters
-│   ├── layout/                 # Sidebar, Topbar, ThemeToggle, BrandMark, PageHeader
-│   ├── providers/              # ThemeProvider
-│   └── ui/                     # Card, Button, Badge, Tabs, Select, Popover, ...
-│
-└── lib/
-    ├── analytics/              # KPIs, séries temporais, ABC, RFM, insights, sellers
-    ├── hooks/                  # useDataset, useFilteredOrders
-    ├── mock/                   # seed determinístico + catálogo de nomes/produtos
-    ├── store/                  # Zustand: filtros globais (persistente)
-    ├── types/                  # domínio (Order, Customer, Product, ...)
-    └── utils/                  # format, currency, dates
-```
-
----
-
-## Como executar
-
-### Requisitos
-
-- Node.js ≥ 20
-- npm ≥ 10 (ou pnpm / bun)
-
-### Local
+<h3>Rodando Localmente</h3>
 
 ```bash
+# Instalar dependências
 npm install
+
+# Iniciar servidor de desenvolvimento
 npm run dev
 ```
 
-Abra http://localhost:3000 — o `/` redireciona para `/dashboard`.
+<p>Abra <code>http://localhost:3000</code> — a raiz redireciona para <code>/dashboard</code>.</p>
 
-### Build de produção
-
-```bash
-npm run build
-npm run start
-```
-
-### Docker
+<h3>Via Docker</h3>
 
 ```bash
 docker compose up --build
 ```
 
-Acessível em http://localhost:3000.
+## ✨ Funcionalidades em Destaque
 
----
+<details>
+<summary><b>Filtros Globais</b></summary>
+<p>Persistidos em <code>localStorage</code> via Zustand <code>persist</code>. Todos os componentes reagem em tempo real — sem reload, sem flicker.</p>
+</details>
 
-## Funcionalidades
+<details>
+<summary><b>Dashboard Executivo</b></summary>
+<p>KPIs heróicos (Faturamento, Lucro, Ticket, Pedidos) com design editorial. Análises temporais, top produtos e insights automáticos.</p>
+</details>
 
-### Filtros globais
+<details>
+<summary><b>Análise de Clientes & Produtos</b></summary>
+<p>Segmentação RFM avançada (VIP, Fiel, Promissor, Inativo), curva ABC completa (A/B/C) e mix por categoria.</p>
+</details>
 
-Persistidos em `localStorage` via Zustand `persist`. Todos os componentes
-reagem em tempo real — sem reload, sem flicker.
+<details>
+<summary><b>Financeiro & Importação</b></summary>
+<p>DRE simplificado e pipeline visível para importação via Drag & Drop de planilhas XLSX e arquivos CSV.</p>
+</details>
 
-- **Período**: hoje · ontem · 7d · 30d · mês atual · ano atual · 12m · custom
-- **Comparativo automático**: cada KPI mostra Δ vs. período anterior equivalente
-- **Região, Canal, Vendedor, Categoria**: pills + dropdown contextual
+## 🎨 Sistema de Design
 
-### Dashboard Executivo
+<p><b>Diretriz:</b> Editorial corporativo com hairlines de 1px definindo tudo. Inspirado em Linear, Stripe e Bloomberg Terminal.</p>
 
-KPIs heróicos (Faturamento, Lucro, Ticket, Pedidos) com:
+<ul>
+  <li><b>Tipografia heróica:</b> Instrument Serif para números executivos.</li>
+  <li><b>Microinterações:</b> Hairline gradients, grain overlay no dark mode, glass topbar e pinstripe grid.</li>
+</ul>
 
-- Números editoriais em **Instrument Serif** (tabular nums)
-- Sparkline embutida
-- Delta com seta tonal (positivo/negativo)
-- Hairline gradient no topo do card (assinatura visual)
+## 🗺️ Roadmap
 
-Painéis: evolução temporal (mensal/diário/lucro), insights automáticos,
-composição por categoria (donut), receita por canal, heatmap dia × semana,
-meta vs. realizado, top produtos, top vendedores.
+<h3>Próxima fase — Backend</h3>
+<ul>
+  <li>✅ NestJS + Fastify adapter</li>
+  <li>✅ Prisma + PostgreSQL</li>
+  <li>✅ Endpoints REST com paginação</li>
+  <li>✅ Autenticação JWT e RBAC</li>
+</ul>
 
-### Análise de Vendas
+<h3>Integrações Futuras</h3>
+<ul>
+  <li>🔄 APIs cambiais ao vivo</li>
+  <li>🔄 Conectores ERP (TOTVS, SAP, Bling)</li>
+  <li>🔄 CRMs (HubSpot, Pipedrive)</li>
+</ul>
 
-Evolução temporal (linha + barras), heatmap de sazonalidade, distribuição
-regional, tabela de pedidos recentes com status.
+<hr />
 
-### Produtos
-
-Curva ABC completa (A/B/C com thresholds 80%/95%), ranking, mix por categoria,
-tabela com share acumulado.
-
-### Clientes
-
-Segmentação RFM (VIP / Fiel / Promissor / Novo / Em risco / Inativo), LTV,
-ticket médio, recência, curva ABC de clientes.
-
-### Vendedores
-
-Ranking com Meta vs. Realizado (progress bar tonal), pedidos, ticket médio,
-margem, comissão estimada baseada em taxa individual.
-
-### Financeiro
-
-DRE simplificado linha-a-linha, fluxo de receita/lucro, indicadores financeiros
-(margem bruta, margem líquida, % impostos, % despesas).
-
-### Importação
-
-Drag & drop de XLSX/CSV (XLS), parser simulado com 4 estágios visíveis
-(Upload → Parser → Validação → Persistência), schema esperado documentado
-inline, histórico de uploads.
-
----
-
-## Sistema de design
-
-**Diretriz**: editorial corporativo com hairlines de 1px definindo tudo. Inspirado
-em Linear, Stripe, Bloomberg Terminal, Financial Times.
-
-### Tipografia
-
-- **Display & Numbers heróicos**: Instrument Serif (com `tabular-nums` + `ss01`)
-  — números executivos parecem impressos em jornal financeiro
-- **UI**: Geist Sans (Vercel)
-- **Mono / tabular figures em tabelas e charts**: Geist Mono
-
-### Paleta
-
-Tokens HSL em CSS variables (`src/app/globals.css`):
-
-| Token       | Light                 | Dark                  | Uso                       |
-| ----------- | --------------------- | --------------------- | ------------------------- |
-| background  | `220 14% 98%`         | `222 22% 5%`          | Body                      |
-| surface     | `0 0% 100%`           | `222 18% 8%`          | Cards                     |
-| border      | `220 13% 89%`         | `220 13% 16%`         | Hairlines                 |
-| accent      | `226 71% 56%`         | `226 84% 66%`         | Cobalto · ações principais |
-| positive    | `152 76% 36%`         | `152 60% 48%`         | Δ positivo                |
-| negative    | `0 72% 51%`           | `0 72% 62%`           | Δ negativo                |
-| warning     | `32 95% 44%`          | `36 95% 60%`          | Alertas                   |
-
-### Microelementos
-
-- **Hairline gradient** no topo de cards-KPI (assinatura)
-- **Grain overlay** sutil no dark mode (textura cinemática)
-- **Pinstripe grid** no dropzone de importação
-- **Glass topbar** com `backdrop-filter`
-- **Pulse dot** verde no badge "sincronizado"
-- **Reveal stagger** de 40ms entre seções no carregamento
-
-### Componentes
-
-KpiCard, InsightCard, DeltaPill, BarChartH, DonutChart, Heatmap, SparkBars, e
-toda a biblioteca shadcn-style (Card, Button, Badge, Tabs, Select, Popover,
-Dropdown, Tooltip, Progress, Skeleton, Separator, Input, ScrollArea).
-
----
-
-## Dados mockados
-
-Gerados deterministicamente por **mulberry32** em
-[`src/lib/mock/seed.ts`](src/lib/mock/seed.ts). Mesma seed → mesmo dataset (build
-reprodutível, screenshots consistentes).
-
-- **200 produtos** distribuídos em 7 categorias, com faixas de preço e margem
-  realistas por categoria (Eletrônicos têm margem baixa; Beleza tem margem alta)
-- **500 clientes** segmentados por RFM após processamento das vendas
-- **20 vendedores** com metas mensais variando entre R$80k–R$320k
-- **5.400 pedidos brutos** ao longo de 12 meses (após filtros de sazonalidade
-  e cancelamentos, ~4.500 ficam efetivamente válidos)
-- **Sazonalidade** modelada: dezembro picam +42%, Black Friday +60%, fim de
-  semana B2B cai 18%
-- **80/20 ativos**: 62% das compras concentradas nos top 20% de clientes
-- **Cancelamentos** (~4%), devoluções (~3%), pendentes (~6%)
-
----
-
-## Multimoeda
-
-Suporte a **BRL · USD · EUR · GBP** com conversão automática em tempo real.
-
-```ts
-// lib/mock/seed.ts
-export const EXCHANGE_RATES: ExchangeRate[] = [
-  { code: "BRL", rateToBRL: 1,    symbol: "R$", name: "Real" },
-  { code: "USD", rateToBRL: 5.08, symbol: "$",  name: "Dólar Americano" },
-  { code: "EUR", rateToBRL: 5.42, symbol: "€",  name: "Euro" },
-  { code: "GBP", rateToBRL: 6.34, symbol: "£",  name: "Libra" },
-];
-```
-
-Para integração futura com APIs cambiais (Open Exchange Rates, ECB, BCB Olinda),
-basta substituir `EXCHANGE_RATES` por um React Query hook que busque taxas
-ao vivo. Componente `<Money brl={...} />` é o único ponto de formatação visual.
-
----
-
-## Roadmap
-
-### Próxima fase — Backend
-
-- [ ] NestJS + Fastify adapter
-- [ ] Prisma + PostgreSQL com schema completo (Customer, Product, Order, Item, Seller, Goal, Category, Currency, Rate, Region, User, Permission)
-- [ ] Migrations e seed equivalente ao mock
-- [ ] Endpoints REST `/api/v1/{kpis|orders|customers|...}` com paginação
-- [ ] Autenticação JWT + refresh tokens
-- [ ] RBAC por perfil (admin / gerente / vendedor)
-- [ ] Logs de auditoria + criptografia
-
-### Fase seguinte — Ingestão real
-
-- [ ] Parser XLSX (SheetJS) + CSV
-- [ ] Mapeamento de colunas configurável por organização
-- [ ] Validação Zod + relatório de erros
-- [ ] Persistência transacional com rollback
-- [ ] Webhooks de status
-
-### Integrações
-
-- [ ] APIs cambiais ao vivo
-- [ ] Conectores ERP (TOTVS, SAP, Bling)
-- [ ] CRMs (HubSpot, Pipedrive, RD Station)
-- [ ] Marketplaces (Mercado Livre, Shopee, Amazon)
-- [ ] Plataformas e-commerce (Shopify, VTEX, Magento)
-
----
-
-## Licença
-
-Proprietária · Dash BI © 2026
-#   b i - m g s i s  
- 
+<div align="center">
+  <p>Proprietária · Dash BI © 2026</p>
+  <p><b>b i - m g s i s</b></p>
+</div>

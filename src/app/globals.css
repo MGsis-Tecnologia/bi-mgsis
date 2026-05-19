@@ -1,0 +1,232 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* ── Light: paper-white surfaces, graphite ink, cobalt accent ── */
+    --background: 220 14% 98%;
+    --foreground: 222 24% 8%;
+
+    --surface: 0 0% 100%;
+    --surface-elevated: 0 0% 100%;
+    --surface-sunken: 220 14% 96%;
+
+    --muted: 220 14% 94%;
+    --muted-foreground: 220 9% 44%;
+
+    --border: 220 13% 89%;
+    --input: 220 13% 89%;
+    --ring: 226 71% 56%;
+
+    --primary: 226 71% 40%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 220 14% 94%;
+    --secondary-foreground: 222 24% 8%;
+
+    --accent: 226 71% 56%;
+    --accent-foreground: 0 0% 100%;
+
+    --positive: 152 76% 36%;
+    --positive-foreground: 0 0% 100%;
+    --positive-subtle: 152 60% 94%;
+
+    --negative: 0 72% 51%;
+    --negative-foreground: 0 0% 100%;
+    --negative-subtle: 0 80% 96%;
+
+    --warning: 32 95% 44%;
+    --warning-subtle: 36 100% 94%;
+
+    /* Editorial chart palette — desaturated to feel BI-grade */
+    --chart-1: 226 71% 56%;
+    --chart-2: 191 75% 42%;
+    --chart-3: 152 64% 40%;
+    --chart-4: 32 90% 52%;
+    --chart-5: 280 60% 56%;
+    --chart-6: 0 0% 50%;
+
+    --radius: 0.625rem;
+  }
+
+  .dark {
+    /* ── Dark: deep graphite, cobalt accent, terminal-grade contrast ── */
+    --background: 222 22% 5%;
+    --foreground: 220 14% 92%;
+
+    --surface: 222 18% 8%;
+    --surface-elevated: 222 16% 10%;
+    --surface-sunken: 222 22% 4%;
+
+    --muted: 222 14% 14%;
+    --muted-foreground: 220 9% 60%;
+
+    --border: 220 13% 16%;
+    --input: 220 13% 18%;
+    --ring: 226 84% 66%;
+
+    --primary: 220 14% 92%;
+    --primary-foreground: 222 22% 5%;
+
+    --secondary: 222 14% 14%;
+    --secondary-foreground: 220 14% 92%;
+
+    --accent: 226 84% 66%;
+    --accent-foreground: 0 0% 100%;
+
+    --positive: 152 60% 48%;
+    --positive-foreground: 0 0% 100%;
+    --positive-subtle: 152 30% 14%;
+
+    --negative: 0 72% 62%;
+    --negative-foreground: 0 0% 100%;
+    --negative-subtle: 0 30% 14%;
+
+    --warning: 36 95% 60%;
+    --warning-subtle: 32 30% 14%;
+
+    --chart-1: 226 84% 66%;
+    --chart-2: 191 75% 56%;
+    --chart-3: 152 60% 56%;
+    --chart-4: 32 95% 64%;
+    --chart-5: 280 70% 70%;
+    --chart-6: 220 9% 65%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  html {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+    font-feature-settings: "ss01", "cv11";
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans;
+    font-feature-settings: "rlig" 1, "calt" 1, "ss01", "cv11";
+  }
+
+  /* Tabular figures for any number-heavy element */
+  .tabular,
+  .tabular-nums {
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: "tnum";
+  }
+
+  /* Hairlines: 1px borders that feel printed */
+  .hairline {
+    @apply border-border;
+    border-width: 1px;
+  }
+
+  /* Editorial serif numbers — signature of the design system */
+  .display-figure {
+    @apply font-serif tracking-editorial;
+    font-feature-settings: "lnum", "tnum", "ss01";
+  }
+
+  /* Subtle grain overlay on dark mode for atmosphere */
+  .dark .grain::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 1;
+    opacity: 0.025;
+    mix-blend-mode: overlay;
+    background-image: url("data:image/svg+xml;utf8,<svg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.6 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+  }
+
+  /* Scrollbar refinement */
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: hsl(var(--border));
+    border-radius: 999px;
+    border: 2px solid hsl(var(--background));
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: hsl(var(--muted-foreground) / 0.4);
+  }
+
+  /* Selection */
+  ::selection {
+    background: hsl(var(--accent) / 0.25);
+    color: hsl(var(--foreground));
+  }
+}
+
+@layer utilities {
+  /* Hairline divider with gradient fade — used between rail sections */
+  .divider-fade {
+    background: linear-gradient(
+      to right,
+      transparent 0%,
+      hsl(var(--border)) 20%,
+      hsl(var(--border)) 80%,
+      transparent 100%
+    );
+    height: 1px;
+  }
+
+  /* Pinstripe grid for empty regions and the dashboard frame */
+  .pinstripe {
+    background-image: linear-gradient(
+        to right,
+        hsl(var(--border) / 0.6) 1px,
+        transparent 1px
+      ),
+      linear-gradient(to bottom, hsl(var(--border) / 0.6) 1px, transparent 1px);
+    background-size: 32px 32px;
+  }
+
+  /* Glass: barely-there frosted layer */
+  .glass {
+    background: hsl(var(--surface) / 0.72);
+    backdrop-filter: saturate(140%) blur(14px);
+    -webkit-backdrop-filter: saturate(140%) blur(14px);
+  }
+
+  /* Reveal animation chain */
+  .reveal {
+    opacity: 0;
+    animation: fade-in-up 0.55s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  }
+  .reveal-1 { animation-delay: 40ms; }
+  .reveal-2 { animation-delay: 100ms; }
+  .reveal-3 { animation-delay: 160ms; }
+  .reveal-4 { animation-delay: 220ms; }
+  .reveal-5 { animation-delay: 280ms; }
+  .reveal-6 { animation-delay: 340ms; }
+
+  /* Inline "ticker" pulse for live indicators */
+  .pulse-dot {
+    position: relative;
+  }
+  .pulse-dot::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: 999px;
+    background: currentColor;
+    opacity: 0.4;
+    animation: ping 2s cubic-bezier(0, 0, 0.2, 1) infinite;
+  }
+  @keyframes ping {
+    75%, 100% {
+      transform: scale(2);
+      opacity: 0;
+    }
+  }
+}

@@ -1,0 +1,51 @@
+"use client";
+
+import * as React from "react";
+import { Bell, Search } from "lucide-react";
+import { DateRangePicker } from "@/components/filters/date-range-picker";
+import { CurrencySwitcher } from "@/components/filters/currency-switcher";
+import { GlobalFilters } from "@/components/filters/global-filters";
+import { ThemeToggle } from "./theme-toggle";
+import { BrandMark } from "./brand-mark";
+
+export function Topbar() {
+  return (
+    <header className="sticky top-0 z-30 glass border-b border-border">
+      <div className="flex h-14 items-center gap-3 px-4 md:px-6">
+        <div className="lg:hidden">
+          <BrandMark showWord={false} />
+        </div>
+
+        <div className="hidden md:flex relative items-center min-w-0 flex-1 max-w-md">
+          <Search className="absolute left-3 h-3.5 w-3.5 text-muted-foreground" />
+          <input
+            type="search"
+            placeholder="Buscar pedido, cliente, produto…"
+            className="h-8 w-full rounded-md border border-border bg-surface/60 pl-8 pr-12 text-xs placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring/30"
+          />
+          <kbd className="absolute right-2 hidden md:inline-flex items-center rounded border border-border bg-muted/60 px-1.5 py-0.5 text-[10px] font-mono text-muted-foreground">
+            ⌘K
+          </kbd>
+        </div>
+
+        <div className="ml-auto flex items-center gap-2">
+          <DateRangePicker />
+          <GlobalFilters />
+          <CurrencySwitcher />
+          <div className="hidden md:block h-5 w-px bg-border mx-1" />
+          <button className="relative inline-flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-muted/40">
+            <Bell className="h-[15px] w-[15px]" />
+            <span className="absolute right-2 top-2 h-1.5 w-1.5 rounded-full bg-accent" />
+          </button>
+          <ThemeToggle />
+          <div className="ml-1 flex items-center gap-2.5 rounded-md border border-border bg-surface px-1.5 py-1 pl-1">
+            <div className="grid h-6 w-6 place-items-center rounded-[5px] bg-foreground text-background text-[10px] font-medium">
+              RM
+            </div>
+            <span className="hidden md:inline text-xs font-medium pr-2">Rogério M.</span>
+          </div>
+        </div>
+      </div>
+    </header>
+  );
+}
