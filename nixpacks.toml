@@ -1,0 +1,8 @@
+[phases.setup]
+exclude = ["node_modules"]
+
+[phases.build]
+cmds = ["npm ci --omit=dev", "npm run build"]
+
+[node]
+version = "22"
