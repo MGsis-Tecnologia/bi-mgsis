@@ -128,9 +128,9 @@ export default function ExecutiveDashboardPage() {
       </PageHeader>
 
       {/* Brand tagline */}
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-4">
         <span className="h-px flex-1 bg-border/60" />
-        <p className="text-[12px] font-serif italic tracking-wide text-muted-foreground select-none whitespace-nowrap">
+        <p className="text-[36px] font-serif italic tracking-wide text-muted-foreground select-none whitespace-nowrap">
           Inteligência que conecta gestão e resultado
         </p>
         <span className="h-px flex-1 bg-border/60" />

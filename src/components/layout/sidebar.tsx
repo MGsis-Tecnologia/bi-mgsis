@@ -8,32 +8,24 @@ import {
   ArrowUpRight,
   Banknote,
   BarChart3,
-  ChevronDown,
-  CreditCard,
+  CircleDollarSign,
   Package,
   Receipt,
   Sparkles,
-  TrendingDown,
   Upload,
   Users,
   UserSquare2,
+  Wallet,
 } from "lucide-react";
 import { BrandMark } from "./brand-mark";
 import { cn } from "@/lib/utils";
 import { useTranslation } from "@/lib/hooks/use-translation";
 import { DictionaryKey } from "@/lib/i18n/dictionaries";
 
-type SubNavItem = {
-  href: string;
-  labelKey: DictionaryKey;
-  icon: React.ElementType;
-};
-
 type NavItem = {
   href: string;
   labelKey: DictionaryKey;
   icon: React.ElementType;
-  children?: SubNavItem[];
 };
 
 type NavGroup = {
@@ -60,15 +52,9 @@ const NAV: NavGroup[] = [
   {
     sectionKey: "sidebar.section.financial",
     items: [
-      {
-        href: "/financeiro",
-        labelKey: "sidebar.nav.revenue",
-        icon: Banknote,
-        children: [
-          { href: "/financeiro/receber", labelKey: "sidebar.nav.receivable", icon: CreditCard },
-          { href: "/financeiro/pagar", labelKey: "sidebar.nav.payable", icon: TrendingDown },
-        ],
-      },
+      { href: "/financeiro", labelKey: "sidebar.nav.revenue", icon: Banknote },
+      { href: "/financeiro/receber", labelKey: "sidebar.nav.receivable", icon: CircleDollarSign },
+      { href: "/financeiro/pagar", labelKey: "sidebar.nav.payable", icon: Wallet },
     ],
   },
   {
@@ -102,11 +88,8 @@ export function Sidebar() {
                 const active =
                   item.href === "/dashboard"
                     ? pathname === item.href
-                    : pathname?.startsWith(item.href);
+                    : pathname === item.href;
                 const Icon = item.icon;
-                const hasChildren = item.children && item.children.length > 0;
-                const expanded = hasChildren && pathname?.startsWith(item.href);
-
                 return (
                   <li key={item.href}>
                     <Link
@@ -118,48 +101,12 @@ export function Sidebar() {
                           : "text-muted-foreground hover:text-foreground hover:bg-muted/40"
                       )}
                     >
-                      {active && !hasChildren && (
+                      {active && (
                         <span className="absolute left-0 top-1/2 h-4 -translate-y-1/2 w-px bg-foreground" />
                       )}
                       <Icon className="h-[15px] w-[15px] shrink-0" />
-                      <span className="truncate flex-1">{t(item.labelKey)}</span>
-                      {hasChildren && (
-                        <ChevronDown
-                          className={cn(
-                            "h-3 w-3 shrink-0 transition-transform duration-200",
-                            expanded ? "rotate-180" : ""
-                          )}
-                        />
-                      )}
+                      <span className="truncate">{t(item.labelKey)}</span>
                     </Link>
-
-                    {hasChildren && expanded && (
-                      <ul className="mt-0.5 ml-3 flex flex-col gap-0.5 border-l border-border/50 pl-3">
-                        {item.children!.map((child) => {
-                          const childActive = pathname === child.href;
-                          const ChildIcon = child.icon;
-                          return (
-                            <li key={child.href}>
-                              <Link
-                                href={child.href}
-                                className={cn(
-                                  "relative flex items-center gap-2 rounded-md px-2 py-1.5 text-[13px] transition-colors",
-                                  childActive
-                                    ? "bg-muted/70 text-foreground font-medium"
-                                    : "text-muted-foreground hover:text-foreground hover:bg-muted/40"
-                                )}
-                              >
-                                {childActive && (
-                                  <span className="absolute left-0 top-1/2 h-3 -translate-y-1/2 w-px bg-foreground" />
-                                )}
-                                <ChildIcon className="h-[13px] w-[13px] shrink-0" />
-                                <span className="truncate">{t(child.labelKey)}</span>
-                              </Link>
-                            </li>
-                          );
-                        })}
-                      </ul>
-                    )}
                   </li>
                 );
               })}
