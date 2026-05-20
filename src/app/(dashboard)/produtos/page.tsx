@@ -14,6 +14,7 @@ import { productABC } from "@/lib/analytics/abc";
 import { revenueByCategory } from "@/lib/analytics/kpis";
 import { formatNumber, formatPercent } from "@/lib/utils/format";
 import { cn } from "@/lib/utils";
+import { useTranslation } from "@/lib/hooks/use-translation";
 
 const CATEGORY_LABELS: Record<string, string> = {
   eletronicos: "Eletrônicos",
@@ -26,6 +27,7 @@ const CATEGORY_LABELS: Record<string, string> = {
 };
 
 export default function ProdutosPage() {
+  const { t } = useTranslation();
   const ds = useDataset();
   const orders = useFilteredOrders();
 
@@ -45,37 +47,37 @@ export default function ProdutosPage() {
   return (
     <div className="space-y-8">
       <PageHeader
-        eyebrow="Catálogo · produtos"
-        title="O que vende."
-        description="Curva ABC, mix por categoria, top performers e itens em risco."
+        eyebrow={t("produtos.header.eyebrow")}
+        title={t("produtos.header.title")}
+        description={t("produtos.header.desc")}
       >
         <Badge variant="ghost" className="gap-1">
           <Package className="h-3 w-3" />
-          {ds.products.length} SKUs ativos
+          {t("produtos.header.badge", { count: ds.products.length })}
         </Badge>
       </PageHeader>
 
       <section className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <KpiCard
-          label="Unidades vendidas"
+          label={t("produtos.kpi.units")}
           value={formatNumber(totalUnits)}
         />
         <KpiCard
-          label="Receita"
+          label={t("produtos.kpi.revenue")}
           value={<><Money brl={totalRevenue} compact /></> as never}
           accent="accent"
         />
-        <KpiCard label="Curva A · top 20%" caption={`${aCount} SKUs`} value={formatPercent(aCount / Math.max(1, abc.length))} />
-        <KpiCard label="SKUs sem giro" caption="Sem venda no período" value={formatNumber(ds.products.length - abc.length)} />
+        <KpiCard label={t("produtos.kpi.curveA")} caption={t("produtos.kpi.curveA.caption", { count: aCount })} value={formatPercent(aCount / Math.max(1, abc.length))} />
+        <KpiCard label={t("produtos.kpi.stuck")} caption={t("produtos.kpi.stuck.caption")} value={formatNumber(ds.products.length - abc.length)} />
       </section>
 
       <section className="grid grid-cols-1 lg:grid-cols-3 gap-3">
         <Card className="lg:col-span-2">
           <CardHeader>
             <div className="flex items-center justify-between">
-              <CardTitle>Ranking de produtos</CardTitle>
+              <CardTitle>{t("produtos.chart.ranking.title")}</CardTitle>
               <Badge variant="ghost" className="gap-1">
-                <TrendingUp className="h-3 w-3" /> top 12
+                <TrendingUp className="h-3 w-3" /> {t("produtos.chart.ranking.badge")}
               </Badge>
             </div>
           </CardHeader>
@@ -95,10 +97,10 @@ export default function ProdutosPage() {
 
         <Card>
           <CardHeader>
-            <CardTitle>Mix por categoria</CardTitle>
+            <CardTitle>{t("produtos.chart.mix.title")}</CardTitle>
           </CardHeader>
           <CardContent>
-            <DonutChart data={donut} centerLabel="Categorias" centerValue={String(donut.length)} isCurrency height={200} />
+            <DonutChart data={donut} centerLabel={t("produtos.chart.mix.center")} centerValue={String(donut.length)} isCurrency height={200} />
           </CardContent>
         </Card>
       </section>
@@ -106,7 +108,7 @@ export default function ProdutosPage() {
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
-            <CardTitle>Curva ABC</CardTitle>
+            <CardTitle>{t("produtos.table.title")}</CardTitle>
             <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
               <CurvaLegend curve="A" count={aCount} />
               <CurvaLegend curve="B" count={bCount} />
@@ -120,13 +122,13 @@ export default function ProdutosPage() {
               <thead>
                 <tr className="border-y border-border text-[10px] uppercase tracking-[0.14em] text-muted-foreground">
                   <th className="text-left font-medium py-2 px-5">#</th>
-                  <th className="text-left font-medium py-2 px-5">Produto</th>
-                  <th className="text-left font-medium py-2 px-5">Categoria</th>
-                  <th className="text-right font-medium py-2 px-5">Unidades</th>
-                  <th className="text-right font-medium py-2 px-5">Receita</th>
-                  <th className="text-right font-medium py-2 px-5">Share</th>
-                  <th className="text-right font-medium py-2 px-5">Acum.</th>
-                  <th className="text-left font-medium py-2 px-5">Curva</th>
+                  <th className="text-left font-medium py-2 px-5">{t("produtos.table.col.product")}</th>
+                  <th className="text-left font-medium py-2 px-5">{t("produtos.table.col.category")}</th>
+                  <th className="text-right font-medium py-2 px-5">{t("produtos.table.col.units")}</th>
+                  <th className="text-right font-medium py-2 px-5">{t("produtos.table.col.revenue")}</th>
+                  <th className="text-right font-medium py-2 px-5">{t("produtos.table.col.share")}</th>
+                  <th className="text-right font-medium py-2 px-5">{t("produtos.table.col.acc")}</th>
+                  <th className="text-left font-medium py-2 px-5">{t("produtos.table.col.curve")}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">

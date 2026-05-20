@@ -6,6 +6,7 @@ import { PageHeader } from "@/components/layout/page-header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import { useTranslation } from "@/lib/hooks/use-translation";
 
 interface UploadItem {
   id: string;
@@ -36,6 +37,7 @@ const COLUMN_SCHEMA = [
 ];
 
 export default function ImportacaoPage() {
+  const { t } = useTranslation();
   const [items, setItems] = React.useState<UploadItem[]>([]);
   const [isDragging, setIsDragging] = React.useState(false);
 
@@ -77,9 +79,9 @@ export default function ImportacaoPage() {
   return (
     <div className="space-y-8">
       <PageHeader
-        eyebrow="Operação · ingestão"
-        title="Importação de dados."
-        description="Suba planilhas para alimentar o dashboard. Suportamos XLSX, XLS e CSV. Schema validado automaticamente."
+        eyebrow={t("importacao.header.eyebrow")}
+        title={t("importacao.header.title")}
+        description={t("importacao.header.desc")}
       >
         <Badge variant="ghost" className="gap-1">
           <FileSpreadsheet className="h-3 w-3" />
@@ -118,9 +120,9 @@ export default function ImportacaoPage() {
               <Upload className="h-5 w-5 text-muted-foreground" />
             </div>
             <div className="text-center">
-              <div className="font-medium">Arraste planilhas aqui ou clique para selecionar</div>
+              <div className="font-medium">{t("importacao.upload.title")}</div>
               <div className="mt-1 text-xs text-muted-foreground">
-                Tamanho máximo 25MB · múltiplos arquivos suportados
+                {t("importacao.upload.desc")}
               </div>
             </div>
           </label>
@@ -131,14 +133,14 @@ export default function ImportacaoPage() {
         <Card className="lg:col-span-2">
           <CardHeader>
             <div className="flex items-center justify-between">
-              <CardTitle>Histórico de uploads</CardTitle>
-              <Badge variant="ghost">{items.length} arquivo(s)</Badge>
+              <CardTitle>{t("importacao.history.title")}</CardTitle>
+              <Badge variant="ghost">{t("importacao.history.badge", { count: items.length })}</Badge>
             </div>
           </CardHeader>
           <CardContent>
             {items.length === 0 ? (
               <div className="py-10 text-center text-sm text-muted-foreground">
-                Nenhum arquivo importado ainda.
+                {t("importacao.history.empty")}
               </div>
             ) : (
               <div className="divide-y divide-border">
@@ -149,8 +151,8 @@ export default function ImportacaoPage() {
                       <div className="truncate font-medium text-sm">{i.name}</div>
                       <div className="text-[11px] text-muted-foreground tabular">
                         {(i.size / 1024).toFixed(1)} KB
-                        {i.rows !== undefined && ` · ${i.rows.toLocaleString("pt-BR")} linhas`}
-                        {i.errors !== undefined && i.errors > 0 && ` · ${i.errors} avisos`}
+                        {i.rows !== undefined && ` · ${t("importacao.history.lines", { count: i.rows.toLocaleString("pt-BR") })}`}
+                        {i.errors !== undefined && i.errors > 0 && ` · ${t("importacao.history.warnings", { count: i.errors })}`}
                       </div>
                     </div>
                     <StatusBadge status={i.status} />
@@ -163,7 +165,7 @@ export default function ImportacaoPage() {
 
         <Card>
           <CardHeader>
-            <CardTitle>Schema esperado</CardTitle>
+            <CardTitle>{t("importacao.schema.title")}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-1.5">
             {COLUMN_SCHEMA.slice(0, 8).map((c) => (
@@ -177,13 +179,13 @@ export default function ImportacaoPage() {
                 </div>
                 {c.required && (
                   <Badge variant="warning" className="shrink-0 text-[9px]">
-                    obrigatório
+                    {t("importacao.schema.required")}
                   </Badge>
                 )}
               </div>
             ))}
             <div className="pt-2 text-[10px] text-muted-foreground">
-              +{COLUMN_SCHEMA.length - 8} colunas mapeadas opcionalmente. Tipos inferidos por valor.
+              {t("importacao.schema.desc", { count: COLUMN_SCHEMA.length - 8 })}
             </div>
           </CardContent>
         </Card>
@@ -191,7 +193,7 @@ export default function ImportacaoPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Pipeline de ingestão</CardTitle>
+          <CardTitle>{t("importacao.pipeline.title")}</CardTitle>
         </CardHeader>
         <CardContent className="grid grid-cols-1 md:grid-cols-4 gap-3">
           {["Upload", "Parser", "Validação", "Persistência"].map((step, i) => (
@@ -219,26 +221,27 @@ export default function ImportacaoPage() {
 }
 
 function StatusBadge({ status }: { status: UploadItem["status"] }) {
+  const { t } = useTranslation();
   switch (status) {
     case "queued":
-      return <Badge variant="ghost">Em fila</Badge>;
+      return <Badge variant="ghost">{t("importacao.status.queued")}</Badge>;
     case "processing":
       return (
         <Badge variant="accent" className="gap-1">
           <span className="inline-block h-1.5 w-1.5 rounded-full bg-accent pulse-dot" />
-          Processando
+          {t("importacao.status.processing")}
         </Badge>
       );
     case "ok":
       return (
         <Badge variant="positive" className="gap-1">
-          <CheckCircle2 className="h-3 w-3" /> Importado
+          <CheckCircle2 className="h-3 w-3" /> {t("importacao.status.ok")}
         </Badge>
       );
     case "error":
       return (
         <Badge variant="negative" className="gap-1">
-          <X className="h-3 w-3" /> Falhou
+          <X className="h-3 w-3" /> {t("importacao.status.error")}
         </Badge>
       );
   }

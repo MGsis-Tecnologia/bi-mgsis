@@ -12,6 +12,7 @@ import { useDataset, useFilteredOrders } from "@/lib/hooks/use-dataset";
 import { sellerMetrics } from "@/lib/analytics/sellers";
 import { formatNumber, formatPercent } from "@/lib/utils/format";
 import { cn } from "@/lib/utils";
+import { useTranslation } from "@/lib/hooks/use-translation";
 
 const REGION_LABELS: Record<string, string> = {
   sudeste: "Sudeste",
@@ -22,6 +23,7 @@ const REGION_LABELS: Record<string, string> = {
 };
 
 export default function VendedoresPage() {
+  const { t } = useTranslation();
   const ds = useDataset();
   const orders = useFilteredOrders();
   const metrics = React.useMemo(() => sellerMetrics(orders, ds.sellers), [orders, ds.sellers]);
@@ -35,29 +37,29 @@ export default function VendedoresPage() {
   return (
     <div className="space-y-8">
       <PageHeader
-        eyebrow="Time comercial"
-        title="Quem vende."
-        description="Ranking, meta vs. realizado, comissão estimada e performance."
+        eyebrow={t("vendedores.header.eyebrow")}
+        title={t("vendedores.header.title")}
+        description={t("vendedores.header.desc")}
       >
         <Badge variant="ghost" className="gap-1">
           <Trophy className="h-3 w-3" />
-          {ds.sellers.length} vendedores
+          {t("vendedores.header.badge", { count: ds.sellers.length })}
         </Badge>
       </PageHeader>
 
       <section className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <KpiCard
-          label="Receita do time"
+          label={t("vendedores.kpi.revenue")}
           value={<><Money brl={teamRevenue} compact /></> as never}
           accent="accent"
         />
-        <KpiCard label="Meta atingida" value={formatPercent(teamAchievement, { decimals: 0 })} accent={teamAchievement >= 1 ? "positive" : "default"} />
+        <KpiCard label={t("vendedores.kpi.goal")} value={formatPercent(teamAchievement, { decimals: 0 })} accent={teamAchievement >= 1 ? "positive" : "default"} />
         <KpiCard
-          label="Comissão estimada"
+          label={t("vendedores.kpi.commission")}
           value={<><Money brl={totalCommission} compact /></> as never}
         />
         <KpiCard
-          label="Top performer"
+          label={t("vendedores.kpi.top")}
           caption={top?.seller.name}
           value={<><Money brl={top?.revenue ?? 0} compact /></> as never}
           accent="positive"
@@ -66,7 +68,7 @@ export default function VendedoresPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Ranking de vendedores</CardTitle>
+          <CardTitle>{t("vendedores.table.title")}</CardTitle>
         </CardHeader>
         <CardContent className="px-0">
           <div className="overflow-x-auto">
@@ -74,14 +76,14 @@ export default function VendedoresPage() {
               <thead>
                 <tr className="border-y border-border text-[10px] uppercase tracking-[0.14em] text-muted-foreground">
                   <th className="text-left font-medium py-2 px-5">#</th>
-                  <th className="text-left font-medium py-2 px-5">Vendedor</th>
-                  <th className="text-left font-medium py-2 px-5">Região</th>
-                  <th className="text-right font-medium py-2 px-5">Pedidos</th>
-                  <th className="text-right font-medium py-2 px-5">Receita</th>
-                  <th className="text-right font-medium py-2 px-5">Ticket médio</th>
-                  <th className="text-right font-medium py-2 px-5">Margem</th>
-                  <th className="text-left font-medium py-2 px-5 w-[200px]">Meta vs. realizado</th>
-                  <th className="text-right font-medium py-2 px-5">Comissão</th>
+                  <th className="text-left font-medium py-2 px-5">{t("vendedores.table.col.seller")}</th>
+                  <th className="text-left font-medium py-2 px-5">{t("vendedores.table.col.region")}</th>
+                  <th className="text-right font-medium py-2 px-5">{t("vendedores.table.col.orders")}</th>
+                  <th className="text-right font-medium py-2 px-5">{t("vendedores.table.col.revenue")}</th>
+                  <th className="text-right font-medium py-2 px-5">{t("vendedores.table.col.ticket")}</th>
+                  <th className="text-right font-medium py-2 px-5">{t("vendedores.table.col.margin")}</th>
+                  <th className="text-left font-medium py-2 px-5 w-[200px]">{t("vendedores.table.col.goal")}</th>
+                  <th className="text-right font-medium py-2 px-5">{t("vendedores.table.col.commission")}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">

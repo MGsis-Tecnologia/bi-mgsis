@@ -31,6 +31,7 @@ import { productABC } from "@/lib/analytics/abc";
 import { formatCurrency, formatNumber, formatPercent } from "@/lib/utils/format";
 import { convertFromBRL } from "@/lib/utils/currency";
 import { EXCHANGE_RATES } from "@/lib/mock/seed";
+import { useTranslation } from "@/lib/hooks/use-translation";
 
 const CATEGORY_LABELS: Record<string, string> = {
   eletronicos: "Eletrônicos",
@@ -51,6 +52,7 @@ const CHANNEL_LABELS: Record<string, string> = {
 };
 
 export default function ExecutiveDashboardPage() {
+  const { t } = useTranslation();
   const ds = useDataset();
   const orders = useFilteredOrders();
   const currency = useFilters((s) => s.currency);
@@ -115,13 +117,13 @@ export default function ExecutiveDashboardPage() {
   return (
     <div className="space-y-8">
       <PageHeader
-        eyebrow="Visão executiva · ao vivo"
-        title={`${greeting}, Rogério.`}
-        description={`Resumo comercial do período selecionado · ${formatNumber(orders.length)} pedidos analisados.`}
+        eyebrow={t("dashboard.header.eyebrow")}
+        title={`${t(greeting === "Bom dia" ? "dashboard.header.greeting.morning" : greeting === "Boa tarde" ? "dashboard.header.greeting.afternoon" : "dashboard.header.greeting.evening")}, Rogério.`}
+        description={t("dashboard.header.description", { count: formatNumber(orders.length) })}
       >
         <Badge variant="positive" className="gap-1.5">
           <span className="relative inline-block h-1.5 w-1.5 rounded-full bg-positive text-positive pulse-dot" />
-          Dados sincronizados
+          {t("dashboard.header.synced")}
         </Badge>
       </PageHeader>
 
@@ -129,8 +131,8 @@ export default function ExecutiveDashboardPage() {
       <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
         <div className="reveal reveal-1">
           <KpiCard
-            label="Faturamento"
-            caption="Receita líquida no período"
+            label={t("dashboard.kpi.revenue.label")}
+            caption={t("dashboard.kpi.revenue.caption")}
             value={formatCurrency(
               convertFromBRL(kpi.revenue, currency, EXCHANGE_RATES),
               currency,
@@ -144,8 +146,8 @@ export default function ExecutiveDashboardPage() {
         </div>
         <div className="reveal reveal-2">
           <KpiCard
-            label="Lucro Operacional"
-            caption={`Margem ${formatPercent(kpi.marginPct, { decimals: 1 })}`}
+            label={t("dashboard.kpi.profit.label")}
+            caption={`${t("dashboard.kpi.profit.caption")} ${formatPercent(kpi.marginPct, { decimals: 1 })}`}
             value={formatCurrency(
               convertFromBRL(kpi.profit, currency, EXCHANGE_RATES),
               currency,
@@ -159,8 +161,8 @@ export default function ExecutiveDashboardPage() {
         </div>
         <div className="reveal reveal-3">
           <KpiCard
-            label="Ticket médio"
-            caption={`${formatNumber(kpi.uniqueCustomers)} clientes únicos`}
+            label={t("dashboard.kpi.ticket.label")}
+            caption={t("dashboard.kpi.ticket.caption", { count: formatNumber(kpi.uniqueCustomers) })}
             value={formatCurrency(
               convertFromBRL(kpi.averageTicket, currency, EXCHANGE_RATES),
               currency,
@@ -172,8 +174,8 @@ export default function ExecutiveDashboardPage() {
         </div>
         <div className="reveal reveal-4">
           <KpiCard
-            label="Pedidos"
-            caption={`${formatNumber(kpi.itemsSold)} itens vendidos`}
+            label={t("dashboard.kpi.orders.label")}
+            caption={t("dashboard.kpi.orders.caption", { count: formatNumber(kpi.itemsSold) })}
             value={formatNumber(kpi.ordersCount)}
             delta={kpi.delta.ordersCount}
             size="lg"
@@ -188,21 +190,21 @@ export default function ExecutiveDashboardPage() {
             <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 p-5">
               <div>
                 <div className="text-[10px] font-medium uppercase tracking-[0.18em] text-muted-foreground">
-                  Evolução de receita
+                  {t("dashboard.trend.title")}
                 </div>
                 <div className="mt-2 flex items-baseline gap-3">
                   <span className="display-figure text-[36px] leading-none tabular">
                     <Money brl={kpi.revenue} compact />
                   </span>
-                  <span className="text-xs text-muted-foreground tabular">
-                    vs. <Money brl={kpi.previous.revenue} compact /> no período anterior
+                  <span className="text-xs text-muted-foreground tabular flex items-center gap-1">
+                    vs. <Money brl={kpi.previous.revenue} compact /> {t("dashboard.trend.vs", { value: "" }).replace("vs.", "").trim()}
                   </span>
                 </div>
               </div>
               <TabsList>
-                <TabsTrigger value="month">Mensal</TabsTrigger>
-                <TabsTrigger value="day">Diário</TabsTrigger>
-                <TabsTrigger value="profit">Lucro</TabsTrigger>
+                <TabsTrigger value="month">{t("dashboard.trend.tab.month")}</TabsTrigger>
+                <TabsTrigger value="day">{t("dashboard.trend.tab.day")}</TabsTrigger>
+                <TabsTrigger value="profit">{t("dashboard.trend.tab.profit")}</TabsTrigger>
               </TabsList>
             </div>
             <div className="px-2 pb-2">
@@ -219,7 +221,7 @@ export default function ExecutiveDashboardPage() {
           </Tabs>
           <div className="border-t border-border grid grid-cols-3 divide-x divide-border">
             <MiniStat
-              label="Maior mês"
+              label={t("dashboard.trend.stat.max")}
               value={
                 <Money
                   brl={Math.max(...monthly.map((m) => m.revenue), 0)}
@@ -228,7 +230,7 @@ export default function ExecutiveDashboardPage() {
               }
             />
             <MiniStat
-              label="Menor mês"
+              label={t("dashboard.trend.stat.min")}
               value={
                 <Money
                   brl={Math.min(...monthly.filter((m) => m.revenue > 0).map((m) => m.revenue), 0)}
@@ -237,7 +239,7 @@ export default function ExecutiveDashboardPage() {
               }
             />
             <MiniStat
-              label="Média mensal"
+              label={t("dashboard.trend.stat.avg")}
               value={
                 <Money
                   brl={
@@ -255,7 +257,7 @@ export default function ExecutiveDashboardPage() {
         <Card className="reveal reveal-3 overflow-hidden">
           <CardHeader>
             <div className="flex items-center justify-between">
-              <CardTitle>Insights automáticos</CardTitle>
+              <CardTitle>{t("dashboard.insights.title")}</CardTitle>
               <Badge variant="ghost" className="gap-1">
                 <Zap className="h-3 w-3" /> IA
               </Badge>
@@ -264,7 +266,7 @@ export default function ExecutiveDashboardPage() {
           <CardContent className="space-y-2.5 pb-4">
             {insights.length === 0 ? (
               <p className="text-sm text-muted-foreground">
-                Sem destaques no período. Ajuste os filtros para refinar.
+                {t("dashboard.insights.empty")}
               </p>
             ) : (
               insights.map((ins, i) => <InsightCard key={ins.id} insight={ins} index={i} />)
@@ -278,19 +280,19 @@ export default function ExecutiveDashboardPage() {
         <Card className="reveal reveal-3">
           <CardHeader>
             <div className="flex items-center justify-between">
-              <CardTitle>Receita por categoria</CardTitle>
+              <CardTitle>{t("dashboard.chart.category.title")}</CardTitle>
               <Link
                 href="/produtos"
                 className="inline-flex items-center gap-1 text-[11px] text-accent hover:underline"
               >
-                ver produtos <ArrowUpRight className="h-3 w-3" />
+                {t("dashboard.chart.category.link")} <ArrowUpRight className="h-3 w-3" />
               </Link>
             </div>
           </CardHeader>
           <CardContent>
             <DonutChart
               data={donutData}
-              centerLabel="Total"
+              centerLabel={t("dashboard.chart.category.center")}
               centerValue={formatCurrency(
                 convertFromBRL(kpi.revenue, currency, EXCHANGE_RATES),
                 currency,
@@ -304,9 +306,9 @@ export default function ExecutiveDashboardPage() {
         <Card className="reveal reveal-4">
           <CardHeader>
             <div className="flex items-center justify-between">
-              <CardTitle>Receita por canal</CardTitle>
+              <CardTitle>{t("dashboard.chart.channel.title")}</CardTitle>
               <Badge variant="ghost" className="gap-1">
-                <Layers className="h-3 w-3" /> {channelRevenue.length} canais
+                <Layers className="h-3 w-3" /> {t("dashboard.chart.channel.badge", { count: channelRevenue.length })}
               </Badge>
             </div>
           </CardHeader>
@@ -321,9 +323,9 @@ export default function ExecutiveDashboardPage() {
         <Card className="lg:col-span-2 reveal reveal-4">
           <CardHeader>
             <div className="flex items-center justify-between">
-              <CardTitle>Mapa de calor · dia × semana</CardTitle>
+              <CardTitle>{t("dashboard.heatmap.title")}</CardTitle>
               <span className="text-[11px] text-muted-foreground">
-                concentração de receita ao longo do mês
+                {t("dashboard.heatmap.desc")}
               </span>
             </div>
           </CardHeader>
@@ -335,7 +337,7 @@ export default function ExecutiveDashboardPage() {
         <Card className="reveal reveal-5">
           <CardHeader>
             <div className="flex items-center justify-between">
-              <CardTitle>Meta vs. realizado</CardTitle>
+              <CardTitle>{t("dashboard.goal.title")}</CardTitle>
               <Badge variant={goalProgress >= 1 ? "positive" : "warning"} className="gap-1">
                 <Target className="h-3 w-3" />
                 {formatPercent(goalProgress, { decimals: 0 })}
@@ -345,7 +347,7 @@ export default function ExecutiveDashboardPage() {
           <CardContent className="space-y-5">
             <div>
               <div className="flex items-baseline justify-between mb-1.5">
-                <span className="text-xs text-muted-foreground">Receita acumulada</span>
+                <span className="text-xs text-muted-foreground">{t("dashboard.goal.acc")}</span>
                 <span className="display-figure text-2xl tabular">
                   <Money brl={kpi.revenue} compact />
                 </span>
@@ -359,7 +361,7 @@ export default function ExecutiveDashboardPage() {
               <div className="mt-1.5 flex justify-between text-[11px] tabular text-muted-foreground">
                 <span>0</span>
                 <span>
-                  Meta:{" "}
+                  {t("dashboard.goal.target")}
                   <Money brl={kpi.previous.revenue * 1.08} compact />
                 </span>
               </div>
@@ -369,14 +371,14 @@ export default function ExecutiveDashboardPage() {
 
             <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <span className="text-xs text-muted-foreground">Aceleração projetada</span>
+                <span className="text-xs text-muted-foreground">{t("dashboard.goal.proj.title")}</span>
                 <Badge variant={kpi.delta.revenue > 0 ? "positive" : "warning"} className="gap-1">
                   <TrendingUp className="h-3 w-3" />
                   {formatPercent(kpi.delta.revenue, { signed: true, decimals: 1 })}
                 </Badge>
               </div>
               <p className="text-[12.5px] leading-relaxed text-muted-foreground">
-                Mantendo o ritmo atual, o trimestre fecha com receita estimada de{" "}
+                {t("dashboard.goal.proj.desc1")}
                 <span className="text-foreground font-medium">
                   <Money brl={kpi.revenue * 1.05} compact />
                 </span>
@@ -392,12 +394,12 @@ export default function ExecutiveDashboardPage() {
         <Card className="reveal reveal-5">
           <CardHeader>
             <div className="flex items-center justify-between">
-              <CardTitle>Produtos mais vendidos</CardTitle>
+              <CardTitle>{t("dashboard.top.products.title")}</CardTitle>
               <Link
                 href="/produtos"
                 className="inline-flex items-center gap-1 text-[11px] text-accent hover:underline"
               >
-                ranking completo <ArrowUpRight className="h-3 w-3" />
+                {t("dashboard.top.products.link")} <ArrowUpRight className="h-3 w-3" />
               </Link>
             </div>
           </CardHeader>
@@ -417,12 +419,12 @@ export default function ExecutiveDashboardPage() {
         <Card className="reveal reveal-6">
           <CardHeader>
             <div className="flex items-center justify-between">
-              <CardTitle>Top vendedores</CardTitle>
+              <CardTitle>{t("dashboard.top.sellers.title")}</CardTitle>
               <Link
                 href="/vendedores"
                 className="inline-flex items-center gap-1 text-[11px] text-accent hover:underline"
               >
-                ver performance <ArrowUpRight className="h-3 w-3" />
+                {t("dashboard.top.sellers.link")} <ArrowUpRight className="h-3 w-3" />
               </Link>
             </div>
           </CardHeader>
@@ -432,7 +434,7 @@ export default function ExecutiveDashboardPage() {
                 key: s.seller.id,
                 label: s.seller.name,
                 value: s.revenue,
-                secondary: `${formatPercent(s.achievement, { decimals: 0 })} da meta`,
+                secondary: t("dashboard.top.sellers.meta", { percent: formatPercent(s.achievement, { decimals: 0 }) }),
                 tone: s.achievement >= 1 ? "positive" : s.achievement >= 0.8 ? "accent" : "muted",
               }))}
               maxRows={7}

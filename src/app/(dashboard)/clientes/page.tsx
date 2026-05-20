@@ -14,6 +14,7 @@ import { customerMetrics, segmentBreakdown } from "@/lib/analytics/customers";
 import { customerABC } from "@/lib/analytics/abc";
 import { formatNumber } from "@/lib/utils/format";
 import { cn } from "@/lib/utils";
+import { useTranslation } from "@/lib/hooks/use-translation";
 
 const SEGMENT_LABELS: Record<string, string> = {
   vip: "VIP",
@@ -34,6 +35,7 @@ const SEGMENT_TONE: Record<string, "positive" | "accent" | "warning" | "negative
 } as const;
 
 export default function ClientesPage() {
+  const { t } = useTranslation();
   const ds = useDataset();
   const orders = useFilteredOrders();
 
@@ -56,27 +58,27 @@ export default function ClientesPage() {
   return (
     <div className="space-y-8">
       <PageHeader
-        eyebrow="Catálogo · clientes"
-        title="Quem compra."
-        description="Segmentação RFM, LTV, ranking e clientes em risco."
+        eyebrow={t("clientes.header.eyebrow")}
+        title={t("clientes.header.title")}
+        description={t("clientes.header.desc")}
       >
         <Badge variant="ghost" className="gap-1">
           <Users className="h-3 w-3" />
-          {formatNumber(ds.customers.length)} cadastrados
+          {t("clientes.header.badge", { count: formatNumber(ds.customers.length) })}
         </Badge>
       </PageHeader>
 
       <section className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <KpiCard label="Clientes ativos" value={formatNumber(activeCustomers.length)} caption="Compraram no período" accent="accent" />
-        <KpiCard label="LTV médio" value={<><Money brl={avgLTV} compact /></> as never} />
-        <KpiCard label="VIP" caption="Top engajados" value={formatNumber(segments.vip ?? 0)} accent="positive" />
-        <KpiCard label="Em risco" caption="Sem comprar há 90+ dias" value={formatNumber(churnRisk)} accent="negative" />
+        <KpiCard label={t("clientes.kpi.active")} value={formatNumber(activeCustomers.length)} caption={t("clientes.kpi.active.caption")} accent="accent" />
+        <KpiCard label={t("clientes.kpi.ltv")} value={<><Money brl={avgLTV} compact /></> as never} />
+        <KpiCard label={t("clientes.kpi.vip")} caption={t("clientes.kpi.vip.caption")} value={formatNumber(segments.vip ?? 0)} accent="positive" />
+        <KpiCard label={t("clientes.kpi.risk")} caption={t("clientes.kpi.risk.caption")} value={formatNumber(churnRisk)} accent="negative" />
       </section>
 
       <section className="grid grid-cols-1 lg:grid-cols-3 gap-3">
         <Card className="lg:col-span-2">
           <CardHeader>
-            <CardTitle>Top clientes por LTV</CardTitle>
+            <CardTitle>{t("clientes.chart.ltv.title")}</CardTitle>
           </CardHeader>
           <CardContent>
             <BarChartH
@@ -93,12 +95,12 @@ export default function ClientesPage() {
 
         <Card>
           <CardHeader>
-            <CardTitle>Segmentação RFM</CardTitle>
+            <CardTitle>{t("clientes.chart.rfm.title")}</CardTitle>
           </CardHeader>
           <CardContent>
             <DonutChart
               data={segmentsArr}
-              centerLabel="Segmentos"
+              centerLabel={t("clientes.chart.rfm.center")}
               centerValue={String(segmentsArr.length)}
               isCurrency={false}
               height={200}
@@ -109,21 +111,21 @@ export default function ClientesPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Base de clientes</CardTitle>
+          <CardTitle>{t("clientes.table.title")}</CardTitle>
         </CardHeader>
         <CardContent className="px-0">
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-y border-border text-[10px] uppercase tracking-[0.14em] text-muted-foreground">
-                  <th className="text-left font-medium py-2 px-5">Cliente</th>
-                  <th className="text-left font-medium py-2 px-5">Cidade</th>
-                  <th className="text-right font-medium py-2 px-5">Pedidos</th>
-                  <th className="text-right font-medium py-2 px-5">LTV</th>
-                  <th className="text-right font-medium py-2 px-5">Ticket médio</th>
-                  <th className="text-right font-medium py-2 px-5">Recência</th>
-                  <th className="text-left font-medium py-2 px-5">Segmento</th>
-                  <th className="text-left font-medium py-2 px-5">Curva</th>
+                  <th className="text-left font-medium py-2 px-5">{t("clientes.table.col.customer")}</th>
+                  <th className="text-left font-medium py-2 px-5">{t("clientes.table.col.city")}</th>
+                  <th className="text-right font-medium py-2 px-5">{t("clientes.table.col.orders")}</th>
+                  <th className="text-right font-medium py-2 px-5">{t("clientes.table.col.ltv")}</th>
+                  <th className="text-right font-medium py-2 px-5">{t("clientes.table.col.ticket")}</th>
+                  <th className="text-right font-medium py-2 px-5">{t("clientes.table.col.recency")}</th>
+                  <th className="text-left font-medium py-2 px-5">{t("clientes.table.col.segment")}</th>
+                  <th className="text-left font-medium py-2 px-5">{t("clientes.table.col.curve")}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">

@@ -13,8 +13,10 @@ import { computeKpis } from "@/lib/analytics/kpis";
 import { monthlySeries } from "@/lib/analytics/timeseries";
 import { formatPercent } from "@/lib/utils/format";
 import { cn } from "@/lib/utils";
+import { useTranslation } from "@/lib/hooks/use-translation";
 
 export default function FinanceiroPage() {
+  const { t } = useTranslation();
   const orders = useFilteredOrders();
   const getRange = useFilters((s) => s.getRange);
   const preset = useFilters((s) => s.preset);
@@ -35,24 +37,24 @@ export default function FinanceiroPage() {
   return (
     <div className="space-y-8">
       <PageHeader
-        eyebrow="Financeiro"
-        title="Saúde financeira."
-        description="Receitas, custos, impostos estimados, DRE simplificado e tendência operacional."
+        eyebrow={t("financeiro.header.eyebrow")}
+        title={t("financeiro.header.title")}
+        description={t("financeiro.header.desc")}
       >
-        <Badge variant="ghost">simulação demonstrativa</Badge>
+        <Badge variant="ghost">{t("financeiro.header.badge")}</Badge>
       </PageHeader>
 
       <section className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <KpiCard label="Receita bruta" value={<><Money brl={kpi.revenue} compact /></> as never} accent="accent" />
-        <KpiCard label="Custos diretos" value={<><Money brl={variable} compact /></> as never} />
-        <KpiCard label="Lucro líquido" value={<><Money brl={netProfit} compact /></> as never} accent={netProfit >= 0 ? "positive" : "negative"} />
-        <KpiCard label="Margem líquida" value={formatPercent(netMargin, { decimals: 1 })} />
+        <KpiCard label={t("financeiro.kpi.revenue")} value={<><Money brl={kpi.revenue} compact /></> as never} accent="accent" />
+        <KpiCard label={t("financeiro.kpi.costs")} value={<><Money brl={variable} compact /></> as never} />
+        <KpiCard label={t("financeiro.kpi.net_profit")} value={<><Money brl={netProfit} compact /></> as never} accent={netProfit >= 0 ? "positive" : "negative"} />
+        <KpiCard label={t("financeiro.kpi.net_margin")} value={formatPercent(netMargin, { decimals: 1 })} />
       </section>
 
       <section className="grid grid-cols-1 lg:grid-cols-3 gap-3">
         <Card className="lg:col-span-2">
           <CardHeader>
-            <CardTitle>Fluxo de receita e lucro</CardTitle>
+            <CardTitle>{t("financeiro.chart.flow.title")}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="h-72">
@@ -63,35 +65,35 @@ export default function FinanceiroPage() {
 
         <Card>
           <CardHeader>
-            <CardTitle>DRE simplificado</CardTitle>
+            <CardTitle>{t("financeiro.dre.title")}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-2">
-            <DREItem label="(+) Receita bruta" value={kpi.revenue} weight="strong" />
-            <DREItem label="(−) Descontos" value={-kpi.discountTotal} tone="negative" />
-            <DREItem label="(−) Impostos (est.)" value={-taxesEstimate} tone="negative" />
-            <DREItem label="(=) Receita líquida" value={kpi.revenue - kpi.discountTotal - taxesEstimate} weight="strong" border />
-            <DREItem label="(−) Custo dos produtos" value={-variable} tone="negative" />
-            <DREItem label="(=) Lucro bruto" value={kpi.revenue - kpi.discountTotal - taxesEstimate - variable} weight="strong" border />
-            <DREItem label="(−) Frete" value={-shipping} tone="negative" />
-            <DREItem label="(−) Despesas fixas (est.)" value={-fixed} tone="negative" />
-            <DREItem label="(=) Lucro líquido" value={netProfit} weight="strong" tone={netProfit >= 0 ? "positive" : "negative"} border />
+            <DREItem label={t("financeiro.dre.gross_revenue")} value={kpi.revenue} weight="strong" />
+            <DREItem label={t("financeiro.dre.discounts")} value={-kpi.discountTotal} tone="negative" />
+            <DREItem label={t("financeiro.dre.taxes")} value={-taxesEstimate} tone="negative" />
+            <DREItem label={t("financeiro.dre.net_revenue")} value={kpi.revenue - kpi.discountTotal - taxesEstimate} weight="strong" border />
+            <DREItem label={t("financeiro.dre.cogs")} value={-variable} tone="negative" />
+            <DREItem label={t("financeiro.dre.gross_profit")} value={kpi.revenue - kpi.discountTotal - taxesEstimate - variable} weight="strong" border />
+            <DREItem label={t("financeiro.dre.shipping")} value={-shipping} tone="negative" />
+            <DREItem label={t("financeiro.dre.fixed")} value={-fixed} tone="negative" />
+            <DREItem label={t("financeiro.dre.net_profit")} value={netProfit} weight="strong" tone={netProfit >= 0 ? "positive" : "negative"} border />
           </CardContent>
         </Card>
       </section>
 
       <Card>
         <CardHeader>
-          <CardTitle>Indicadores financeiros</CardTitle>
+          <CardTitle>{t("financeiro.indicators.title")}</CardTitle>
         </CardHeader>
         <CardContent className="grid grid-cols-2 md:grid-cols-4 gap-x-6 gap-y-4">
-          <Indicator label="Margem bruta" value={formatPercent(kpi.marginPct, { decimals: 1 })} />
-          <Indicator label="Margem líquida" value={formatPercent(netMargin, { decimals: 1 })} />
-          <Indicator label="Impostos / Receita" value={formatPercent(taxesEstimate / Math.max(1, kpi.revenue), { decimals: 1 })} />
-          <Indicator label="Despesas fixas / Receita" value={formatPercent(fixed / Math.max(1, kpi.revenue), { decimals: 1 })} />
-          <Indicator label="Pedidos" value={kpi.ordersCount.toLocaleString("pt-BR")} />
-          <Indicator label="Ticket médio" value={<><Money brl={kpi.averageTicket} /></> as never} />
-          <Indicator label="Desconto médio" value={formatPercent(kpi.discountTotal / Math.max(1, kpi.revenue), { decimals: 1 })} />
-          <Indicator label="Frete embarcado" value={<><Money brl={shipping} compact /></> as never} />
+          <Indicator label={t("financeiro.indicators.gross_margin")} value={formatPercent(kpi.marginPct, { decimals: 1 })} />
+          <Indicator label={t("financeiro.indicators.net_margin")} value={formatPercent(netMargin, { decimals: 1 })} />
+          <Indicator label={t("financeiro.indicators.taxes_rev")} value={formatPercent(taxesEstimate / Math.max(1, kpi.revenue), { decimals: 1 })} />
+          <Indicator label={t("financeiro.indicators.fixed_rev")} value={formatPercent(fixed / Math.max(1, kpi.revenue), { decimals: 1 })} />
+          <Indicator label={t("financeiro.indicators.orders")} value={kpi.ordersCount.toLocaleString("pt-BR")} />
+          <Indicator label={t("financeiro.indicators.ticket")} value={<><Money brl={kpi.averageTicket} /></> as never} />
+          <Indicator label={t("financeiro.indicators.discount")} value={formatPercent(kpi.discountTotal / Math.max(1, kpi.revenue), { decimals: 1 })} />
+          <Indicator label={t("financeiro.indicators.shipping")} value={<><Money brl={shipping} compact /></> as never} />
         </CardContent>
       </Card>
     </div>

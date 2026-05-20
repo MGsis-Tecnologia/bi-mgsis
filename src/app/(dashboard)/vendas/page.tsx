@@ -20,6 +20,7 @@ import { dailySeries, heatmapByDayOfWeek, monthlySeries } from "@/lib/analytics/
 import { formatCurrency, formatNumber, formatPercent } from "@/lib/utils/format";
 import { convertFromBRL } from "@/lib/utils/currency";
 import { EXCHANGE_RATES } from "@/lib/mock/seed";
+import { useTranslation } from "@/lib/hooks/use-translation";
 
 const REGION_LABELS: Record<string, string> = {
   sudeste: "Sudeste",
@@ -30,6 +31,7 @@ const REGION_LABELS: Record<string, string> = {
 };
 
 export default function VendasPage() {
+  const { t } = useTranslation();
   const orders = useFilteredOrders();
   const currency = useFilters((s) => s.currency);
   const getRange = useFilters((s) => s.getRange);
@@ -57,44 +59,44 @@ export default function VendasPage() {
   return (
     <div className="space-y-8">
       <PageHeader
-        eyebrow="Análise de vendas"
-        title="Como vendemos."
-        description="Evolução temporal, sazonalidade, distribuição regional e comparativos."
+        eyebrow={t("vendas.header.eyebrow")}
+        title={t("vendas.header.title")}
+        description={t("vendas.header.desc")}
       />
 
       <section className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <KpiCard
-          label="Receita"
+          label={t("vendas.kpi.revenue")}
           value={formatCurrency(convertFromBRL(kpi.revenue, currency, EXCHANGE_RATES), currency, {
             compact: true,
           })}
           accent="accent"
         />
-        <KpiCard label="Pedidos" value={formatNumber(kpi.ordersCount)} />
+        <KpiCard label={t("vendas.kpi.orders")} value={formatNumber(kpi.ordersCount)} />
         <KpiCard
-          label="Ticket médio"
+          label={t("vendas.kpi.ticket")}
           value={formatCurrency(
             convertFromBRL(kpi.averageTicket, currency, EXCHANGE_RATES),
             currency
           )}
         />
-        <KpiCard label="Margem" value={formatPercent(kpi.marginPct, { decimals: 1 })} />
+        <KpiCard label={t("vendas.kpi.margin")} value={formatPercent(kpi.marginPct, { decimals: 1 })} />
       </section>
 
       <Card>
         <CardHeader>
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
-              <CardTitle>Evolução temporal</CardTitle>
+              <CardTitle>{t("vendas.chart.evolution.title")}</CardTitle>
               <p className="mt-1 text-xs text-muted-foreground">
-                Comparativos diários e mensais no período selecionado.
+                {t("vendas.chart.evolution.desc")}
               </p>
             </div>
             <Tabs defaultValue="month">
               <TabsList>
-                <TabsTrigger value="month">Mensal</TabsTrigger>
-                <TabsTrigger value="day">Diário</TabsTrigger>
-                <TabsTrigger value="bars">Pedidos × Receita</TabsTrigger>
+                <TabsTrigger value="month">{t("dashboard.trend.tab.month")}</TabsTrigger>
+                <TabsTrigger value="day">{t("dashboard.trend.tab.day")}</TabsTrigger>
+                <TabsTrigger value="bars">{t("dashboard.trend.tab.bars")}</TabsTrigger>
               </TabsList>
               <TabsContent value="month">
                 <div className="h-72 mt-3">
@@ -144,8 +146,8 @@ export default function VendasPage() {
         <Card className="lg:col-span-2">
           <CardHeader>
             <div className="flex items-center justify-between">
-              <CardTitle>Sazonalidade · dia × semana</CardTitle>
-              <Badge variant="ghost">heatmap</Badge>
+              <CardTitle>{t("vendas.chart.season.title")}</CardTitle>
+              <Badge variant="ghost">{t("vendas.chart.season.badge")}</Badge>
             </div>
           </CardHeader>
           <CardContent>
@@ -155,7 +157,7 @@ export default function VendasPage() {
 
         <Card>
           <CardHeader>
-            <CardTitle>Receita por região</CardTitle>
+            <CardTitle>{t("vendas.chart.region.title")}</CardTitle>
           </CardHeader>
           <CardContent>
             <BarChartH rows={byRegion} />
@@ -166,8 +168,8 @@ export default function VendasPage() {
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
-            <CardTitle>Últimos pedidos</CardTitle>
-            <Badge variant="ghost">{orders.length.toLocaleString("pt-BR")} resultados</Badge>
+            <CardTitle>{t("vendas.orders.title")}</CardTitle>
+            <Badge variant="ghost">{t("vendas.orders.badge", { count: orders.length.toLocaleString("pt-BR") })}</Badge>
           </div>
         </CardHeader>
         <CardContent className="px-0">
@@ -179,6 +181,7 @@ export default function VendasPage() {
 }
 
 function RecentOrdersTable() {
+  const { t } = useTranslation();
   const ds = useDataset();
   const orders = useFilteredOrders();
   const recent = React.useMemo(
@@ -189,10 +192,10 @@ function RecentOrdersTable() {
   const sellerById = React.useMemo(() => new Map(ds.sellers.map((s) => [s.id, s])), [ds.sellers]);
 
   const STATUS: Record<string, { label: string; variant: "positive" | "warning" | "negative" | "default" }> = {
-    pago: { label: "Pago", variant: "positive" },
-    pendente: { label: "Pendente", variant: "warning" },
-    cancelado: { label: "Cancelado", variant: "negative" },
-    devolvido: { label: "Devolvido", variant: "warning" },
+    pago: { label: t("vendas.status.paid"), variant: "positive" },
+    pendente: { label: t("vendas.status.pending"), variant: "warning" },
+    cancelado: { label: t("vendas.status.canceled"), variant: "negative" },
+    devolvido: { label: t("vendas.status.returned"), variant: "warning" },
   };
 
   return (
@@ -200,15 +203,15 @@ function RecentOrdersTable() {
       <table className="w-full text-sm">
         <thead>
           <tr className="border-y border-border text-[10px] uppercase tracking-[0.14em] text-muted-foreground">
-            <th className="text-left font-medium py-2 px-5">Pedido</th>
-            <th className="text-left font-medium py-2 px-5">Cliente</th>
-            <th className="text-left font-medium py-2 px-5">Vendedor</th>
-            <th className="text-left font-medium py-2 px-5">Canal</th>
-            <th className="text-right font-medium py-2 px-5">Itens</th>
-            <th className="text-right font-medium py-2 px-5">Total</th>
-            <th className="text-right font-medium py-2 px-5">Margem</th>
-            <th className="text-left font-medium py-2 px-5">Status</th>
-            <th className="text-right font-medium py-2 px-5">Data</th>
+            <th className="text-left font-medium py-2 px-5">{t("vendas.table.order")}</th>
+            <th className="text-left font-medium py-2 px-5">{t("vendas.table.customer")}</th>
+            <th className="text-left font-medium py-2 px-5">{t("vendas.table.seller")}</th>
+            <th className="text-left font-medium py-2 px-5">{t("vendas.table.channel")}</th>
+            <th className="text-right font-medium py-2 px-5">{t("vendas.table.items")}</th>
+            <th className="text-right font-medium py-2 px-5">{t("vendas.table.total")}</th>
+            <th className="text-right font-medium py-2 px-5">{t("vendas.table.margin")}</th>
+            <th className="text-left font-medium py-2 px-5">{t("vendas.table.status")}</th>
+            <th className="text-right font-medium py-2 px-5">{t("vendas.table.date")}</th>
           </tr>
         </thead>
         <tbody className="divide-y divide-border">

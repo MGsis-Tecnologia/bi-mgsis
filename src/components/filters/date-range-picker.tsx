@@ -8,18 +8,21 @@ import { presetRange } from "@/lib/utils/dates";
 import { formatDate } from "@/lib/utils/format";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
+import { useTranslation } from "@/lib/hooks/use-translation";
+import { DictionaryKey } from "@/lib/i18n/dictionaries";
 
-const PRESETS: { value: DatePreset; label: string }[] = [
-  { value: "hoje", label: "Hoje" },
-  { value: "ontem", label: "Ontem" },
-  { value: "7d", label: "Últimos 7 dias" },
-  { value: "30d", label: "Últimos 30 dias" },
-  { value: "mes-atual", label: "Mês atual" },
-  { value: "ano-atual", label: "Ano atual" },
-  { value: "12m", label: "Últimos 12 meses" },
+const PRESETS: { value: DatePreset; labelKey: DictionaryKey }[] = [
+  { value: "hoje", labelKey: "filters.date.preset.today" },
+  { value: "ontem", labelKey: "filters.date.preset.yesterday" },
+  { value: "7d", labelKey: "filters.date.preset.7d" },
+  { value: "30d", labelKey: "filters.date.preset.30d" },
+  { value: "mes-atual", labelKey: "filters.date.preset.month" },
+  { value: "ano-atual", labelKey: "filters.date.preset.year" },
+  { value: "12m", labelKey: "filters.date.preset.12m" },
 ];
 
 export function DateRangePicker() {
+  const { t } = useTranslation();
   const preset = useFilters((s) => s.preset);
   const customRange = useFilters((s) => s.customRange);
   const setPreset = useFilters((s) => s.setPreset);
@@ -32,7 +35,8 @@ export function DateRangePicker() {
     return presetRange(preset);
   }, [preset, customRange]);
 
-  const presetLabel = PRESETS.find((p) => p.value === preset)?.label ?? "Personalizado";
+  const presetLabelKey = PRESETS.find((p) => p.value === preset)?.labelKey;
+  const presetLabel = presetLabelKey ? t(presetLabelKey) : t("filters.date.custom");
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -47,7 +51,7 @@ export function DateRangePicker() {
       </PopoverTrigger>
       <PopoverContent className="w-64 p-2" align="start">
         <div className="px-1 pb-1 text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
-          Período rápido
+          {t("filters.date.quick")}
         </div>
         <div className="grid grid-cols-1 gap-0.5">
           {PRESETS.map((p) => (
@@ -64,7 +68,7 @@ export function DateRangePicker() {
                   : "text-foreground hover:bg-muted/40"
               )}
             >
-              <span>{p.label}</span>
+              <span>{t(p.labelKey)}</span>
               <span className="text-[10px] text-muted-foreground tabular">
                 {formatDate(presetRange(p.value).from, "day")}
               </span>
