@@ -101,6 +101,10 @@ function processRows(
     colMap[normalizeHeader(h)] = h;
   }
 
+  // Debug: log all available columns
+  console.log("Colunas encontradas no CSV:", Object.keys(colMap));
+  console.log("Coluna 'pedido_cidade' encontrada?", "pedido_cidade" in colMap);
+
   // Validate required columns
   const missing = REQUIRED_COLS.filter((c) => !(c in colMap));
   if (missing.length > 0) {
@@ -145,12 +149,15 @@ function processRows(
     const currencyId   = String(row["moeda_id"] ?? "1").trim();
     const currencyCode = String(row["moeda_sigla"] ?? "R$").trim();
 
+    const clientCity = String(row["pedido_cidade"] ?? "").trim() || undefined;
+
     items.push({
       date,
       orderId,
       channel:      String(row["pedido_canal"] ?? "").trim(),
       clientId,
       clientName:   String(row["cliente_nome"] ?? "").trim(),
+      clientCity,
       productId,
       productName:  String(row["produto_descricao"] ?? "").trim(),
       quantity:     parseNumber(row["produto_quantidade"] as string),

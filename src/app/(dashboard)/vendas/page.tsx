@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import dynamic from "next/dynamic";
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { PageHeader } from "@/components/layout/page-header";
 import { KpiCard } from "@/components/dashboard/kpi-card";
@@ -17,9 +18,15 @@ import { Money } from "@/components/dashboard/money";
 import { useDataset, useFilteredOrders } from "@/lib/hooks/use-dataset";
 import { useFilters } from "@/lib/store/filters";
 import { computeKpis } from "@/lib/analytics/kpis";
+import { aggregateSalesByCity, getMaxSales } from "@/lib/analytics/geo-sales";
 import { dailySeries, heatmapByDayOfWeek, monthlySeries } from "@/lib/analytics/timeseries";
 import { formatCurrency, formatNumber, formatPercent } from "@/lib/utils/format";
 import { useTranslation } from "@/lib/hooks/use-translation";
+
+const SalesHeatmapGeo = dynamic(() => import("@/components/charts/sales-heatmap-geo").then((mod) => ({ default: mod.SalesHeatmapGeo })), {
+  ssr: false,
+  loading: () => <div className="w-full h-96 bg-muted/20 rounded-lg flex items-center justify-center"><p className="text-sm text-muted-foreground">Carregando mapa...</p></div>,
+});
 
 export default function VendasPage() {
   const { t } = useTranslation();
@@ -42,6 +49,19 @@ export default function VendasPage() {
     for (const o of orders) m[o.channel] = (m[o.channel] ?? 0) + o.totalBRL;
     return Object.entries(m).map(([k, v]) => ({ key: k, label: k, value: v })).sort((a, b) => b.value - a.value);
   }, [orders]);
+
+  const citiesSales = React.useMemo(() => aggregateSalesByCity(orders), [orders]);
+  const maxSales = React.useMemo(() => getMaxSales(citiesSales), [citiesSales]);
+
+  // Debug: log orders com clientCity
+  React.useEffect(() => {
+    console.log("Primeiros 5 orders com clientCity:");
+    orders.slice(0, 5).forEach((o) => {
+      console.log(`  ${o.id}: ${o.clientName} - Cidade: ${o.clientCity || "NÃO DEFINIDA"}`);
+    });
+    console.log(`Total de cidades encontradas: ${Object.keys(citiesSales).length}`);
+    console.log("Cidades com vendas:", Object.keys(citiesSales));
+  }, [orders, citiesSales]);
 
   if (!ds.hasData) {
     return (
@@ -112,6 +132,21 @@ export default function VendasPage() {
           <CardContent><BarChartH rows={byChannel} /></CardContent>
         </Card>
       </section>
+
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle>Mapa de Vendas por Cidade</CardTitle>
+              <p className="mt-1 text-xs text-muted-foreground">Vendas por localização geográfica (Brasil e Paraguai)</p>
+            </div>
+            <Badge variant="ghost">{Object.keys(citiesSales).length} cidades</Badge>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <SalesHeatmapGeo cities={citiesSales} maxSales={maxSales} />
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader>

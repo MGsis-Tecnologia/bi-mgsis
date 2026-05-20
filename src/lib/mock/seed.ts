@@ -217,6 +217,7 @@ function genOrders({
     const customer = rand() < 0.62 ? pick(heavyCustomers) : pick(allCustomers);
     const seller = pick(sellers);
     const region = customer.region;
+    const city = customer.city;
     const channel = pickWeighted(CHANNELS.map((c, i) => ({ v: c, w: CHANNEL_WEIGHTS[i]! })));
 
     // 1–6 items per order, basket size correlates with channel
@@ -268,6 +269,7 @@ function genOrders({
       sellerId: seller.id,
       channel,
       region,
+      city,
       date: date.toISOString(),
       items,
       subtotalBRL: Math.round(subtotal * 100) / 100,

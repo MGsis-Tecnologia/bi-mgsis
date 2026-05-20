@@ -5,6 +5,7 @@ export interface OrderLineItem {
   channel: string;        // Atacado | Varejo (normalized)
   clientId: string;
   clientName: string;
+  clientCity?: string;    // pedido_cidade (optional)
   productId: string;
   productName: string;
   quantity: number;
@@ -25,6 +26,7 @@ export interface ImportedOrder {
   channel: string;
   clientId: string;
   clientName: string;
+  clientCity?: string;    // pedido_cidade (optional)
   sellerId: string;
   sellerName: string;
   currencyId: string;

@@ -48,6 +48,10 @@ function buildOrders(
       existing.profitBRL = existing.totalBRL - existing.costBRL;
       existing.marginPct = existing.totalBRL > 0 ? existing.profitBRL / existing.totalBRL : 0;
       existing.items.push(lineItem);
+      // Garante que clientCity está definido (usa a primeira ocorrência não-vazia)
+      if (!existing.clientCity && item.clientCity) {
+        existing.clientCity = item.clientCity;
+      }
     } else {
       map.set(item.orderId, {
         id: item.orderId,
@@ -55,6 +59,7 @@ function buildOrders(
         channel: item.channel,
         clientId: item.clientId,
         clientName: item.clientName,
+        clientCity: item.clientCity,
         sellerId: item.sellerId,
         sellerName: item.sellerName,
         currencyId: item.currencyId,

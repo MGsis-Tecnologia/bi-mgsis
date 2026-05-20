@@ -61,6 +61,7 @@ export interface Order {
   sellerId: string;
   channel: Channel;
   region: Region;
+  city: string;
   date: string; // ISO date
   items: OrderItem[];
   subtotalBRL: number;
