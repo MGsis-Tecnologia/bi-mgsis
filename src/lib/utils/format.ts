@@ -1,27 +1,34 @@
-import type { CurrencyCode } from "@/lib/types";
+import type { AppCurrencyId } from "@/lib/types/dataset";
 
-const CURRENCY_LOCALE: Record<CurrencyCode, string> = {
-  BRL: "pt-BR",
-  USD: "en-US",
-  EUR: "de-DE",
-  GBP: "en-GB",
-};
-
+// R$ and US$: 2 decimal places, Brazilian locale
+// G$: integer, no decimals, thousands with dot
 export function formatCurrency(
   value: number,
-  currency: CurrencyCode = "BRL",
+  currencyId: AppCurrencyId | string = "ALL",
   opts: { compact?: boolean; signed?: boolean } = {}
-) {
+): string {
   const { compact, signed } = opts;
-  const formatter = new Intl.NumberFormat(CURRENCY_LOCALE[currency], {
-    style: "currency",
-    currency,
-    notation: compact ? "compact" : "standard",
-    maximumFractionDigits: compact ? 1 : 2,
+  const sign = signed && value > 0 ? "+" : "";
+
+  if (currencyId === "3") {
+    // Guarani: integer only, no decimals
+    const intVal = Math.round(value);
+    const formatted = new Intl.NumberFormat("pt-BR", {
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
+      notation: compact ? "compact" : "standard",
+    }).format(intVal);
+    return `${sign}G$ ${formatted}`;
+  }
+
+  // R$ (1), US$ (2), ALL (base = R$)
+  const symbol = currencyId === "2" ? "US$ " : "R$ ";
+  const formatted = new Intl.NumberFormat("pt-BR", {
     minimumFractionDigits: compact ? 0 : 2,
-    signDisplay: signed ? "exceptZero" : "auto",
-  });
-  return formatter.format(value);
+    maximumFractionDigits: compact ? 1 : 2,
+    notation: compact ? "compact" : "standard",
+  }).format(value);
+  return `${sign}${symbol}${formatted}`;
 }
 
 export function formatNumber(
@@ -51,11 +58,7 @@ export function formatDate(date: Date | string, fmt: "short" | "long" | "month" 
   const d = typeof date === "string" ? new Date(date) : date;
   switch (fmt) {
     case "long":
-      return new Intl.DateTimeFormat("pt-BR", {
-        day: "2-digit",
-        month: "long",
-        year: "numeric",
-      }).format(d);
+      return new Intl.DateTimeFormat("pt-BR", { day: "2-digit", month: "long", year: "numeric" }).format(d);
     case "month":
       return new Intl.DateTimeFormat("pt-BR", { month: "short", year: "2-digit" }).format(d);
     case "day":

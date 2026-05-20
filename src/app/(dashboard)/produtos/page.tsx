@@ -4,6 +4,7 @@ import * as React from "react";
 import { Package, TrendingUp } from "lucide-react";
 import { PageHeader } from "@/components/layout/page-header";
 import { KpiCard } from "@/components/dashboard/kpi-card";
+import { EmptyState } from "@/components/dashboard/empty-state";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { BarChartH } from "@/components/charts/bar-chart-h";
@@ -11,20 +12,10 @@ import { DonutChart } from "@/components/charts/donut-chart";
 import { Money } from "@/components/dashboard/money";
 import { useDataset, useFilteredOrders } from "@/lib/hooks/use-dataset";
 import { productABC } from "@/lib/analytics/abc";
-import { revenueByCategory } from "@/lib/analytics/kpis";
+import { revenueBySubgroup } from "@/lib/analytics/kpis";
 import { formatNumber, formatPercent } from "@/lib/utils/format";
 import { cn } from "@/lib/utils";
 import { useTranslation } from "@/lib/hooks/use-translation";
-
-const CATEGORY_LABELS: Record<string, string> = {
-  eletronicos: "Eletrônicos",
-  moda: "Moda",
-  "casa-decoracao": "Casa & Decoração",
-  "esporte-lazer": "Esporte & Lazer",
-  "beleza-saude": "Beleza & Saúde",
-  "alimentos-bebidas": "Alimentos & Bebidas",
-  "livros-midia": "Livros & Mídia",
-};
 
 export default function ProdutosPage() {
   const { t } = useTranslation();
@@ -32,17 +23,23 @@ export default function ProdutosPage() {
   const orders = useFilteredOrders();
 
   const abc = React.useMemo(() => productABC(orders, ds.products), [orders, ds.products]);
-  const categoryById = React.useMemo(() => new Map(ds.products.map((p) => [p.id, p.category])), [ds.products]);
-  const rbc = React.useMemo(() => revenueByCategory(orders, categoryById), [orders, categoryById]);
-  const donut = Object.entries(rbc)
-    .map(([k, v]) => ({ key: k, label: CATEGORY_LABELS[k] ?? k, value: v }))
-    .sort((a, b) => b.value - a.value);
+  const rbs = React.useMemo(() => revenueBySubgroup(orders), [orders]);
+  const donut = Object.values(rbs).sort((a, b) => b.value - a.value).map((v) => ({ key: v.id, label: v.label, value: v.value }));
 
   const aCount = abc.filter((e) => e.curve === "A").length;
   const bCount = abc.filter((e) => e.curve === "B").length;
   const cCount = abc.filter((e) => e.curve === "C").length;
   const totalUnits = abc.reduce((s, e) => s + e.units, 0);
   const totalRevenue = abc.reduce((s, e) => s + e.revenue, 0);
+
+  if (!ds.hasData) {
+    return (
+      <div className="space-y-8">
+        <PageHeader eyebrow={t("produtos.header.eyebrow")} title={t("produtos.header.title")} description={t("produtos.header.desc")} />
+        <EmptyState />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-8">
@@ -58,15 +55,8 @@ export default function ProdutosPage() {
       </PageHeader>
 
       <section className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <KpiCard
-          label={t("produtos.kpi.units")}
-          value={formatNumber(totalUnits)}
-        />
-        <KpiCard
-          label={t("produtos.kpi.revenue")}
-          value={<><Money brl={totalRevenue} compact /></> as never}
-          accent="accent"
-        />
+        <KpiCard label={t("produtos.kpi.units")} value={formatNumber(totalUnits)} />
+        <KpiCard label={t("produtos.kpi.revenue")} value={<><Money value={totalRevenue} compact /></> as never} accent="accent" />
         <KpiCard label={t("produtos.kpi.curveA")} caption={t("produtos.kpi.curveA.caption", { count: aCount })} value={formatPercent(aCount / Math.max(1, abc.length))} />
         <KpiCard label={t("produtos.kpi.stuck")} caption={t("produtos.kpi.stuck.caption")} value={formatNumber(ds.products.length - abc.length)} />
       </section>
@@ -88,7 +78,7 @@ export default function ProdutosPage() {
                 label: e.item.name,
                 value: e.revenue,
                 secondary: `${formatNumber(e.units)} un · ${e.curve}`,
-                tone: e.curve === "A" ? "accent" : e.curve === "B" ? "muted" : "muted",
+                tone: e.curve === "A" ? "accent" : "muted",
               }))}
               maxRows={12}
             />
@@ -139,12 +129,12 @@ export default function ProdutosPage() {
                     </td>
                     <td className="py-2 px-5 max-w-[260px] truncate">
                       <div className="font-medium">{e.item.name}</div>
-                      <div className="text-xs text-muted-foreground font-mono">{e.item.sku}</div>
+                      <div className="text-xs text-muted-foreground font-mono">{e.item.id}</div>
                     </td>
-                    <td className="py-2 px-5 text-muted-foreground">{CATEGORY_LABELS[e.item.category]}</td>
+                    <td className="py-2 px-5 text-muted-foreground">{e.item.subgroupName}</td>
                     <td className="py-2 px-5 text-right tabular">{formatNumber(e.units)}</td>
                     <td className="py-2 px-5 text-right tabular font-medium">
-                      <Money brl={e.revenue} />
+                      <Money value={e.revenue} />
                     </td>
                     <td className="py-2 px-5 text-right tabular text-muted-foreground">
                       {formatPercent(e.share, { decimals: 2 })}

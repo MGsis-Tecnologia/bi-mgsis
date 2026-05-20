@@ -4,6 +4,7 @@ import * as React from "react";
 import { Users } from "lucide-react";
 import { PageHeader } from "@/components/layout/page-header";
 import { KpiCard } from "@/components/dashboard/kpi-card";
+import { EmptyState } from "@/components/dashboard/empty-state";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { BarChartH } from "@/components/charts/bar-chart-h";
@@ -39,9 +40,9 @@ export default function ClientesPage() {
   const ds = useDataset();
   const orders = useFilteredOrders();
 
-  const metrics = React.useMemo(() => customerMetrics(orders, ds.customers), [orders, ds.customers]);
-  const abc = React.useMemo(() => customerABC(orders, ds.customers), [orders, ds.customers]);
-  const segments = React.useMemo(() => segmentBreakdown(ds.customers), [ds.customers]);
+  const metrics = React.useMemo(() => customerMetrics(orders, ds.clients), [orders, ds.clients]);
+  const abc = React.useMemo(() => customerABC(orders, ds.clients), [orders, ds.clients]);
+  const segments = React.useMemo(() => segmentBreakdown(metrics), [metrics]);
   const segmentsArr = Object.entries(segments).map(([k, v]) => ({
     key: k,
     label: SEGMENT_LABELS[k] ?? k,
@@ -51,9 +52,18 @@ export default function ClientesPage() {
   const activeCustomers = metrics.filter((m) => m.orders > 0);
   const totalRevenue = metrics.reduce((s, m) => s + m.revenue, 0);
   const avgLTV = activeCustomers.length > 0 ? totalRevenue / activeCustomers.length : 0;
-  const churnRisk = metrics.filter((m) => m.customer.segment === "em-risco").length;
+  const churnRisk = metrics.filter((m) => m.segment === "em-risco").length;
 
   const topByLTV = [...activeCustomers].sort((a, b) => b.ltv - a.ltv).slice(0, 10);
+
+  if (!ds.hasData) {
+    return (
+      <div className="space-y-8">
+        <PageHeader eyebrow={t("clientes.header.eyebrow")} title={t("clientes.header.title")} description={t("clientes.header.desc")} />
+        <EmptyState />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-8">
@@ -64,13 +74,13 @@ export default function ClientesPage() {
       >
         <Badge variant="ghost" className="gap-1">
           <Users className="h-3 w-3" />
-          {t("clientes.header.badge", { count: formatNumber(ds.customers.length) })}
+          {t("clientes.header.badge", { count: formatNumber(ds.clients.length) })}
         </Badge>
       </PageHeader>
 
       <section className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <KpiCard label={t("clientes.kpi.active")} value={formatNumber(activeCustomers.length)} caption={t("clientes.kpi.active.caption")} accent="accent" />
-        <KpiCard label={t("clientes.kpi.ltv")} value={<><Money brl={avgLTV} compact /></> as never} />
+        <KpiCard label={t("clientes.kpi.ltv")} value={<><Money value={avgLTV} compact /></> as never} />
         <KpiCard label={t("clientes.kpi.vip")} caption={t("clientes.kpi.vip.caption")} value={formatNumber(segments.vip ?? 0)} accent="positive" />
         <KpiCard label={t("clientes.kpi.risk")} caption={t("clientes.kpi.risk.caption")} value={formatNumber(churnRisk)} accent="negative" />
       </section>
@@ -83,10 +93,10 @@ export default function ClientesPage() {
           <CardContent>
             <BarChartH
               rows={topByLTV.map((m) => ({
-                key: m.customer.id,
-                label: m.customer.name,
+                key: m.client.id,
+                label: m.client.name,
                 value: m.ltv,
-                secondary: `${m.orders} pedidos · ${SEGMENT_LABELS[m.customer.segment]}`,
+                secondary: `${m.orders} pedidos · ${SEGMENT_LABELS[m.segment] ?? m.segment}`,
               }))}
               maxRows={10}
             />
@@ -119,7 +129,6 @@ export default function ClientesPage() {
               <thead>
                 <tr className="border-y border-border text-[10px] uppercase tracking-[0.14em] text-muted-foreground">
                   <th className="text-left font-medium py-2 px-5">{t("clientes.table.col.customer")}</th>
-                  <th className="text-left font-medium py-2 px-5">{t("clientes.table.col.city")}</th>
                   <th className="text-right font-medium py-2 px-5">{t("clientes.table.col.orders")}</th>
                   <th className="text-right font-medium py-2 px-5">{t("clientes.table.col.ltv")}</th>
                   <th className="text-right font-medium py-2 px-5">{t("clientes.table.col.ticket")}</th>
@@ -130,28 +139,27 @@ export default function ClientesPage() {
               </thead>
               <tbody className="divide-y divide-border">
                 {abc.slice(0, 18).map((e) => {
-                  const m = metrics.find((mm) => mm.customer.id === e.item.id);
+                  const m = metrics.find((mm) => mm.client.id === e.item.id);
                   if (!m) return null;
                   return (
                     <tr key={e.item.id} className="hover:bg-muted/30 transition-colors">
                       <td className="py-2.5 px-5">
                         <div className="font-medium truncate max-w-[220px]">{e.item.name}</div>
-                        <div className="text-xs text-muted-foreground font-mono">{e.item.code}</div>
+                        <div className="text-xs text-muted-foreground font-mono">{e.item.id}</div>
                       </td>
-                      <td className="py-2.5 px-5 text-muted-foreground">{e.item.city}</td>
                       <td className="py-2.5 px-5 text-right tabular">{m.orders}</td>
                       <td className="py-2.5 px-5 text-right tabular font-medium">
-                        <Money brl={m.ltv} />
+                        <Money value={m.ltv} />
                       </td>
                       <td className="py-2.5 px-5 text-right tabular text-muted-foreground">
-                        <Money brl={m.averageTicket} />
+                        <Money value={m.averageTicket} />
                       </td>
                       <td className="py-2.5 px-5 text-right tabular text-muted-foreground">
                         {m.recencyDays === Infinity ? "—" : `${m.recencyDays}d`}
                       </td>
                       <td className="py-2.5 px-5">
-                        <Badge variant={SEGMENT_TONE[m.customer.segment]} className="capitalize">
-                          {SEGMENT_LABELS[m.customer.segment]}
+                        <Badge variant={SEGMENT_TONE[m.segment]} className="capitalize">
+                          {SEGMENT_LABELS[m.segment] ?? m.segment}
                         </Badge>
                       </td>
                       <td className="py-2.5 px-5">

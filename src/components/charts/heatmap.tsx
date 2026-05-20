@@ -3,9 +3,7 @@
 import * as React from "react";
 import { cn } from "@/lib/utils";
 import { useFilters } from "@/lib/store/filters";
-import { convertFromBRL } from "@/lib/utils/currency";
 import { formatCurrency } from "@/lib/utils/format";
-import { EXCHANGE_RATES } from "@/lib/mock/seed";
 
 interface Props {
   matrix: number[][]; // [weekday=7][week=6]
@@ -39,11 +37,7 @@ export function Heatmap({ matrix, max }: Props) {
                 return (
                   <div
                     key={day}
-                    title={`${DAYS[day]} · ${WEEKS[week]} · ${formatCurrency(
-                      convertFromBRL(v, currency, EXCHANGE_RATES),
-                      currency,
-                      { compact: true }
-                    )}`}
+                    title={`${DAYS[day]} · ${WEEKS[week]} · ${formatCurrency(v, currency, { compact: true })}`}
                     className={cn(
                       "h-7 rounded-sm border border-border transition-transform hover:scale-[1.06] hover:z-10",
                       intensity === 0 ? "bg-muted/40" : ""

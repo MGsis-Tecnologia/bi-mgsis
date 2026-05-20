@@ -2,9 +2,7 @@
 
 import * as React from "react";
 import { useFilters } from "@/lib/store/filters";
-import { convertFromBRL } from "@/lib/utils/currency";
 import { formatCurrency, formatNumber } from "@/lib/utils/format";
-import { EXCHANGE_RATES } from "@/lib/mock/seed";
 import { cn } from "@/lib/utils";
 
 interface Row {
@@ -36,7 +34,7 @@ export function BarChartH({
 
   const fmt = (v: number) => {
     if (format === "currency") {
-      return formatCurrency(convertFromBRL(v, currency, EXCHANGE_RATES), currency, { compact: true });
+      return formatCurrency(v, currency, { compact: true });
     }
     if (format === "percent") return `${(v * 100).toFixed(1)}%`;
     return formatNumber(v, { compact: true });

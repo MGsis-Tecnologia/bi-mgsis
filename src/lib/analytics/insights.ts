@@ -1,7 +1,7 @@
-import type { Order, Product } from "@/lib/types";
-import { computeKpis, revenueByCategory } from "./kpis";
-import { monthlySeries } from "./timeseries";
+import type { ImportedOrder } from "@/lib/types/dataset";
 import type { DateRange } from "@/lib/types";
+import { computeKpis, revenueBySubgroup } from "./kpis";
+import { monthlySeries } from "./timeseries";
 import { previousComparableRange, isInRange } from "@/lib/utils/dates";
 import { formatPercent } from "@/lib/utils/format";
 
@@ -13,23 +13,8 @@ export interface Insight {
   metric?: string;
 }
 
-const CATEGORY_LABELS: Record<string, string> = {
-  eletronicos: "Eletrônicos",
-  moda: "Moda",
-  "casa-decoracao": "Casa & Decoração",
-  "esporte-lazer": "Esporte & Lazer",
-  "beleza-saude": "Beleza & Saúde",
-  "alimentos-bebidas": "Alimentos & Bebidas",
-  "livros-midia": "Livros & Mídia",
-};
-
-export function generateInsights(
-  orders: Order[],
-  products: Product[],
-  range: DateRange
-): Insight[] {
+export function generateInsights(orders: ImportedOrder[], range: DateRange): Insight[] {
   const insights: Insight[] = [];
-  const productCat = new Map(products.map((p) => [p.id, p.category]));
 
   const cur = orders.filter((o) => isInRange(o.date, range));
   const prevRange = previousComparableRange(range);
@@ -43,40 +28,36 @@ export function generateInsights(
     const tone = d > 0 ? "positive" : "negative";
     const verb = d > 0 ? "cresceu" : "recuou";
     insights.push({
-      id: "revenue-trend",
-      tone,
+      id: "revenue-trend", tone,
       title: `Receita ${verb} ${formatPercent(Math.abs(d), { decimals: 1 })} vs. período anterior`,
-      body:
-        d > 0
-          ? "O ritmo de faturamento acelerou em relação ao período comparável. Avalie reforçar estoque das categorias líderes."
-          : "Houve perda de tração no faturamento. Recomenda-se revisar campanhas ativas e níveis de desconto.",
+      body: d > 0
+        ? "O ritmo de faturamento acelerou em relação ao período comparável. Avalie reforçar estoque dos subgrupos líderes."
+        : "Houve perda de tração no faturamento. Recomenda-se revisar campanhas ativas e mix de produtos.",
       metric: `Δ ${formatPercent(d, { signed: true, decimals: 1 })}`,
     });
   }
 
-  // 2. Strongest category
-  const rbc = revenueByCategory(cur, productCat);
-  const sortedCats = Object.entries(rbc).sort((a, b) => b[1] - a[1]);
-  if (sortedCats.length > 0) {
-    const [topCat, topRev] = sortedCats[0]!;
-    const total = sortedCats.reduce((s, [, v]) => s + v, 0);
-    const share = total > 0 ? topRev / total : 0;
+  // 2. Top subgroup
+  const rbs = revenueBySubgroup(cur);
+  const sortedSubs = Object.values(rbs).sort((a, b) => b.value - a.value);
+  if (sortedSubs.length > 0) {
+    const top = sortedSubs[0]!;
+    const total = sortedSubs.reduce((s, v) => s + v.value, 0);
+    const share = total > 0 ? top.value / total : 0;
     insights.push({
-      id: "top-category",
-      tone: "neutral",
-      title: `${CATEGORY_LABELS[topCat] ?? topCat} concentra ${formatPercent(share, { decimals: 0 })} da receita`,
-      body: "Categoria líder do período. Considere aprofundar análise de margem e giro nesta linha.",
-      metric: CATEGORY_LABELS[topCat] ?? topCat,
+      id: "top-subgroup", tone: "neutral",
+      title: `${top.label} concentra ${formatPercent(share, { decimals: 0 })} da receita`,
+      body: "Subgrupo líder do período. Considere aprofundar análise de margem e giro nesta linha.",
+      metric: top.label,
     });
   }
 
   // 3. Margin alert
   if (k.marginPct < 0.18 && k.revenue > 0) {
     insights.push({
-      id: "margin-alert",
-      tone: "warning",
+      id: "margin-alert", tone: "warning",
       title: `Margem operacional em ${formatPercent(k.marginPct, { decimals: 1 })}`,
-      body: "Patamar abaixo da banda saudável. Verifique descontos médios praticados e custo de aquisição.",
+      body: "Patamar abaixo da banda saudável. Verifique custo dos produtos e preços praticados.",
       metric: formatPercent(k.marginPct),
     });
   }
@@ -88,14 +69,12 @@ export function generateInsights(
       insights.push({
         id: "ticket-trend",
         tone: d > 0 ? "positive" : "neutral",
-        title:
-          d > 0
-            ? `Ticket médio subiu ${formatPercent(d, { decimals: 1 })}`
-            : `Ticket médio caiu ${formatPercent(Math.abs(d), { decimals: 1 })}`,
-        body:
-          d > 0
-            ? "Clientes adquiriram baskets mais robustos no período. Cross-sell parece eficaz."
-            : "Baskets menores podem indicar pressão promocional ou mix com menor valor agregado.",
+        title: d > 0
+          ? `Ticket médio subiu ${formatPercent(d, { decimals: 1 })}`
+          : `Ticket médio caiu ${formatPercent(Math.abs(d), { decimals: 1 })}`,
+        body: d > 0
+          ? "Pedidos com valor maior no período. Estratégia de mix ou canal está funcionando."
+          : "Pedidos menores podem indicar pressão de preço ou mix de menor valor agregado.",
         metric: `Δ ${formatPercent(d, { signed: true, decimals: 1 })}`,
       });
     }
@@ -112,14 +91,12 @@ export function generateInsights(
         insights.push({
           id: "momentum",
           tone: d > 0 ? "positive" : "warning",
-          title:
-            d > 0
-              ? `Último mês superou o anterior em ${formatPercent(d, { decimals: 1 })}`
-              : `Desaceleração de ${formatPercent(Math.abs(d), { decimals: 1 })} no último mês`,
-          body:
-            d > 0
-              ? "Tendência positiva de curto prazo. Mantenha investimento nas alavancas comerciais ativas."
-              : "Queda mensal relevante. Vale investigar canais e regiões impactados.",
+          title: d > 0
+            ? `Último mês superou o anterior em ${formatPercent(d, { decimals: 1 })}`
+            : `Desaceleração de ${formatPercent(Math.abs(d), { decimals: 1 })} no último mês`,
+          body: d > 0
+            ? "Tendência positiva de curto prazo. Mantenha as alavancas comerciais ativas."
+            : "Queda mensal relevante. Vale investigar canais e subgrupos impactados.",
         });
       }
     }

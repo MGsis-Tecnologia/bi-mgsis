@@ -1,4 +1,4 @@
-import type { Customer, Order, Product } from "@/lib/types";
+import type { ImportedOrder, ImportedProduct, ImportedClient } from "@/lib/types/dataset";
 
 export interface ABCEntry<T> {
   item: T;
@@ -17,49 +17,39 @@ function classifyABC<T>(entries: { item: T; revenue: number; units: number }[]):
   return sorted.map((e) => {
     const share = e.revenue / total;
     cum += share;
-    let curve: "A" | "B" | "C" = "C";
-    if (cum <= 0.8) curve = "A";
-    else if (cum <= 0.95) curve = "B";
+    const curve: "A" | "B" | "C" = cum <= 0.8 ? "A" : cum <= 0.95 ? "B" : "C";
     return { ...e, share, cumulativeShare: cum, curve };
   });
 }
 
-export function productABC(orders: Order[], products: Product[]): ABCEntry<Product>[] {
+export function productABC(orders: ImportedOrder[], products: ImportedProduct[]): ABCEntry<ImportedProduct>[] {
   const byProduct = new Map<string, { revenue: number; units: number }>();
   for (const o of orders) {
-    if (o.status === "cancelado") continue;
     for (const it of o.items) {
       const cur = byProduct.get(it.productId) ?? { revenue: 0, units: 0 };
-      cur.revenue += it.unitPriceBRL * it.quantity * (1 - it.discountPct);
+      cur.revenue += it.totalBRL;
       cur.units += it.quantity;
       byProduct.set(it.productId, cur);
     }
   }
   const productMap = new Map(products.map((p) => [p.id, p]));
   const entries = [...byProduct.entries()]
-    .map(([id, v]) => {
-      const item = productMap.get(id);
-      return item ? { item, revenue: v.revenue, units: v.units } : null;
-    })
-    .filter(Boolean) as { item: Product; revenue: number; units: number }[];
+    .map(([id, v]) => { const item = productMap.get(id); return item ? { item, ...v } : null; })
+    .filter(Boolean) as { item: ImportedProduct; revenue: number; units: number }[];
   return classifyABC(entries);
 }
 
-export function customerABC(orders: Order[], customers: Customer[]): ABCEntry<Customer>[] {
-  const byCustomer = new Map<string, { revenue: number; units: number }>();
+export function customerABC(orders: ImportedOrder[], clients: ImportedClient[]): ABCEntry<ImportedClient>[] {
+  const byClient = new Map<string, { revenue: number; units: number }>();
   for (const o of orders) {
-    if (o.status === "cancelado") continue;
-    const cur = byCustomer.get(o.customerId) ?? { revenue: 0, units: 0 };
+    const cur = byClient.get(o.clientId) ?? { revenue: 0, units: 0 };
     cur.revenue += o.totalBRL;
     cur.units += 1;
-    byCustomer.set(o.customerId, cur);
+    byClient.set(o.clientId, cur);
   }
-  const cmap = new Map(customers.map((c) => [c.id, c]));
-  const entries = [...byCustomer.entries()]
-    .map(([id, v]) => {
-      const item = cmap.get(id);
-      return item ? { item, revenue: v.revenue, units: v.units } : null;
-    })
-    .filter(Boolean) as { item: Customer; revenue: number; units: number }[];
+  const cmap = new Map(clients.map((c) => [c.id, c]));
+  const entries = [...byClient.entries()]
+    .map(([id, v]) => { const item = cmap.get(id); return item ? { item, ...v } : null; })
+    .filter(Boolean) as { item: ImportedClient; revenue: number; units: number }[];
   return classifyABC(entries);
 }

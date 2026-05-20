@@ -12,9 +12,7 @@ import {
 } from "recharts";
 import type { TimePoint } from "@/lib/analytics/timeseries";
 import { useFilters } from "@/lib/store/filters";
-import { convertFromBRL } from "@/lib/utils/currency";
 import { formatCurrency } from "@/lib/utils/format";
-import { EXCHANGE_RATES } from "@/lib/mock/seed";
 import { ChartDefs } from "./chart-defs";
 import { ChartTooltip } from "./chart-tooltip";
 
@@ -60,11 +58,7 @@ export function RevenueAreaChart({
             tickLine={false}
             axisLine={false}
             tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 10 }}
-            tickFormatter={(v) =>
-              formatCurrency(convertFromBRL(Number(v), currency, EXCHANGE_RATES), currency, {
-                compact: true,
-              })
-            }
+            tickFormatter={(v) => formatCurrency(Number(v), currency, { compact: true })}
             width={56}
           />
         )}

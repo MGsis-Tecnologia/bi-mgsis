@@ -1,4 +1,5 @@
-import type { DateRange, Order, ProductCategory } from "@/lib/types";
+import type { ImportedOrder } from "@/lib/types/dataset";
+import type { DateRange } from "@/lib/types";
 import { isInRange, previousComparableRange } from "@/lib/utils/dates";
 
 export interface KpiSnapshot {
@@ -10,50 +11,29 @@ export interface KpiSnapshot {
   averageTicket: number;
   uniqueCustomers: number;
   itemsSold: number;
-  discountTotal: number;
 }
 
 export function emptyKpi(): KpiSnapshot {
-  return {
-    revenue: 0,
-    cost: 0,
-    profit: 0,
-    marginPct: 0,
-    ordersCount: 0,
-    averageTicket: 0,
-    uniqueCustomers: 0,
-    itemsSold: 0,
-    discountTotal: 0,
-  };
+  return { revenue: 0, cost: 0, profit: 0, marginPct: 0, ordersCount: 0, averageTicket: 0, uniqueCustomers: 0, itemsSold: 0 };
 }
 
-export function computeKpis(orders: Order[]): KpiSnapshot {
-  let revenue = 0;
-  let cost = 0;
-  let discount = 0;
-  let items = 0;
+export function computeKpis(orders: ImportedOrder[]): KpiSnapshot {
+  let revenue = 0, cost = 0, items = 0;
   const customers = new Set<string>();
-  let validOrders = 0;
   for (const o of orders) {
-    if (o.status === "cancelado") continue;
     revenue += o.totalBRL;
     cost += o.costBRL;
-    discount += o.discountBRL;
     for (const it of o.items) items += it.quantity;
-    customers.add(o.customerId);
-    validOrders++;
+    customers.add(o.clientId);
   }
   const profit = revenue - cost;
   return {
-    revenue,
-    cost,
-    profit,
+    revenue, cost, profit,
     marginPct: revenue > 0 ? profit / revenue : 0,
-    ordersCount: validOrders,
-    averageTicket: validOrders > 0 ? revenue / validOrders : 0,
+    ordersCount: orders.length,
+    averageTicket: orders.length > 0 ? revenue / orders.length : 0,
     uniqueCustomers: customers.size,
     itemsSold: items,
-    discountTotal: discount,
   };
 }
 
@@ -69,10 +49,7 @@ export interface KpiWithDelta extends KpiSnapshot {
   };
 }
 
-export function computeKpisWithComparison(
-  allOrders: Order[],
-  range: DateRange
-): KpiWithDelta {
+export function computeKpisWithComparison(allOrders: ImportedOrder[], range: DateRange): KpiWithDelta {
   const current = allOrders.filter((o) => isInRange(o.date, range));
   const prev = previousComparableRange(range);
   const previous = allOrders.filter((o) => isInRange(o.date, prev));
@@ -93,14 +70,14 @@ export function computeKpisWithComparison(
   };
 }
 
-export function revenueByCategory(orders: Order[], productCategoryById: Map<string, ProductCategory>): Record<string, number> {
-  const out: Record<string, number> = {};
+export function revenueBySubgroup(orders: ImportedOrder[]): Record<string, { id: string; label: string; value: number }> {
+  const out: Record<string, { id: string; label: string; value: number }> = {};
   for (const o of orders) {
-    if (o.status === "cancelado") continue;
     for (const it of o.items) {
-      const cat = productCategoryById.get(it.productId);
-      if (!cat) continue;
-      out[cat] = (out[cat] ?? 0) + it.unitPriceBRL * it.quantity * (1 - it.discountPct);
+      if (!out[it.subgroupId]) {
+        out[it.subgroupId] = { id: it.subgroupId, label: it.subgroupName, value: 0 };
+      }
+      out[it.subgroupId]!.value += it.totalBRL;
     }
   }
   return out;

@@ -4,6 +4,7 @@ import * as React from "react";
 import { Trophy } from "lucide-react";
 import { PageHeader } from "@/components/layout/page-header";
 import { KpiCard } from "@/components/dashboard/kpi-card";
+import { EmptyState } from "@/components/dashboard/empty-state";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
@@ -14,25 +15,24 @@ import { formatNumber, formatPercent } from "@/lib/utils/format";
 import { cn } from "@/lib/utils";
 import { useTranslation } from "@/lib/hooks/use-translation";
 
-const REGION_LABELS: Record<string, string> = {
-  sudeste: "Sudeste",
-  sul: "Sul",
-  "centro-oeste": "Centro-Oeste",
-  nordeste: "Nordeste",
-  norte: "Norte",
-};
-
 export default function VendedoresPage() {
   const { t } = useTranslation();
   const ds = useDataset();
   const orders = useFilteredOrders();
   const metrics = React.useMemo(() => sellerMetrics(orders, ds.sellers), [orders, ds.sellers]);
 
-  const totalCommission = metrics.reduce((s, m) => s + m.commissionDue, 0);
-  const totalGoal = ds.sellers.reduce((s, m) => s + m.monthlyGoalBRL * 12, 0);
   const teamRevenue = metrics.reduce((s, m) => s + m.revenue, 0);
-  const teamAchievement = totalGoal > 0 ? teamRevenue / totalGoal : 0;
+  const avgAchievement = metrics.length > 0 ? metrics.reduce((s, m) => s + m.achievement, 0) / metrics.length : 0;
   const top = metrics[0];
+
+  if (!ds.hasData) {
+    return (
+      <div className="space-y-8">
+        <PageHeader eyebrow={t("vendedores.header.eyebrow")} title={t("vendedores.header.title")} description={t("vendedores.header.desc")} />
+        <EmptyState />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-8">
@@ -50,18 +50,22 @@ export default function VendedoresPage() {
       <section className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <KpiCard
           label={t("vendedores.kpi.revenue")}
-          value={<><Money brl={teamRevenue} compact /></> as never}
+          value={<><Money value={teamRevenue} compact /></> as never}
           accent="accent"
         />
-        <KpiCard label={t("vendedores.kpi.goal")} value={formatPercent(teamAchievement, { decimals: 0 })} accent={teamAchievement >= 1 ? "positive" : "default"} />
         <KpiCard
-          label={t("vendedores.kpi.commission")}
-          value={<><Money brl={totalCommission} compact /></> as never}
+          label={t("vendedores.kpi.goal")}
+          value={formatPercent(avgAchievement, { decimals: 0 })}
+          accent={avgAchievement >= 0.8 ? "positive" : "default"}
+        />
+        <KpiCard
+          label={t("vendedores.kpi.sellers")}
+          value={formatNumber(ds.sellers.length)}
         />
         <KpiCard
           label={t("vendedores.kpi.top")}
           caption={top?.seller.name}
-          value={<><Money brl={top?.revenue ?? 0} compact /></> as never}
+          value={<><Money value={top?.revenue ?? 0} compact /></> as never}
           accent="positive"
         />
       </section>
@@ -77,13 +81,11 @@ export default function VendedoresPage() {
                 <tr className="border-y border-border text-[10px] uppercase tracking-[0.14em] text-muted-foreground">
                   <th className="text-left font-medium py-2 px-5">#</th>
                   <th className="text-left font-medium py-2 px-5">{t("vendedores.table.col.seller")}</th>
-                  <th className="text-left font-medium py-2 px-5">{t("vendedores.table.col.region")}</th>
                   <th className="text-right font-medium py-2 px-5">{t("vendedores.table.col.orders")}</th>
                   <th className="text-right font-medium py-2 px-5">{t("vendedores.table.col.revenue")}</th>
                   <th className="text-right font-medium py-2 px-5">{t("vendedores.table.col.ticket")}</th>
                   <th className="text-right font-medium py-2 px-5">{t("vendedores.table.col.margin")}</th>
                   <th className="text-left font-medium py-2 px-5 w-[200px]">{t("vendedores.table.col.goal")}</th>
-                  <th className="text-right font-medium py-2 px-5">{t("vendedores.table.col.commission")}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
@@ -101,21 +103,15 @@ export default function VendedoresPage() {
                             .slice(0, 2)
                             .join("")}
                         </div>
-                        <div>
-                          <div className="font-medium">{m.seller.name}</div>
-                          <div className="text-xs text-muted-foreground font-mono">{m.seller.code}</div>
-                        </div>
+                        <div className="font-medium">{m.seller.name}</div>
                       </div>
-                    </td>
-                    <td className="py-3 px-5 text-muted-foreground">
-                      {REGION_LABELS[m.seller.region] ?? m.seller.region}
                     </td>
                     <td className="py-3 px-5 text-right tabular">{formatNumber(m.orders)}</td>
                     <td className="py-3 px-5 text-right tabular font-medium">
-                      <Money brl={m.revenue} compact />
+                      <Money value={m.revenue} compact />
                     </td>
                     <td className="py-3 px-5 text-right tabular text-muted-foreground">
-                      <Money brl={m.averageTicket} />
+                      <Money value={m.averageTicket} />
                     </td>
                     <td className="py-3 px-5 text-right tabular text-muted-foreground">
                       {formatPercent(m.marginPct, { decimals: 1 })}
@@ -136,9 +132,6 @@ export default function VendedoresPage() {
                           {formatPercent(m.achievement, { decimals: 0 })}
                         </span>
                       </div>
-                    </td>
-                    <td className="py-3 px-5 text-right tabular font-medium">
-                      <Money brl={m.commissionDue} />
                     </td>
                   </tr>
                 ))}

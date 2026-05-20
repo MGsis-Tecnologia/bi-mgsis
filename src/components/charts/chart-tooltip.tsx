@@ -1,10 +1,7 @@
 "use client";
 
 import * as React from "react";
-import type { CurrencyCode } from "@/lib/types";
 import { formatCurrency, formatNumber } from "@/lib/utils/format";
-import { convertFromBRL } from "@/lib/utils/currency";
-import { EXCHANGE_RATES } from "@/lib/mock/seed";
 import { useFilters } from "@/lib/store/filters";
 
 interface RechartsTooltipPayloadItem {
@@ -47,7 +44,7 @@ export function ChartTooltip({
           const out =
             formatter?.(v, entry.dataKey) ??
             (isCurrency
-              ? formatCurrency(convertFromBRL(v, currency, EXCHANGE_RATES), currency as CurrencyCode, { compact: false })
+              ? formatCurrency(v, currency, { compact: false })
               : formatNumber(v));
           return (
             <div key={i} className="flex items-center justify-between gap-4">

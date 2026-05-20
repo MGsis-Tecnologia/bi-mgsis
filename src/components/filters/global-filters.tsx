@@ -8,50 +8,31 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { cn } from "@/lib/utils";
 import { useTranslation } from "@/lib/hooks/use-translation";
 
-const REGION_LABELS: Record<string, string> = {
-  sudeste: "Sudeste",
-  sul: "Sul",
-  "centro-oeste": "Centro-Oeste",
-  nordeste: "Nordeste",
-  norte: "Norte",
-};
-
-const CHANNEL_LABELS: Record<string, string> = {
-  ecommerce: "E-commerce",
-  marketplace: "Marketplace",
-  "loja-fisica": "Loja física",
-  b2b: "B2B",
-  telemarketing: "Telemarketing",
-};
-
-const CATEGORY_LABELS: Record<string, string> = {
-  eletronicos: "Eletrônicos",
-  moda: "Moda",
-  "casa-decoracao": "Casa & Decoração",
-  "esporte-lazer": "Esporte & Lazer",
-  "beleza-saude": "Beleza & Saúde",
-  "alimentos-bebidas": "Alimentos & Bebidas",
-  "livros-midia": "Livros & Mídia",
-};
-
 export function GlobalFilters() {
   const { t } = useTranslation();
-  const region = useFilters((s) => s.region);
-  const channel = useFilters((s) => s.channel);
-  const sellerId = useFilters((s) => s.sellerId);
-  const categoryId = useFilters((s) => s.categoryId);
-  const setRegion = useFilters((s) => s.setRegion);
-  const setChannel = useFilters((s) => s.setChannel);
-  const setSeller = useFilters((s) => s.setSeller);
-  const setCategory = useFilters((s) => s.setCategory);
-  const reset = useFilters((s) => s.resetFilters);
-  const ds = useDataset();
+  const channel    = useFilters((s) => s.channel);
+  const sellerId   = useFilters((s) => s.sellerId);
+  const subgroupId = useFilters((s) => s.subgroupId);
+  const setChannel  = useFilters((s) => s.setChannel);
+  const setSeller   = useFilters((s) => s.setSeller);
+  const setSubgroup = useFilters((s) => s.setSubgroup);
+  const reset       = useFilters((s) => s.resetFilters);
+  const ds          = useDataset();
 
   const activeCount =
-    (region !== "all" ? 1 : 0) +
     (channel !== "all" ? 1 : 0) +
     (sellerId !== "all" ? 1 : 0) +
-    (categoryId !== "all" ? 1 : 0);
+    (subgroupId !== "all" ? 1 : 0);
+
+  const channelOptions = [
+    { value: "all", label: t("filters.global.all_masc") },
+    ...ds.channels.map((c) => ({ value: c, label: c })),
+  ];
+
+  const subgroupOptions = [
+    { value: "all", label: t("filters.global.all_fem") },
+    ...ds.subgroups.map((s) => ({ value: s.id, label: s.name })),
+  ];
 
   return (
     <Popover>
@@ -80,34 +61,22 @@ export function GlobalFilters() {
             </button>
           )}
         </div>
+
         <div className="max-h-[460px] overflow-y-auto p-3 space-y-4">
-          <FilterGroup
-            label={t("filters.global.region")}
-            value={region}
-            onChange={(v) => setRegion(v as never)}
-            options={[
-              { value: "all", label: t("filters.global.all_fem") },
-              ...Object.entries(REGION_LABELS).map(([v, l]) => ({ value: v, label: l })),
-            ]}
-          />
           <FilterGroup
             label={t("filters.global.channel")}
             value={channel}
-            onChange={(v) => setChannel(v as never)}
-            options={[
-              { value: "all", label: t("filters.global.all_masc") },
-              ...Object.entries(CHANNEL_LABELS).map(([v, l]) => ({ value: v, label: l })),
-            ]}
+            onChange={setChannel}
+            options={channelOptions}
           />
+
           <FilterGroup
             label={t("filters.global.category")}
-            value={categoryId}
-            onChange={(v) => setCategory(v)}
-            options={[
-              { value: "all", label: t("filters.global.all_fem") },
-              ...Object.entries(CATEGORY_LABELS).map(([v, l]) => ({ value: v, label: l })),
-            ]}
+            value={subgroupId}
+            onChange={setSubgroup}
+            options={subgroupOptions}
           />
+
           <div>
             <div className="pb-1.5 text-[10px] font-medium uppercase tracking-[0.18em] text-muted-foreground">
               {t("filters.global.seller")}
@@ -119,9 +88,7 @@ export function GlobalFilters() {
             >
               <option value="all">{t("filters.global.all_sellers")}</option>
               {ds.sellers.map((s) => (
-                <option key={s.id} value={s.id}>
-                  {s.code} · {s.name}
-                </option>
+                <option key={s.id} value={s.id}>{s.name}</option>
               ))}
             </select>
           </div>
@@ -132,10 +99,7 @@ export function GlobalFilters() {
 }
 
 function FilterGroup({
-  label,
-  value,
-  onChange,
-  options,
+  label, value, onChange, options,
 }: {
   label: string;
   value: string;
