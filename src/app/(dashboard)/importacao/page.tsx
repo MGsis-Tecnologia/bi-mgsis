@@ -6,7 +6,8 @@ import { PageHeader } from "@/components/layout/page-header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { parseFile } from "@/lib/parsers/csv-parser";
-import { useDatasetStore } from "@/lib/store/dataset";
+import { useDatasetStore, IDB_KEY } from "@/lib/store/dataset";
+import { idbSet, idbDel } from "@/lib/store/idb";
 import { useTranslation } from "@/lib/hooks/use-translation";
 import { formatNumber, formatDate } from "@/lib/utils/format";
 
@@ -46,6 +47,7 @@ export default function ImportacaoPage() {
     if (result.errors.length > 0 || !result.dataset) {
       setState({ status: "error", errors: result.errors, warnings: result.warnings, skipped: result.skipped, rowCount: 0, filename: file.name });
     } else {
+      await idbSet(IDB_KEY, result.dataset);
       setDataset(result.dataset);
       setState({ status: "success", errors: [], warnings: result.warnings, skipped: result.skipped, rowCount: result.dataset.rowCount, filename: file.name });
     }
@@ -137,7 +139,7 @@ export default function ImportacaoPage() {
             <div className="flex items-center justify-between">
               <CardTitle>Dataset atual</CardTitle>
               <button
-                onClick={() => { clearDataset(); setState({ status: "idle", errors: [], warnings: [], skipped: 0, rowCount: 0, filename: "" }); }}
+                onClick={() => { idbDel(IDB_KEY); clearDataset(); setState({ status: "idle", errors: [], warnings: [], skipped: 0, rowCount: 0, filename: "" }); }}
                 className="inline-flex items-center gap-1.5 rounded-md border border-border px-2.5 py-1.5 text-xs text-muted-foreground hover:text-negative hover:border-negative transition-colors"
               >
                 <Trash2 className="h-3.5 w-3.5" /> Remover dados
