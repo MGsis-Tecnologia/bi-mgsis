@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -17,7 +18,6 @@ import {
   UserSquare2,
   Wallet,
 } from "lucide-react";
-import { BrandMark } from "./brand-mark";
 import { cn } from "@/lib/utils";
 import { useTranslation } from "@/lib/hooks/use-translation";
 import { DictionaryKey } from "@/lib/i18n/dictionaries";
@@ -71,9 +71,19 @@ export function Sidebar() {
 
   return (
     <aside className="hidden lg:flex h-screen sticky top-0 w-[244px] shrink-0 flex-col border-r border-border bg-surface/40">
-      <div className="flex h-14 items-center px-5 border-b border-border">
-        <Link href="/dashboard" aria-label="MGSIS Analytics" className="group inline-flex items-center gap-2">
-          <BrandMark />
+      <div className="flex flex-col items-center justify-center px-4 pt-5 pb-4 border-b border-border gap-2">
+        <Link href="/dashboard" aria-label="MGSIS Analytics" className="group flex flex-col items-center gap-2.5">
+          <Image
+            src="/logo-mgsis.png"
+            alt="MGSIS Tecnologia"
+            width={152}
+            height={91}
+            className="object-contain"
+            priority
+          />
+          <span className="font-serif text-[18px] leading-none tracking-wide text-foreground">
+            MGSIS Analytics
+          </span>
         </Link>
       </div>
 
