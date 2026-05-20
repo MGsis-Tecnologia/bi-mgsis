@@ -1,0 +1,1001 @@
+pedido_data;pedido_documento;pedido_canal;cliente_id;cliente_nome;produto_id;produto_descricao;produto_quantidade;produto_valor_total;produto_valor_custo;subgrupo_id;subgrupo_descricao;vendedor_id;vendedor_nome;moeda_id;moeda_sigla;pedido_tipo
+02/12/2025;PED-00100;Varejo;CLI-027;Epsilon Zeta ME;PROD-032;Cerveja Long Neck cx12;7;577,15;294,00;SG-08;Bebidas;VND-005;Pedro Alves;1;R$;VENDAS
+02/12/2025;PED-00100;Varejo;CLI-027;Epsilon Zeta ME;PROD-019;Vestido Casual;6;904,80;408,00;SG-05;Vestuario;VND-005;Pedro Alves;1;R$;VENDAS
+02/12/2025;PED-00100;Varejo;CLI-027;Epsilon Zeta ME;PROD-032;Cerveja Long Neck cx12;7;648,55;294,00;SG-08;Bebidas;VND-005;Pedro Alves;1;R$;VENDAS
+01/05/2026;PED-00101;Atacado;CLI-022;Chi Distribuidora;PROD-011;Cafeteira Eletrica;8;2396,80;1280,00;SG-03;Eletrodomesticos;VND-001;Joao Silva;1;R$;VENDAS
+19/09/2025;PED-00102;Varejo;CLI-008;Theta Importacoes;PROD-029;Suco de Laranja 1L;9;137,70;63,00;SG-08;Bebidas;VND-005;Pedro Alves;1;R$;VENDAS
+23/03/2026;PED-00103;Atacado;CLI-018;Sigma Logistica;PROD-012;Ventilador Torre;3;85600;46250;SG-03;Eletrodomesticos;VND-002;Maria Oliveira;3;G$;VENDAS
+23/03/2026;PED-00103;Atacado;CLI-018;Sigma Logistica;PROD-028;Macarrao Espaguete;3;1980;1000;SG-07;Alimentos;VND-002;Maria Oliveira;3;G$;VENDAS
+23/03/2026;PED-00103;Atacado;CLI-018;Sigma Logistica;PROD-024;Bota Couro;6;216300;115000;SG-06;Calcados;VND-002;Maria Oliveira;3;G$;VENDAS
+01/05/2026;PED-00104;Varejo;CLI-029;Iota Kappa Ltda;PROD-031;Refrigerante 2L;3;57,78;27,00;SG-08;Bebidas;VND-002;Maria Oliveira;1;R$;VENDAS
+01/05/2026;PED-00104;Varejo;CLI-029;Iota Kappa Ltda;PROD-011;Cafeteira Eletrica;8;2172,80;1280,00;SG-03;Eletrodomesticos;VND-002;Maria Oliveira;1;R$;VENDAS
+01/05/2026;PED-00104;Varejo;CLI-029;Iota Kappa Ltda;PROD-031;Refrigerante 2L;10;180,00;90,00;SG-08;Bebidas;VND-002;Maria Oliveira;1;R$;VENDAS
+01/05/2026;PED-00104;Varejo;CLI-029;Iota Kappa Ltda;PROD-009;Geladeira Frost Free;7;26068,00;17500,00;SG-03;Eletrodomesticos;VND-002;Maria Oliveira;1;R$;VENDAS
+04/11/2025;PED-00105;Atacado;CLI-029;Iota Kappa Ltda;PROD-017;Camiseta Polo;7;623,00;294,00;SG-05;Vestuario;VND-004;Ana Costa;1;R$;VENDAS
+04/11/2025;PED-00105;Atacado;CLI-029;Iota Kappa Ltda;PROD-032;Cerveja Long Neck cx12;3;260,10;126,00;SG-08;Bebidas;VND-004;Ana Costa;1;R$;VENDAS
+04/11/2025;PED-00105;Atacado;CLI-029;Iota Kappa Ltda;PROD-012;Ventilador Torre;7;2352,00;1295,00;SG-03;Eletrodomesticos;VND-004;Ana Costa;1;R$;VENDAS
+04/11/2025;PED-00105;Atacado;CLI-029;Iota Kappa Ltda;PROD-021;Tenis Esportivo;8;2240,00;1240,00;SG-06;Calcados;VND-004;Ana Costa;1;R$;VENDAS
+06/04/2026;PED-00106;Atacado;CLI-007;Grupo Eta Comercio;PROD-023;Sandalia Feminina;7;1272,60;630,00;SG-06;Calcados;VND-005;Pedro Alves;1;R$;VENDAS
+06/04/2026;PED-00106;Atacado;CLI-007;Grupo Eta Comercio;PROD-029;Suco de Laranja 1L;8;114,00;56,00;SG-08;Bebidas;VND-005;Pedro Alves;1;R$;VENDAS
+06/04/2026;PED-00106;Atacado;CLI-007;Grupo Eta Comercio;PROD-018;Calca Jeans;10;1728,00;800,00;SG-05;Vestuario;VND-005;Pedro Alves;1;R$;VENDAS
+11/07/2025;PED-00107;Atacado;CLI-013;Nu Varejo Ltda;PROD-004;Mouse Sem Fio;4;499,20;260,00;SG-02;Informatica;VND-007;Ricardo Souza;1;R$;VENDAS
+16/03/2026;PED-00108;Varejo;CLI-024;Omega Comercio;PROD-020;Jaqueta de Couro;9;5637,60;2790,00;SG-05;Vestuario;VND-006;Fernanda Lima;1;R$;VENDAS
+28/02/2026;PED-00109;Varejo;CLI-024;Omega Comercio;PROD-008;Smart TV 50 pol;4;1152000;700000;SG-01;Eletronicos;VND-005;Pedro Alves;3;G$;VENDAS
+28/02/2026;PED-00109;Varejo;CLI-024;Omega Comercio;PROD-012;Ventilador Torre;6;166400;92500;SG-03;Eletrodomesticos;VND-005;Pedro Alves;3;G$;VENDAS
+28/02/2026;PED-00109;Varejo;CLI-024;Omega Comercio;PROD-018;Calca Jeans;4;51733;26667;SG-05;Vestuario;VND-005;Pedro Alves;3;G$;VENDAS
+28/02/2026;PED-00109;Varejo;CLI-024;Omega Comercio;PROD-020;Jaqueta de Couro;2;103433;51667;SG-05;Vestuario;VND-005;Pedro Alves;3;G$;VENDAS
+06/06/2025;PED-00110;Atacado;CLI-009;Iota Distribuicoes;PROD-005;Smartphone 128GB;3;1280,40;840,00;SG-01;Eletronicos;VND-008;Juliana Mendes;2;US$;VENDAS
+06/06/2025;PED-00110;Atacado;CLI-009;Iota Distribuicoes;PROD-005;Smartphone 128GB;9;3801,60;2520,00;SG-01;Eletronicos;VND-008;Juliana Mendes;2;US$;VENDAS
+05/08/2025;PED-00111;Varejo;CLI-014;Xi Comercio SA;PROD-011;Cafeteira Eletrica;6;325,92;192,00;SG-03;Eletrodomesticos;VND-008;Juliana Mendes;2;US$;VENDAS
+15/07/2025;PED-00112;Atacado;CLI-016;Pi Distribuidora;PROD-027;Azeite Extra Virgem;8;67,87;35,20;SG-07;Alimentos;VND-002;Maria Oliveira;2;US$;VENDAS
+15/07/2025;PED-00112;Atacado;CLI-016;Pi Distribuidora;PROD-010;Micro-ondas 30L;10;1400,80;840,00;SG-03;Eletrodomesticos;VND-002;Maria Oliveira;2;US$;VENDAS
+15/07/2025;PED-00112;Atacado;CLI-016;Pi Distribuidora;PROD-008;Smart TV 50 pol;10;7040,00;4200,00;SG-01;Eletronicos;VND-002;Maria Oliveira;2;US$;VENDAS
+15/07/2025;PED-00112;Atacado;CLI-016;Pi Distribuidora;PROD-015;Estante Modular;2;391,40;232,00;SG-04;Moveis e Decoracao;VND-002;Maria Oliveira;2;US$;VENDAS
+13/12/2025;PED-00113;Atacado;CLI-003;Comercial Gamma ME;PROD-020;Jaqueta de Couro;9;5637,60;2790,00;SG-05;Vestuario;VND-003;Carlos Santos;1;R$;VENDAS
+13/12/2025;PED-00113;Atacado;CLI-003;Comercial Gamma ME;PROD-031;Refrigerante 2L;2;36,00;18,00;SG-08;Bebidas;VND-003;Carlos Santos;1;R$;VENDAS
+13/12/2025;PED-00113;Atacado;CLI-003;Comercial Gamma ME;PROD-018;Calca Jeans;10;1520,00;800,00;SG-05;Vestuario;VND-003;Carlos Santos;1;R$;VENDAS
+13/12/2025;PED-00113;Atacado;CLI-003;Comercial Gamma ME;PROD-027;Azeite Extra Virgem;5;205,80;110,00;SG-07;Alimentos;VND-003;Carlos Santos;1;R$;VENDAS
+02/11/2025;PED-00114;Varejo;CLI-007;Grupo Eta Comercio;PROD-015;Estante Modular;4;3686,00;2320,00;SG-04;Moveis e Decoracao;VND-004;Ana Costa;1;R$;VENDAS
+02/11/2025;PED-00114;Varejo;CLI-007;Grupo Eta Comercio;PROD-011;Cafeteira Eletrica;1;266,00;160,00;SG-03;Eletrodomesticos;VND-004;Ana Costa;1;R$;VENDAS
+02/11/2025;PED-00114;Varejo;CLI-007;Grupo Eta Comercio;PROD-029;Suco de Laranja 1L;10;157,50;70,00;SG-08;Bebidas;VND-004;Ana Costa;1;R$;VENDAS
+02/11/2025;PED-00114;Varejo;CLI-007;Grupo Eta Comercio;PROD-024;Bota Couro;10;4494,00;2300,00;SG-06;Calcados;VND-004;Ana Costa;1;R$;VENDAS
+18/03/2026;PED-00115;Atacado;CLI-009;Iota Distribuicoes;PROD-010;Micro-ondas 30L;6;864,96;504,00;SG-03;Eletrodomesticos;VND-006;Fernanda Lima;2;US$;VENDAS
+18/03/2026;PED-00115;Atacado;CLI-009;Iota Distribuicoes;PROD-024;Bota Couro;2;162,96;92,00;SG-06;Calcados;VND-006;Fernanda Lima;2;US$;VENDAS
+03/02/2026;PED-00116;Atacado;CLI-027;Epsilon Zeta ME;PROD-017;Camiseta Polo;7;629,23;294,00;SG-05;Vestuario;VND-008;Juliana Mendes;1;R$;VENDAS
+02/01/2026;PED-00117;Varejo;CLI-014;Xi Comercio SA;PROD-029;Suco de Laranja 1L;9;27,00;12,60;SG-08;Bebidas;VND-001;Joao Silva;2;US$;VENDAS
+02/01/2026;PED-00117;Varejo;CLI-014;Xi Comercio SA;PROD-029;Suco de Laranja 1L;7;23,10;9,80;SG-08;Bebidas;VND-001;Joao Silva;2;US$;VENDAS
+02/01/2026;PED-00117;Varejo;CLI-014;Xi Comercio SA;PROD-032;Cerveja Long Neck cx12;2;33,66;16,80;SG-08;Bebidas;VND-001;Joao Silva;2;US$;VENDAS
+02/01/2026;PED-00117;Varejo;CLI-014;Xi Comercio SA;PROD-017;Camiseta Polo;3;56,07;25,20;SG-05;Vestuario;VND-001;Joao Silva;2;US$;VENDAS
+01/01/2026;PED-00118;Varejo;CLI-022;Chi Distribuidora;PROD-031;Refrigerante 2L;2;3240;1500;SG-08;Bebidas;VND-007;Ricardo Souza;3;G$;VENDAS
+01/01/2026;PED-00118;Varejo;CLI-022;Chi Distribuidora;PROD-027;Azeite Extra Virgem;4;15260;7333;SG-07;Alimentos;VND-007;Ricardo Souza;3;G$;VENDAS
+25/04/2026;PED-00119;Varejo;CLI-010;Kappa Logistica;PROD-005;Smartphone 128GB;2;4180,00;2800,00;SG-01;Eletronicos;VND-003;Carlos Santos;1;R$;VENDAS
+25/04/2026;PED-00119;Varejo;CLI-010;Kappa Logistica;PROD-016;Poltrona Conforto;1;1260,00;720,00;SG-04;Moveis e Decoracao;VND-003;Carlos Santos;1;R$;VENDAS
+26/07/2025;PED-00120;Varejo;CLI-029;Iota Kappa Ltda;PROD-031;Refrigerante 2L;8;141,12;72,00;SG-08;Bebidas;VND-003;Carlos Santos;1;R$;VENDAS
+26/07/2025;PED-00120;Varejo;CLI-029;Iota Kappa Ltda;PROD-022;Sapato Social;6;1920,00;1050,00;SG-06;Calcados;VND-003;Carlos Santos;1;R$;VENDAS
+26/07/2025;PED-00120;Varejo;CLI-029;Iota Kappa Ltda;PROD-007;Tablet 10 pol;4;6840,00;4400,00;SG-01;Eletronicos;VND-003;Carlos Santos;1;R$;VENDAS
+16/09/2025;PED-00121;Varejo;CLI-012;Mu Atacadista;PROD-027;Azeite Extra Virgem;9;77,87;39,60;SG-07;Alimentos;VND-006;Fernanda Lima;2;US$;VENDAS
+18/06/2025;PED-00122;Atacado;CLI-029;Iota Kappa Ltda;PROD-022;Sapato Social;3;1017,60;525,00;SG-06;Calcados;VND-005;Pedro Alves;1;R$;VENDAS
+18/06/2025;PED-00122;Atacado;CLI-029;Iota Kappa Ltda;PROD-004;Mouse Sem Fio;6;792,00;390,00;SG-02;Informatica;VND-005;Pedro Alves;1;R$;VENDAS
+20/04/2026;PED-00123;Atacado;CLI-005;Atacado Epsilon Ltda;PROD-018;Calca Jeans;5;153,60;80,00;SG-05;Vestuario;VND-007;Ricardo Souza;2;US$;VENDAS
+20/04/2026;PED-00123;Atacado;CLI-005;Atacado Epsilon Ltda;PROD-031;Refrigerante 2L;2;7,27;3,60;SG-08;Bebidas;VND-007;Ricardo Souza;2;US$;VENDAS
+24/12/2025;PED-00124;Varejo;CLI-015;Omicron Atacado;PROD-007;Tablet 10 pol;2;3960,00;2200,00;SG-01;Eletronicos;VND-002;Maria Oliveira;1;R$;VENDAS
+24/12/2025;PED-00124;Varejo;CLI-015;Omicron Atacado;PROD-010;Micro-ondas 30L;3;1978,80;1260,00;SG-03;Eletrodomesticos;VND-002;Maria Oliveira;1;R$;VENDAS
+24/12/2025;PED-00124;Varejo;CLI-015;Omicron Atacado;PROD-024;Bota Couro;5;2310,00;1150,00;SG-06;Calcados;VND-002;Maria Oliveira;1;R$;VENDAS
+21/02/2026;PED-00125;Atacado;CLI-027;Epsilon Zeta ME;PROD-017;Camiseta Polo;2;194,02;84,00;SG-05;Vestuario;VND-001;Joao Silva;1;R$;VENDAS
+21/02/2026;PED-00125;Atacado;CLI-027;Epsilon Zeta ME;PROD-005;Smartphone 128GB;3;7260,00;4200,00;SG-01;Eletronicos;VND-001;Joao Silva;1;R$;VENDAS
+04/08/2025;PED-00126;Varejo;CLI-026;Gama Delta SA;PROD-006;Fone Bluetooth;8;3492,00;2080,00;SG-01;Eletronicos;VND-001;Joao Silva;1;R$;VENDAS
+04/08/2025;PED-00126;Varejo;CLI-026;Gama Delta SA;PROD-003;Teclado Mecanico;9;3522,60;1890,00;SG-02;Informatica;VND-001;Joao Silva;1;R$;VENDAS
+11/03/2026;PED-00127;Varejo;CLI-029;Iota Kappa Ltda;PROD-019;Vestido Casual;8;1206,40;544,00;SG-05;Vestuario;VND-007;Ricardo Souza;1;R$;VENDAS
+11/03/2026;PED-00127;Varejo;CLI-029;Iota Kappa Ltda;PROD-017;Camiseta Polo;5;458,35;210,00;SG-05;Vestuario;VND-007;Ricardo Souza;1;R$;VENDAS
+13/02/2026;PED-00128;Varejo;CLI-009;Iota Distribuicoes;PROD-027;Azeite Extra Virgem;4;169,68;88,00;SG-07;Alimentos;VND-001;Joao Silva;1;R$;VENDAS
+13/02/2026;PED-00128;Varejo;CLI-009;Iota Distribuicoes;PROD-023;Sandalia Feminina;8;1382,40;720,00;SG-06;Calcados;VND-001;Joao Silva;1;R$;VENDAS
+20/09/2025;PED-00129;Varejo;CLI-029;Iota Kappa Ltda;PROD-026;Feijao Carioca 1kg;2;23,04;12,00;SG-07;Alimentos;VND-004;Ana Costa;1;R$;VENDAS
+20/09/2025;PED-00129;Varejo;CLI-029;Iota Kappa Ltda;PROD-032;Cerveja Long Neck cx12;4;374,00;168,00;SG-08;Bebidas;VND-004;Ana Costa;1;R$;VENDAS
+20/09/2025;PED-00129;Varejo;CLI-029;Iota Kappa Ltda;PROD-016;Poltrona Conforto;2;2280,00;1440,00;SG-04;Moveis e Decoracao;VND-004;Ana Costa;1;R$;VENDAS
+20/09/2025;PED-00129;Varejo;CLI-029;Iota Kappa Ltda;PROD-022;Sapato Social;6;1881,60;1050,00;SG-06;Calcados;VND-004;Ana Costa;1;R$;VENDAS
+25/04/2026;PED-00130;Varejo;CLI-012;Mu Atacadista;PROD-009;Geladeira Frost Free;8;2660000;1666667;SG-03;Eletrodomesticos;VND-004;Ana Costa;3;G$;VENDAS
+25/04/2026;PED-00130;Varejo;CLI-012;Mu Atacadista;PROD-021;Tenis Esportivo;7;174767;90417;SG-06;Calcados;VND-004;Ana Costa;3;G$;VENDAS
+25/04/2026;PED-00130;Varejo;CLI-012;Mu Atacadista;PROD-016;Poltrona Conforto;6;648000;360000;SG-04;Moveis e Decoracao;VND-004;Ana Costa;3;G$;VENDAS
+25/04/2026;PED-00130;Varejo;CLI-012;Mu Atacadista;PROD-023;Sandalia Feminina;7;100800;52500;SG-06;Calcados;VND-004;Ana Costa;3;G$;VENDAS
+15/10/2025;PED-00131;Atacado;CLI-017;Rho Importacoes;PROD-006;Fone Bluetooth;1;89,10;52,00;SG-01;Eletronicos;VND-001;Joao Silva;2;US$;VENDAS
+15/10/2025;PED-00131;Atacado;CLI-017;Rho Importacoes;PROD-002;Monitor 27 pol;3;705,60;450,00;SG-02;Informatica;VND-001;Joao Silva;2;US$;VENDAS
+15/10/2025;PED-00131;Atacado;CLI-017;Rho Importacoes;PROD-006;Fone Bluetooth;3;283,50;156,00;SG-01;Eletronicos;VND-001;Joao Silva;2;US$;VENDAS
+02/04/2026;PED-00132;Atacado;CLI-018;Sigma Logistica;PROD-022;Sapato Social;6;163200;87500;SG-06;Calcados;VND-003;Carlos Santos;3;G$;VENDAS
+02/04/2026;PED-00132;Atacado;CLI-018;Sigma Logistica;PROD-015;Estante Modular;6;475000;290000;SG-04;Moveis e Decoracao;VND-003;Carlos Santos;3;G$;VENDAS
+14/08/2025;PED-00133;Varejo;CLI-010;Kappa Logistica;PROD-009;Geladeira Frost Free;10;41800,00;25000,00;SG-03;Eletrodomesticos;VND-006;Fernanda Lima;1;R$;VENDAS
+14/08/2025;PED-00133;Varejo;CLI-010;Kappa Logistica;PROD-026;Feijao Carioca 1kg;2;25,20;12,00;SG-07;Alimentos;VND-006;Fernanda Lima;1;R$;VENDAS
+18/03/2026;PED-00134;Varejo;CLI-002;Distribuidora Beta S.A.;PROD-016;Poltrona Conforto;10;1050000;600000;SG-04;Moveis e Decoracao;VND-008;Juliana Mendes;3;G$;VENDAS
+18/03/2026;PED-00134;Varejo;CLI-002;Distribuidora Beta S.A.;PROD-030;Agua Mineral cx24;4;8067;3667;SG-08;Bebidas;VND-008;Juliana Mendes;3;G$;VENDAS
+18/03/2026;PED-00134;Varejo;CLI-002;Distribuidora Beta S.A.;PROD-029;Suco de Laranja 1L;1;1300;583;SG-08;Bebidas;VND-008;Juliana Mendes;3;G$;VENDAS
+06/08/2025;PED-00135;Atacado;CLI-026;Gama Delta SA;PROD-008;Smart TV 50 pol;8;27392,00;16800,00;SG-01;Eletronicos;VND-008;Juliana Mendes;1;R$;VENDAS
+06/08/2025;PED-00135;Atacado;CLI-026;Gama Delta SA;PROD-020;Jaqueta de Couro;3;1705,20;930,00;SG-05;Vestuario;VND-008;Juliana Mendes;1;R$;VENDAS
+06/08/2025;PED-00135;Atacado;CLI-026;Gama Delta SA;PROD-020;Jaqueta de Couro;1;609,00;310,00;SG-05;Vestuario;VND-008;Juliana Mendes;1;R$;VENDAS
+03/01/2026;PED-00136;Varejo;CLI-019;Tau Comercio Ltda;PROD-008;Smart TV 50 pol;1;704,00;420,00;SG-01;Eletronicos;VND-008;Juliana Mendes;2;US$;VENDAS
+03/01/2026;PED-00136;Varejo;CLI-019;Tau Comercio Ltda;PROD-004;Mouse Sem Fio;9;213,84;117,00;SG-02;Informatica;VND-008;Juliana Mendes;2;US$;VENDAS
+10/05/2026;PED-00137;Varejo;CLI-004;Industria Delta SA;PROD-009;Geladeira Frost Free;4;1292000;833333;SG-03;Eletrodomesticos;VND-003;Carlos Santos;3;G$;VENDAS
+10/05/2026;PED-00137;Varejo;CLI-004;Industria Delta SA;PROD-032;Cerveja Long Neck cx12;6;45050;21000;SG-08;Bebidas;VND-003;Carlos Santos;3;G$;VENDAS
+15/01/2026;PED-00138;Atacado;CLI-029;Iota Kappa Ltda;PROD-001;Notebook Pro 15;8;21280,00;15200,00;SG-02;Informatica;VND-001;Joao Silva;1;R$;VENDAS
+15/01/2026;PED-00138;Atacado;CLI-029;Iota Kappa Ltda;PROD-020;Jaqueta de Couro;2;1206,40;620,00;SG-05;Vestuario;VND-001;Joao Silva;1;R$;VENDAS
+15/01/2026;PED-00138;Atacado;CLI-029;Iota Kappa Ltda;PROD-015;Estante Modular;5;4987,50;2900,00;SG-04;Moveis e Decoracao;VND-001;Joao Silva;1;R$;VENDAS
+06/08/2025;PED-00139;Atacado;CLI-007;Grupo Eta Comercio;PROD-023;Sandalia Feminina;8;1540,80;720,00;SG-06;Calcados;VND-001;Joao Silva;1;R$;VENDAS
+06/08/2025;PED-00139;Atacado;CLI-007;Grupo Eta Comercio;PROD-032;Cerveja Long Neck cx12;3;242,25;126,00;SG-08;Bebidas;VND-001;Joao Silva;1;R$;VENDAS
+06/08/2025;PED-00139;Atacado;CLI-007;Grupo Eta Comercio;PROD-024;Bota Couro;4;1764,00;920,00;SG-06;Calcados;VND-001;Joao Silva;1;R$;VENDAS
+15/06/2025;PED-00140;Atacado;CLI-021;Phi Varejo ME;PROD-028;Macarrao Espaguete;6;4040;2000;SG-07;Alimentos;VND-008;Juliana Mendes;3;G$;VENDAS
+15/06/2025;PED-00140;Atacado;CLI-021;Phi Varejo ME;PROD-014;Mesa de Jantar;9;1377000;825000;SG-04;Moveis e Decoracao;VND-008;Juliana Mendes;3;G$;VENDAS
+09/07/2025;PED-00141;Varejo;CLI-005;Atacado Epsilon Ltda;PROD-023;Sandalia Feminina;7;1285,20;630,00;SG-06;Calcados;VND-001;Joao Silva;1;R$;VENDAS
+09/07/2025;PED-00141;Varejo;CLI-005;Atacado Epsilon Ltda;PROD-021;Tenis Esportivo;1;305,20;155,00;SG-06;Calcados;VND-001;Joao Silva;1;R$;VENDAS
+09/04/2026;PED-00142;Atacado;CLI-010;Kappa Logistica;PROD-029;Suco de Laranja 1L;10;31,20;14,00;SG-08;Bebidas;VND-004;Ana Costa;2;US$;VENDAS
+09/04/2026;PED-00142;Atacado;CLI-010;Kappa Logistica;PROD-011;Cafeteira Eletrica;10;537,60;320,00;SG-03;Eletrodomesticos;VND-004;Ana Costa;2;US$;VENDAS
+09/04/2026;PED-00142;Atacado;CLI-010;Kappa Logistica;PROD-025;Arroz Integral 5kg;5;27,16;16,00;SG-07;Alimentos;VND-004;Ana Costa;2;US$;VENDAS
+20/07/2025;PED-00143;Atacado;CLI-019;Tau Comercio Ltda;PROD-022;Sapato Social;4;103467;58333;SG-06;Calcados;VND-003;Carlos Santos;3;G$;VENDAS
+20/07/2025;PED-00143;Atacado;CLI-019;Tau Comercio Ltda;PROD-007;Tablet 10 pol;5;720000;458333;SG-01;Eletronicos;VND-003;Carlos Santos;3;G$;VENDAS
+20/07/2025;PED-00143;Atacado;CLI-019;Tau Comercio Ltda;PROD-018;Calca Jeans;9;130800;60000;SG-05;Vestuario;VND-003;Carlos Santos;3;G$;VENDAS
+20/07/2025;PED-00143;Atacado;CLI-019;Tau Comercio Ltda;PROD-004;Mouse Sem Fio;5;50500;27083;SG-02;Informatica;VND-003;Carlos Santos;3;G$;VENDAS
+25/11/2025;PED-00144;Atacado;CLI-014;Xi Comercio SA;PROD-030;Agua Mineral cx24;10;48,40;22,00;SG-08;Bebidas;VND-001;Joao Silva;2;US$;VENDAS
+25/11/2025;PED-00144;Atacado;CLI-014;Xi Comercio SA;PROD-031;Refrigerante 2L;2;6,91;3,60;SG-08;Bebidas;VND-001;Joao Silva;2;US$;VENDAS
+25/11/2025;PED-00144;Atacado;CLI-014;Xi Comercio SA;PROD-017;Camiseta Polo;4;74,05;33,60;SG-05;Vestuario;VND-001;Joao Silva;2;US$;VENDAS
+25/11/2025;PED-00144;Atacado;CLI-014;Xi Comercio SA;PROD-009;Geladeira Frost Free;10;8132,00;5000,00;SG-03;Eletrodomesticos;VND-001;Joao Silva;2;US$;VENDAS
+18/09/2025;PED-00145;Atacado;CLI-029;Iota Kappa Ltda;PROD-012;Ventilador Torre;6;2035,20;1110,00;SG-03;Eletrodomesticos;VND-006;Fernanda Lima;1;R$;VENDAS
+14/08/2025;PED-00146;Atacado;CLI-003;Comercial Gamma ME;PROD-014;Mesa de Jantar;10;1440000;916667;SG-04;Moveis e Decoracao;VND-005;Pedro Alves;3;G$;VENDAS
+18/06/2025;PED-00147;Varejo;CLI-015;Omicron Atacado;PROD-014;Mesa de Jantar;3;5616,00;3300,00;SG-04;Moveis e Decoracao;VND-008;Juliana Mendes;1;R$;VENDAS
+18/06/2025;PED-00147;Varejo;CLI-015;Omicron Atacado;PROD-017;Camiseta Polo;1;86,33;42,00;SG-05;Vestuario;VND-008;Juliana Mendes;1;R$;VENDAS
+15/06/2025;PED-00148;Atacado;CLI-016;Pi Distribuidora;PROD-021;Tenis Esportivo;7;415,52;217,00;SG-06;Calcados;VND-005;Pedro Alves;2;US$;VENDAS
+15/06/2025;PED-00148;Atacado;CLI-016;Pi Distribuidora;PROD-017;Camiseta Polo;3;54,47;25,20;SG-05;Vestuario;VND-005;Pedro Alves;2;US$;VENDAS
+15/06/2025;PED-00148;Atacado;CLI-016;Pi Distribuidora;PROD-015;Estante Modular;5;978,50;580,00;SG-04;Moveis e Decoracao;VND-005;Pedro Alves;2;US$;VENDAS
+14/01/2026;PED-00149;Varejo;CLI-022;Chi Distribuidora;PROD-002;Monitor 27 pol;2;2424,00;1500,00;SG-02;Informatica;VND-004;Ana Costa;1;R$;VENDAS
+14/01/2026;PED-00149;Varejo;CLI-022;Chi Distribuidora;PROD-021;Tenis Esportivo;4;1220,80;620,00;SG-06;Calcados;VND-004;Ana Costa;1;R$;VENDAS
+14/01/2026;PED-00149;Varejo;CLI-022;Chi Distribuidora;PROD-015;Estante Modular;2;1919,00;1160,00;SG-04;Moveis e Decoracao;VND-004;Ana Costa;1;R$;VENDAS
+14/01/2026;PED-00149;Varejo;CLI-022;Chi Distribuidora;PROD-004;Mouse Sem Fio;7;882,00;455,00;SG-02;Informatica;VND-004;Ana Costa;1;R$;VENDAS
+05/11/2025;PED-00150;Atacado;CLI-010;Kappa Logistica;PROD-013;Sofa 3 Lugares;3;6912,00;4500,00;SG-04;Moveis e Decoracao;VND-004;Ana Costa;1;R$;VENDAS
+05/11/2025;PED-00150;Atacado;CLI-010;Kappa Logistica;PROD-010;Micro-ondas 30L;6;4365,60;2520,00;SG-03;Eletrodomesticos;VND-004;Ana Costa;1;R$;VENDAS
+05/11/2025;PED-00150;Atacado;CLI-010;Kappa Logistica;PROD-032;Cerveja Long Neck cx12;6;530,40;252,00;SG-08;Bebidas;VND-004;Ana Costa;1;R$;VENDAS
+20/09/2025;PED-00151;Atacado;CLI-010;Kappa Logistica;PROD-007;Tablet 10 pol;8;15264,00;8800,00;SG-01;Eletronicos;VND-003;Carlos Santos;1;R$;VENDAS
+20/09/2025;PED-00151;Atacado;CLI-010;Kappa Logistica;PROD-009;Geladeira Frost Free;10;41800,00;25000,00;SG-03;Eletrodomesticos;VND-003;Carlos Santos;1;R$;VENDAS
+20/09/2025;PED-00151;Atacado;CLI-010;Kappa Logistica;PROD-020;Jaqueta de Couro;5;2842,00;1550,00;SG-05;Vestuario;VND-003;Carlos Santos;1;R$;VENDAS
+18/01/2026;PED-00152;Atacado;CLI-023;Psi Suprimentos;PROD-032;Cerveja Long Neck cx12;1;86,70;42,00;SG-08;Bebidas;VND-003;Carlos Santos;1;R$;VENDAS
+19/07/2025;PED-00153;Atacado;CLI-028;Eta Teta Comercio;PROD-026;Feijao Carioca 1kg;4;9,89;4,80;SG-07;Alimentos;VND-002;Maria Oliveira;2;US$;VENDAS
+19/07/2025;PED-00153;Atacado;CLI-028;Eta Teta Comercio;PROD-011;Cafeteira Eletrica;2;109,76;64,00;SG-03;Eletrodomesticos;VND-002;Maria Oliveira;2;US$;VENDAS
+19/07/2025;PED-00153;Atacado;CLI-028;Eta Teta Comercio;PROD-017;Camiseta Polo;9;158,60;75,60;SG-05;Vestuario;VND-002;Maria Oliveira;2;US$;VENDAS
+19/07/2025;PED-00153;Atacado;CLI-028;Eta Teta Comercio;PROD-027;Azeite Extra Virgem;4;34,61;17,60;SG-07;Alimentos;VND-002;Maria Oliveira;2;US$;VENDAS
+01/11/2025;PED-00154;Atacado;CLI-020;Upsilon Atacado;PROD-030;Agua Mineral cx24;1;20,90;11,00;SG-08;Bebidas;VND-005;Pedro Alves;1;R$;VENDAS
+01/11/2025;PED-00154;Atacado;CLI-020;Upsilon Atacado;PROD-005;Smartphone 128GB;9;20592,00;12600,00;SG-01;Eletronicos;VND-005;Pedro Alves;1;R$;VENDAS
+01/11/2025;PED-00154;Atacado;CLI-020;Upsilon Atacado;PROD-009;Geladeira Frost Free;1;3914,00;2500,00;SG-03;Eletrodomesticos;VND-005;Pedro Alves;1;R$;VENDAS
+01/11/2025;PED-00155;Varejo;CLI-011;Lambda Suprimentos;PROD-006;Fone Bluetooth;3;1471,50;780,00;SG-01;Eletronicos;VND-003;Carlos Santos;1;R$;VENDAS
+26/09/2025;PED-00156;Varejo;CLI-004;Industria Delta SA;PROD-029;Suco de Laranja 1L;6;85,50;42,00;SG-08;Bebidas;VND-002;Maria Oliveira;1;R$;VENDAS
+26/09/2025;PED-00156;Varejo;CLI-004;Industria Delta SA;PROD-021;Tenis Esportivo;6;1831,20;930,00;SG-06;Calcados;VND-002;Maria Oliveira;1;R$;VENDAS
+26/09/2025;PED-00156;Varejo;CLI-004;Industria Delta SA;PROD-005;Smartphone 128GB;8;17072,00;11200,00;SG-01;Eletronicos;VND-002;Maria Oliveira;1;R$;VENDAS
+26/09/2025;PED-00156;Varejo;CLI-004;Industria Delta SA;PROD-031;Refrigerante 2L;8;152,64;72,00;SG-08;Bebidas;VND-002;Maria Oliveira;1;R$;VENDAS
+19/12/2025;PED-00157;Atacado;CLI-029;Iota Kappa Ltda;PROD-004;Mouse Sem Fio;1;124,80;65,00;SG-02;Informatica;VND-004;Ana Costa;1;R$;VENDAS
+19/12/2025;PED-00157;Atacado;CLI-029;Iota Kappa Ltda;PROD-011;Cafeteira Eletrica;3;873,60;480,00;SG-03;Eletrodomesticos;VND-004;Ana Costa;1;R$;VENDAS
+03/12/2025;PED-00158;Atacado;CLI-027;Epsilon Zeta ME;PROD-009;Geladeira Frost Free;4;16264,00;10000,00;SG-03;Eletrodomesticos;VND-003;Carlos Santos;1;R$;VENDAS
+17/01/2026;PED-00159;Atacado;CLI-014;Xi Comercio SA;PROD-007;Tablet 10 pol;7;13104,00;7700,00;SG-01;Eletronicos;VND-008;Juliana Mendes;1;R$;VENDAS
+01/12/2025;PED-00160;Varejo;CLI-007;Grupo Eta Comercio;PROD-019;Vestido Casual;10;1595,00;680,00;SG-05;Vestuario;VND-007;Ricardo Souza;1;R$;VENDAS
+03/02/2026;PED-00161;Atacado;CLI-017;Rho Importacoes;PROD-018;Calca Jeans;6;940,80;480,00;SG-05;Vestuario;VND-004;Ana Costa;1;R$;VENDAS
+03/02/2026;PED-00161;Atacado;CLI-017;Rho Importacoes;PROD-024;Bota Couro;6;2721,60;1380,00;SG-06;Calcados;VND-004;Ana Costa;1;R$;VENDAS
+17/07/2025;PED-00162;Varejo;CLI-020;Upsilon Atacado;PROD-018;Calca Jeans;10;1696,00;800,00;SG-05;Vestuario;VND-008;Juliana Mendes;1;R$;VENDAS
+15/02/2026;PED-00163;Varejo;CLI-003;Comercial Gamma ME;PROD-006;Fone Bluetooth;8;3852,00;2080,00;SG-01;Eletronicos;VND-006;Fernanda Lima;1;R$;VENDAS
+15/02/2026;PED-00163;Varejo;CLI-003;Comercial Gamma ME;PROD-027;Azeite Extra Virgem;8;362,88;176,00;SG-07;Alimentos;VND-006;Fernanda Lima;1;R$;VENDAS
+02/07/2025;PED-00164;Atacado;CLI-001;Empresa Alpha Ltda;PROD-019;Vestido Casual;10;307,40;136,00;SG-05;Vestuario;VND-001;Joao Silva;2;US$;VENDAS
+02/07/2025;PED-00164;Atacado;CLI-001;Empresa Alpha Ltda;PROD-014;Mesa de Jantar;8;2822,40;1760,00;SG-04;Moveis e Decoracao;VND-001;Joao Silva;2;US$;VENDAS
+02/07/2025;PED-00164;Atacado;CLI-001;Empresa Alpha Ltda;PROD-022;Sapato Social;1;65,28;35,00;SG-06;Calcados;VND-001;Joao Silva;2;US$;VENDAS
+02/07/2025;PED-00164;Atacado;CLI-001;Empresa Alpha Ltda;PROD-021;Tenis Esportivo;9;488,88;279,00;SG-06;Calcados;VND-001;Joao Silva;2;US$;VENDAS
+25/03/2026;PED-00165;Atacado;CLI-021;Phi Varejo ME;PROD-020;Jaqueta de Couro;9;426300;232500;SG-05;Vestuario;VND-004;Ana Costa;3;G$;VENDAS
+25/03/2026;PED-00165;Atacado;CLI-021;Phi Varejo ME;PROD-026;Feijao Carioca 1kg;1;950;500;SG-07;Alimentos;VND-004;Ana Costa;3;G$;VENDAS
+25/03/2026;PED-00165;Atacado;CLI-021;Phi Varejo ME;PROD-018;Calca Jeans;10;141333;66667;SG-05;Vestuario;VND-004;Ana Costa;3;G$;VENDAS
+25/03/2026;PED-00165;Atacado;CLI-021;Phi Varejo ME;PROD-005;Smartphone 128GB;4;740667;466667;SG-01;Eletronicos;VND-004;Ana Costa;3;G$;VENDAS
+29/10/2025;PED-00166;Varejo;CLI-025;Alpha Beta Ltda;PROD-008;Smart TV 50 pol;9;5472,00;3780,00;SG-01;Eletronicos;VND-001;Joao Silva;2;US$;VENDAS
+29/10/2025;PED-00166;Varejo;CLI-025;Alpha Beta Ltda;PROD-005;Smartphone 128GB;9;3880,80;2520,00;SG-01;Eletronicos;VND-001;Joao Silva;2;US$;VENDAS
+29/10/2025;PED-00166;Varejo;CLI-025;Alpha Beta Ltda;PROD-001;Notebook Pro 15;1;565,60;380,00;SG-02;Informatica;VND-001;Joao Silva;2;US$;VENDAS
+29/10/2025;PED-00166;Varejo;CLI-025;Alpha Beta Ltda;PROD-024;Bota Couro;6;529,20;276,00;SG-06;Calcados;VND-001;Joao Silva;2;US$;VENDAS
+17/02/2026;PED-00167;Atacado;CLI-020;Upsilon Atacado;PROD-025;Arroz Integral 5kg;7;40,38;22,40;SG-07;Alimentos;VND-002;Maria Oliveira;2;US$;VENDAS
+17/02/2026;PED-00167;Atacado;CLI-020;Upsilon Atacado;PROD-019;Vestido Casual;2;62,64;27,20;SG-05;Vestuario;VND-002;Maria Oliveira;2;US$;VENDAS
+17/02/2026;PED-00167;Atacado;CLI-020;Upsilon Atacado;PROD-022;Sapato Social;2;122,88;70,00;SG-06;Calcados;VND-002;Maria Oliveira;2;US$;VENDAS
+19/12/2025;PED-00168;Varejo;CLI-001;Empresa Alpha Ltda;PROD-022;Sapato Social;5;1648,00;875,00;SG-06;Calcados;VND-006;Fernanda Lima;1;R$;VENDAS
+19/12/2025;PED-00168;Varejo;CLI-001;Empresa Alpha Ltda;PROD-022;Sapato Social;2;652,80;350,00;SG-06;Calcados;VND-006;Fernanda Lima;1;R$;VENDAS
+19/12/2025;PED-00168;Varejo;CLI-001;Empresa Alpha Ltda;PROD-011;Cafeteira Eletrica;7;1862,00;1120,00;SG-03;Eletrodomesticos;VND-006;Fernanda Lima;1;R$;VENDAS
+04/07/2025;PED-00169;Varejo;CLI-006;Varejo Zeta ME;PROD-022;Sapato Social;2;135,68;70,00;SG-06;Calcados;VND-003;Carlos Santos;2;US$;VENDAS
+05/01/2026;PED-00170;Atacado;CLI-029;Iota Kappa Ltda;PROD-017;Camiseta Polo;7;604,31;294,00;SG-05;Vestuario;VND-002;Maria Oliveira;1;R$;VENDAS
+05/01/2026;PED-00170;Atacado;CLI-029;Iota Kappa Ltda;PROD-010;Micro-ondas 30L;7;4902,80;2940,00;SG-03;Eletrodomesticos;VND-002;Maria Oliveira;1;R$;VENDAS
+05/01/2026;PED-00170;Atacado;CLI-029;Iota Kappa Ltda;PROD-021;Tenis Esportivo;3;831,60;465,00;SG-06;Calcados;VND-002;Maria Oliveira;1;R$;VENDAS
+07/09/2025;PED-00171;Atacado;CLI-012;Mu Atacadista;PROD-022;Sapato Social;8;202667;116667;SG-06;Calcados;VND-005;Pedro Alves;3;G$;VENDAS
+07/09/2025;PED-00171;Atacado;CLI-012;Mu Atacadista;PROD-025;Arroz Integral 5kg;8;19973;10667;SG-07;Alimentos;VND-005;Pedro Alves;3;G$;VENDAS
+07/09/2025;PED-00171;Atacado;CLI-012;Mu Atacadista;PROD-024;Bota Couro;4;135800;76667;SG-06;Calcados;VND-005;Pedro Alves;3;G$;VENDAS
+07/10/2025;PED-00172;Atacado;CLI-017;Rho Importacoes;PROD-028;Macarrao Espaguete;4;31,04;16,00;SG-07;Alimentos;VND-001;Joao Silva;1;R$;VENDAS
+07/10/2025;PED-00172;Atacado;CLI-017;Rho Importacoes;PROD-031;Refrigerante 2L;10;180,00;90,00;SG-08;Bebidas;VND-001;Joao Silva;1;R$;VENDAS
+07/10/2025;PED-00172;Atacado;CLI-017;Rho Importacoes;PROD-026;Feijao Carioca 1kg;9;111,24;54,00;SG-07;Alimentos;VND-001;Joao Silva;1;R$;VENDAS
+19/06/2025;PED-00173;Varejo;CLI-015;Omicron Atacado;PROD-004;Mouse Sem Fio;10;1164,00;650,00;SG-02;Informatica;VND-003;Carlos Santos;1;R$;VENDAS
+24/11/2025;PED-00174;Atacado;CLI-025;Alpha Beta Ltda;PROD-022;Sapato Social;4;115200;58333;SG-06;Calcados;VND-004;Ana Costa;3;G$;VENDAS
+24/11/2025;PED-00174;Atacado;CLI-025;Alpha Beta Ltda;PROD-002;Monitor 27 pol;9;927000;562500;SG-02;Informatica;VND-004;Ana Costa;3;G$;VENDAS
+19/12/2025;PED-00175;Varejo;CLI-014;Xi Comercio SA;PROD-005;Smartphone 128GB;1;2398,00;1400,00;SG-01;Eletronicos;VND-003;Carlos Santos;1;R$;VENDAS
+19/12/2025;PED-00175;Varejo;CLI-014;Xi Comercio SA;PROD-017;Camiseta Polo;3;288,36;126,00;SG-05;Vestuario;VND-003;Carlos Santos;1;R$;VENDAS
+03/02/2026;PED-00176;Varejo;CLI-007;Grupo Eta Comercio;PROD-023;Sandalia Feminina;5;174,60;90,00;SG-06;Calcados;VND-005;Pedro Alves;2;US$;VENDAS
+04/12/2025;PED-00177;Varejo;CLI-024;Omega Comercio;PROD-026;Feijao Carioca 1kg;3;36,00;18,00;SG-07;Alimentos;VND-001;Joao Silva;1;R$;VENDAS
+04/12/2025;PED-00177;Varejo;CLI-024;Omega Comercio;PROD-009;Geladeira Frost Free;2;8056,00;5000,00;SG-03;Eletrodomesticos;VND-001;Joao Silva;1;R$;VENDAS
+04/12/2025;PED-00177;Varejo;CLI-024;Omega Comercio;PROD-022;Sapato Social;3;912,00;525,00;SG-06;Calcados;VND-001;Joao Silva;1;R$;VENDAS
+04/12/2025;PED-00177;Varejo;CLI-024;Omega Comercio;PROD-006;Fone Bluetooth;8;3600,00;2080,00;SG-01;Eletronicos;VND-001;Joao Silva;1;R$;VENDAS
+08/02/2026;PED-00178;Atacado;CLI-006;Varejo Zeta ME;PROD-028;Macarrao Espaguete;4;6,72;3,20;SG-07;Alimentos;VND-005;Pedro Alves;2;US$;VENDAS
+19/09/2025;PED-00179;Varejo;CLI-013;Nu Varejo Ltda;PROD-003;Teclado Mecanico;5;1843,00;1050,00;SG-02;Informatica;VND-004;Ana Costa;1;R$;VENDAS
+19/09/2025;PED-00179;Varejo;CLI-013;Nu Varejo Ltda;PROD-013;Sofa 3 Lugares;10;23760,00;15000,00;SG-04;Moveis e Decoracao;VND-004;Ana Costa;1;R$;VENDAS
+19/09/2025;PED-00179;Varejo;CLI-013;Nu Varejo Ltda;PROD-015;Estante Modular;8;8132,00;4640,00;SG-04;Moveis e Decoracao;VND-004;Ana Costa;1;R$;VENDAS
+13/12/2025;PED-00180;Varejo;CLI-008;Theta Importacoes;PROD-016;Poltrona Conforto;10;11760,00;7200,00;SG-04;Moveis e Decoracao;VND-003;Carlos Santos;1;R$;VENDAS
+13/09/2025;PED-00181;Varejo;CLI-020;Upsilon Atacado;PROD-017;Camiseta Polo;1;90,78;42,00;SG-05;Vestuario;VND-003;Carlos Santos;1;R$;VENDAS
+13/09/2025;PED-00181;Varejo;CLI-020;Upsilon Atacado;PROD-021;Tenis Esportivo;7;1940,40;1085,00;SG-06;Calcados;VND-003;Carlos Santos;1;R$;VENDAS
+13/09/2025;PED-00181;Varejo;CLI-020;Upsilon Atacado;PROD-020;Jaqueta de Couro;10;5626,00;3100,00;SG-05;Vestuario;VND-003;Carlos Santos;1;R$;VENDAS
+13/09/2025;PED-00181;Varejo;CLI-020;Upsilon Atacado;PROD-023;Sandalia Feminina;8;1526,40;720,00;SG-06;Calcados;VND-003;Carlos Santos;1;R$;VENDAS
+20/02/2026;PED-00182;Varejo;CLI-023;Psi Suprimentos;PROD-005;Smartphone 128GB;9;19800,00;12600,00;SG-01;Eletronicos;VND-003;Carlos Santos;1;R$;VENDAS
+20/02/2026;PED-00182;Varejo;CLI-023;Psi Suprimentos;PROD-013;Sofa 3 Lugares;10;23280,00;15000,00;SG-04;Moveis e Decoracao;VND-003;Carlos Santos;1;R$;VENDAS
+20/02/2026;PED-00182;Varejo;CLI-023;Psi Suprimentos;PROD-023;Sandalia Feminina;9;1782,00;810,00;SG-06;Calcados;VND-003;Carlos Santos;1;R$;VENDAS
+13/10/2025;PED-00183;Atacado;CLI-007;Grupo Eta Comercio;PROD-018;Calca Jeans;10;1680,00;800,00;SG-05;Vestuario;VND-006;Fernanda Lima;1;R$;VENDAS
+13/10/2025;PED-00183;Atacado;CLI-007;Grupo Eta Comercio;PROD-029;Suco de Laranja 1L;3;42,75;21,00;SG-08;Bebidas;VND-006;Fernanda Lima;1;R$;VENDAS
+13/10/2025;PED-00183;Atacado;CLI-007;Grupo Eta Comercio;PROD-009;Geladeira Frost Free;10;38000,00;25000,00;SG-03;Eletrodomesticos;VND-006;Fernanda Lima;1;R$;VENDAS
+08/03/2026;PED-00184;Atacado;CLI-023;Psi Suprimentos;PROD-026;Feijao Carioca 1kg;7;6860;3500;SG-07;Alimentos;VND-006;Fernanda Lima;3;G$;VENDAS
+08/03/2026;PED-00184;Atacado;CLI-023;Psi Suprimentos;PROD-025;Arroz Integral 5kg;2;4667;2667;SG-07;Alimentos;VND-006;Fernanda Lima;3;G$;VENDAS
+08/03/2026;PED-00184;Atacado;CLI-023;Psi Suprimentos;PROD-027;Azeite Extra Virgem;9;34335;16500;SG-07;Alimentos;VND-006;Fernanda Lima;3;G$;VENDAS
+08/03/2026;PED-00184;Atacado;CLI-023;Psi Suprimentos;PROD-010;Micro-ondas 30L;7;388733;245000;SG-03;Eletrodomesticos;VND-006;Fernanda Lima;3;G$;VENDAS
+04/01/2026;PED-00185;Varejo;CLI-009;Iota Distribuicoes;PROD-011;Cafeteira Eletrica;6;369,60;192,00;SG-03;Eletrodomesticos;VND-005;Pedro Alves;2;US$;VENDAS
+04/02/2026;PED-00186;Varejo;CLI-009;Iota Distribuicoes;PROD-006;Fone Bluetooth;2;76500;43333;SG-01;Eletronicos;VND-006;Fernanda Lima;3;G$;VENDAS
+04/02/2026;PED-00186;Varejo;CLI-009;Iota Distribuicoes;PROD-008;Smart TV 50 pol;3;784000;525000;SG-01;Eletronicos;VND-006;Fernanda Lima;3;G$;VENDAS
+04/02/2026;PED-00186;Varejo;CLI-009;Iota Distribuicoes;PROD-005;Smartphone 128GB;4;792000;466667;SG-01;Eletronicos;VND-006;Fernanda Lima;3;G$;VENDAS
+04/02/2026;PED-00186;Varejo;CLI-009;Iota Distribuicoes;PROD-008;Smart TV 50 pol;1;264000;175000;SG-01;Eletronicos;VND-006;Fernanda Lima;3;G$;VENDAS
+31/08/2025;PED-00187;Varejo;CLI-026;Gama Delta SA;PROD-028;Macarrao Espaguete;10;80,00;40,00;SG-07;Alimentos;VND-003;Carlos Santos;1;R$;VENDAS
+17/06/2025;PED-00188;Varejo;CLI-016;Pi Distribuidora;PROD-032;Cerveja Long Neck cx12;9;146,88;75,60;SG-08;Bebidas;VND-005;Pedro Alves;2;US$;VENDAS
+17/06/2025;PED-00188;Varejo;CLI-016;Pi Distribuidora;PROD-028;Macarrao Espaguete;10;16,00;8,00;SG-07;Alimentos;VND-005;Pedro Alves;2;US$;VENDAS
+17/06/2025;PED-00188;Varejo;CLI-016;Pi Distribuidora;PROD-025;Arroz Integral 5kg;2;11,42;6,40;SG-07;Alimentos;VND-005;Pedro Alves;2;US$;VENDAS
+17/06/2025;PED-00188;Varejo;CLI-016;Pi Distribuidora;PROD-017;Camiseta Polo;3;52,33;25,20;SG-05;Vestuario;VND-005;Pedro Alves;2;US$;VENDAS
+10/05/2026;PED-00189;Atacado;CLI-011;Lambda Suprimentos;PROD-030;Agua Mineral cx24;3;5665;2750;SG-08;Bebidas;VND-006;Fernanda Lima;3;G$;VENDAS
+10/05/2026;PED-00189;Atacado;CLI-011;Lambda Suprimentos;PROD-010;Micro-ondas 30L;2;120133;70000;SG-03;Eletrodomesticos;VND-006;Fernanda Lima;3;G$;VENDAS
+10/05/2026;PED-00189;Atacado;CLI-011;Lambda Suprimentos;PROD-023;Sandalia Feminina;5;76500;37500;SG-06;Calcados;VND-006;Fernanda Lima;3;G$;VENDAS
+10/05/2026;PED-00189;Atacado;CLI-011;Lambda Suprimentos;PROD-032;Cerveja Long Neck cx12;5;34354;17500;SG-08;Bebidas;VND-006;Fernanda Lima;3;G$;VENDAS
+18/11/2025;PED-00190;Atacado;CLI-016;Pi Distribuidora;PROD-003;Teclado Mecanico;8;245733;140000;SG-02;Informatica;VND-001;Joao Silva;3;G$;VENDAS
+18/12/2025;PED-00191;Atacado;CLI-027;Epsilon Zeta ME;PROD-014;Mesa de Jantar;1;367,20;220,00;SG-04;Moveis e Decoracao;VND-008;Juliana Mendes;2;US$;VENDAS
+22/12/2025;PED-00192;Varejo;CLI-028;Eta Teta Comercio;PROD-031;Refrigerante 2L;6;22,25;10,80;SG-08;Bebidas;VND-001;Joao Silva;2;US$;VENDAS
+05/09/2025;PED-00193;Varejo;CLI-023;Psi Suprimentos;PROD-008;Smart TV 50 pol;10;33280,00;21000,00;SG-01;Eletronicos;VND-007;Ricardo Souza;1;R$;VENDAS
+05/09/2025;PED-00193;Varejo;CLI-023;Psi Suprimentos;PROD-004;Mouse Sem Fio;10;1308,00;650,00;SG-02;Informatica;VND-007;Ricardo Souza;1;R$;VENDAS
+05/09/2025;PED-00193;Varejo;CLI-023;Psi Suprimentos;PROD-027;Azeite Extra Virgem;3;134,82;66,00;SG-07;Alimentos;VND-007;Ricardo Souza;1;R$;VENDAS
+16/03/2026;PED-00194;Varejo;CLI-002;Distribuidora Beta S.A.;PROD-007;Tablet 10 pol;3;5616,00;3300,00;SG-01;Eletronicos;VND-007;Ricardo Souza;1;R$;VENDAS
+16/03/2026;PED-00194;Varejo;CLI-002;Distribuidora Beta S.A.;PROD-007;Tablet 10 pol;4;7920,00;4400,00;SG-01;Eletronicos;VND-007;Ricardo Souza;1;R$;VENDAS
+19/02/2026;PED-00195;Varejo;CLI-026;Gama Delta SA;PROD-004;Mouse Sem Fio;5;127,20;65,00;SG-02;Informatica;VND-004;Ana Costa;2;US$;VENDAS
+22/07/2025;PED-00196;Atacado;CLI-028;Eta Teta Comercio;PROD-002;Monitor 27 pol;1;256,80;150,00;SG-02;Informatica;VND-008;Juliana Mendes;2;US$;VENDAS
+22/07/2025;PED-00196;Atacado;CLI-028;Eta Teta Comercio;PROD-012;Ventilador Torre;9;593,28;333,00;SG-03;Eletrodomesticos;VND-008;Juliana Mendes;2;US$;VENDAS
+03/07/2025;PED-00197;Varejo;CLI-021;Phi Varejo ME;PROD-029;Suco de Laranja 1L;9;132,30;63,00;SG-08;Bebidas;VND-005;Pedro Alves;1;R$;VENDAS
+13/09/2025;PED-00198;Atacado;CLI-021;Phi Varejo ME;PROD-006;Fone Bluetooth;4;159000;86667;SG-01;Eletronicos;VND-004;Ana Costa;3;G$;VENDAS
+13/09/2025;PED-00198;Atacado;CLI-021;Phi Varejo ME;PROD-012;Ventilador Torre;6;171200;92500;SG-03;Eletrodomesticos;VND-004;Ana Costa;3;G$;VENDAS
+13/09/2025;PED-00198;Atacado;CLI-021;Phi Varejo ME;PROD-011;Cafeteira Eletrica;5;116667;66667;SG-03;Eletrodomesticos;VND-004;Ana Costa;3;G$;VENDAS
+13/09/2025;PED-00198;Atacado;CLI-021;Phi Varejo ME;PROD-009;Geladeira Frost Free;2;614333;416667;SG-03;Eletrodomesticos;VND-004;Ana Costa;3;G$;VENDAS
+20/04/2026;PED-00199;Varejo;CLI-019;Tau Comercio Ltda;PROD-003;Teclado Mecanico;2;148,96;84,00;SG-02;Informatica;VND-006;Fernanda Lima;2;US$;VENDAS
+20/04/2026;PED-00199;Varejo;CLI-019;Tau Comercio Ltda;PROD-021;Tenis Esportivo;7;411,60;217,00;SG-06;Calcados;VND-006;Fernanda Lima;2;US$;VENDAS
+20/04/2026;PED-00199;Varejo;CLI-019;Tau Comercio Ltda;PROD-018;Calca Jeans;7;230,72;112,00;SG-05;Vestuario;VND-006;Fernanda Lima;2;US$;VENDAS
+23/12/2025;PED-00200;Varejo;CLI-018;Sigma Logistica;PROD-026;Feijao Carioca 1kg;10;132,00;60,00;SG-07;Alimentos;VND-004;Ana Costa;1;R$;VENDAS
+23/12/2025;PED-00200;Varejo;CLI-018;Sigma Logistica;PROD-009;Geladeira Frost Free;1;3952,00;2500,00;SG-03;Eletrodomesticos;VND-004;Ana Costa;1;R$;VENDAS
+23/12/2025;PED-00200;Varejo;CLI-018;Sigma Logistica;PROD-017;Camiseta Polo;5;476,15;210,00;SG-05;Vestuario;VND-004;Ana Costa;1;R$;VENDAS
+23/12/2025;PED-00200;Varejo;CLI-018;Sigma Logistica;PROD-027;Azeite Extra Virgem;8;352,80;176,00;SG-07;Alimentos;VND-004;Ana Costa;1;R$;VENDAS
+15/10/2025;PED-00201;Atacado;CLI-010;Kappa Logistica;PROD-005;Smartphone 128GB;7;3141,60;1960,00;SG-01;Eletronicos;VND-007;Ricardo Souza;2;US$;VENDAS
+10/04/2026;PED-00202;Atacado;CLI-030;Lambda Mu SA;PROD-009;Geladeira Frost Free;10;38380,00;25000,00;SG-03;Eletrodomesticos;VND-002;Maria Oliveira;1;R$;VENDAS
+15/04/2026;PED-00203;Atacado;CLI-008;Theta Importacoes;PROD-003;Teclado Mecanico;9;310650;157500;SG-02;Informatica;VND-001;Joao Silva;3;G$;VENDAS
+19/09/2025;PED-00204;Varejo;CLI-010;Kappa Logistica;PROD-020;Jaqueta de Couro;7;885,08;434,00;SG-05;Vestuario;VND-003;Carlos Santos;2;US$;VENDAS
+19/09/2025;PED-00204;Varejo;CLI-010;Kappa Logistica;PROD-026;Feijao Carioca 1kg;4;10,46;4,80;SG-07;Alimentos;VND-003;Carlos Santos;2;US$;VENDAS
+11/01/2026;PED-00205;Atacado;CLI-008;Theta Importacoes;PROD-031;Refrigerante 2L;6;118,80;54,00;SG-08;Bebidas;VND-004;Ana Costa;1;R$;VENDAS
+11/01/2026;PED-00205;Atacado;CLI-008;Theta Importacoes;PROD-001;Notebook Pro 15;9;26964,00;17100,00;SG-02;Informatica;VND-004;Ana Costa;1;R$;VENDAS
+11/01/2026;PED-00205;Atacado;CLI-008;Theta Importacoes;PROD-007;Tablet 10 pol;7;12600,00;7700,00;SG-01;Eletronicos;VND-004;Ana Costa;1;R$;VENDAS
+11/01/2026;PED-00205;Atacado;CLI-008;Theta Importacoes;PROD-025;Arroz Integral 5kg;6;173,04;96,00;SG-07;Alimentos;VND-004;Ana Costa;1;R$;VENDAS
+16/11/2025;PED-00206;Atacado;CLI-001;Empresa Alpha Ltda;PROD-014;Mesa de Jantar;2;748,80;440,00;SG-04;Moveis e Decoracao;VND-007;Ricardo Souza;2;US$;VENDAS
+16/11/2025;PED-00206;Atacado;CLI-001;Empresa Alpha Ltda;PROD-022;Sapato Social;3;199,68;105,00;SG-06;Calcados;VND-007;Ricardo Souza;2;US$;VENDAS
+16/11/2025;PED-00206;Atacado;CLI-001;Empresa Alpha Ltda;PROD-031;Refrigerante 2L;6;22,25;10,80;SG-08;Bebidas;VND-007;Ricardo Souza;2;US$;VENDAS
+16/11/2025;PED-00206;Atacado;CLI-001;Empresa Alpha Ltda;PROD-031;Refrigerante 2L;1;3,42;1,80;SG-08;Bebidas;VND-007;Ricardo Souza;2;US$;VENDAS
+19/06/2025;PED-00207;Varejo;CLI-021;Phi Varejo ME;PROD-027;Azeite Extra Virgem;6;21630;11000;SG-07;Alimentos;VND-008;Juliana Mendes;3;G$;VENDAS
+19/06/2025;PED-00207;Varejo;CLI-021;Phi Varejo ME;PROD-018;Calca Jeans;6;80800;40000;SG-05;Vestuario;VND-008;Juliana Mendes;3;G$;VENDAS
+19/06/2025;PED-00207;Varejo;CLI-021;Phi Varejo ME;PROD-009;Geladeira Frost Free;8;2685333;1666667;SG-03;Eletrodomesticos;VND-008;Juliana Mendes;3;G$;VENDAS
+20/08/2025;PED-00208;Atacado;CLI-030;Lambda Mu SA;PROD-016;Poltrona Conforto;10;13200,00;7200,00;SG-04;Moveis e Decoracao;VND-003;Carlos Santos;1;R$;VENDAS
+06/08/2025;PED-00209;Varejo;CLI-024;Omega Comercio;PROD-028;Macarrao Espaguete;2;15,84;8,00;SG-07;Alimentos;VND-001;Joao Silva;1;R$;VENDAS
+06/08/2025;PED-00209;Varejo;CLI-024;Omega Comercio;PROD-021;Tenis Esportivo;3;915,60;465,00;SG-06;Calcados;VND-001;Joao Silva;1;R$;VENDAS
+06/08/2025;PED-00209;Varejo;CLI-024;Omega Comercio;PROD-001;Notebook Pro 15;10;29680,00;19000,00;SG-02;Informatica;VND-001;Joao Silva;1;R$;VENDAS
+02/05/2026;PED-00210;Varejo;CLI-026;Gama Delta SA;PROD-007;Tablet 10 pol;8;15120,00;8800,00;SG-01;Eletronicos;VND-001;Joao Silva;1;R$;VENDAS
+02/05/2026;PED-00210;Varejo;CLI-026;Gama Delta SA;PROD-006;Fone Bluetooth;3;1377,00;780,00;SG-01;Eletronicos;VND-001;Joao Silva;1;R$;VENDAS
+02/05/2026;PED-00210;Varejo;CLI-026;Gama Delta SA;PROD-014;Mesa de Jantar;7;13860,00;7700,00;SG-04;Moveis e Decoracao;VND-001;Joao Silva;1;R$;VENDAS
+12/09/2025;PED-00211;Atacado;CLI-005;Atacado Epsilon Ltda;PROD-021;Tenis Esportivo;9;207900;116250;SG-06;Calcados;VND-008;Juliana Mendes;3;G$;VENDAS
+12/09/2025;PED-00211;Atacado;CLI-005;Atacado Epsilon Ltda;PROD-028;Macarrao Espaguete;5;3367;1667;SG-07;Alimentos;VND-008;Juliana Mendes;3;G$;VENDAS
+18/07/2025;PED-00212;Atacado;CLI-019;Tau Comercio Ltda;PROD-022;Sapato Social;9;2764,80;1575,00;SG-06;Calcados;VND-001;Joao Silva;1;R$;VENDAS
+18/07/2025;PED-00212;Atacado;CLI-019;Tau Comercio Ltda;PROD-029;Suco de Laranja 1L;7;112,35;49,00;SG-08;Bebidas;VND-001;Joao Silva;1;R$;VENDAS
+18/07/2025;PED-00212;Atacado;CLI-019;Tau Comercio Ltda;PROD-032;Cerveja Long Neck cx12;9;803,25;378,00;SG-08;Bebidas;VND-001;Joao Silva;1;R$;VENDAS
+18/07/2025;PED-00212;Atacado;CLI-019;Tau Comercio Ltda;PROD-022;Sapato Social;2;627,20;350,00;SG-06;Calcados;VND-001;Joao Silva;1;R$;VENDAS
+21/10/2025;PED-00213;Varejo;CLI-025;Alpha Beta Ltda;PROD-016;Poltrona Conforto;9;972000;540000;SG-04;Moveis e Decoracao;VND-007;Ricardo Souza;3;G$;VENDAS
+21/10/2025;PED-00213;Varejo;CLI-025;Alpha Beta Ltda;PROD-001;Notebook Pro 15;8;2053333;1266667;SG-02;Informatica;VND-007;Ricardo Souza;3;G$;VENDAS
+21/10/2025;PED-00213;Varejo;CLI-025;Alpha Beta Ltda;PROD-006;Fone Bluetooth;6;216000;130000;SG-01;Eletronicos;VND-007;Ricardo Souza;3;G$;VENDAS
+10/02/2026;PED-00214;Atacado;CLI-015;Omicron Atacado;PROD-029;Suco de Laranja 1L;10;32,10;14,00;SG-08;Bebidas;VND-003;Carlos Santos;2;US$;VENDAS
+10/02/2026;PED-00214;Atacado;CLI-015;Omicron Atacado;PROD-006;Fone Bluetooth;8;748,80;416,00;SG-01;Eletronicos;VND-003;Carlos Santos;2;US$;VENDAS
+10/02/2026;PED-00214;Atacado;CLI-015;Omicron Atacado;PROD-017;Camiseta Polo;4;69,78;33,60;SG-05;Vestuario;VND-003;Carlos Santos;2;US$;VENDAS
+18/09/2025;PED-00215;Atacado;CLI-016;Pi Distribuidora;PROD-014;Mesa de Jantar;10;18360,00;11000,00;SG-04;Moveis e Decoracao;VND-007;Ricardo Souza;1;R$;VENDAS
+18/09/2025;PED-00215;Atacado;CLI-016;Pi Distribuidora;PROD-012;Ventilador Torre;7;2172,80;1295,00;SG-03;Eletrodomesticos;VND-007;Ricardo Souza;1;R$;VENDAS
+18/09/2025;PED-00215;Atacado;CLI-016;Pi Distribuidora;PROD-016;Poltrona Conforto;10;12360,00;7200,00;SG-04;Moveis e Decoracao;VND-007;Ricardo Souza;1;R$;VENDAS
+07/01/2026;PED-00216;Atacado;CLI-004;Industria Delta SA;PROD-010;Micro-ondas 30L;2;1360,00;840,00;SG-03;Eletrodomesticos;VND-003;Carlos Santos;1;R$;VENDAS
+07/01/2026;PED-00216;Atacado;CLI-004;Industria Delta SA;PROD-018;Calca Jeans;6;1017,60;480,00;SG-05;Vestuario;VND-003;Carlos Santos;1;R$;VENDAS
+16/05/2026;PED-00217;Atacado;CLI-016;Pi Distribuidora;PROD-022;Sapato Social;6;1881,60;1050,00;SG-06;Calcados;VND-007;Ricardo Souza;1;R$;VENDAS
+16/05/2026;PED-00217;Atacado;CLI-016;Pi Distribuidora;PROD-008;Smart TV 50 pol;4;14080,00;8400,00;SG-01;Eletronicos;VND-007;Ricardo Souza;1;R$;VENDAS
+16/05/2026;PED-00217;Atacado;CLI-016;Pi Distribuidora;PROD-016;Poltrona Conforto;3;3600,00;2160,00;SG-04;Moveis e Decoracao;VND-007;Ricardo Souza;1;R$;VENDAS
+21/11/2025;PED-00218;Atacado;CLI-028;Eta Teta Comercio;PROD-008;Smart TV 50 pol;1;3328,00;2100,00;SG-01;Eletronicos;VND-008;Juliana Mendes;1;R$;VENDAS
+21/11/2025;PED-00218;Atacado;CLI-028;Eta Teta Comercio;PROD-013;Sofa 3 Lugares;9;22464,00;13500,00;SG-04;Moveis e Decoracao;VND-008;Juliana Mendes;1;R$;VENDAS
+21/11/2025;PED-00218;Atacado;CLI-028;Eta Teta Comercio;PROD-030;Agua Mineral cx24;2;44,44;22,00;SG-08;Bebidas;VND-008;Juliana Mendes;1;R$;VENDAS
+21/11/2025;PED-00218;Atacado;CLI-028;Eta Teta Comercio;PROD-013;Sofa 3 Lugares;8;18432,00;12000,00;SG-04;Moveis e Decoracao;VND-008;Juliana Mendes;1;R$;VENDAS
+17/04/2026;PED-00219;Atacado;CLI-013;Nu Varejo Ltda;PROD-026;Feijao Carioca 1kg;3;38,88;18,00;SG-07;Alimentos;VND-003;Carlos Santos;1;R$;VENDAS
+17/04/2026;PED-00219;Atacado;CLI-013;Nu Varejo Ltda;PROD-005;Smartphone 128GB;8;17952,00;11200,00;SG-01;Eletronicos;VND-003;Carlos Santos;1;R$;VENDAS
+05/10/2025;PED-00220;Atacado;CLI-002;Distribuidora Beta S.A.;PROD-008;Smart TV 50 pol;4;1120000;700000;SG-01;Eletronicos;VND-008;Juliana Mendes;3;G$;VENDAS
+05/10/2025;PED-00220;Atacado;CLI-002;Distribuidora Beta S.A.;PROD-024;Bota Couro;4;138600;76667;SG-06;Calcados;VND-008;Juliana Mendes;3;G$;VENDAS
+20/07/2025;PED-00221;Varejo;CLI-021;Phi Varejo ME;PROD-023;Sandalia Feminina;4;61800;30000;SG-06;Calcados;VND-008;Juliana Mendes;3;G$;VENDAS
+20/07/2025;PED-00221;Varejo;CLI-021;Phi Varejo ME;PROD-015;Estante Modular;6;508250;290000;SG-04;Moveis e Decoracao;VND-008;Juliana Mendes;3;G$;VENDAS
+20/07/2025;PED-00221;Varejo;CLI-021;Phi Varejo ME;PROD-028;Macarrao Espaguete;5;3200;1667;SG-07;Alimentos;VND-008;Juliana Mendes;3;G$;VENDAS
+20/07/2025;PED-00221;Varejo;CLI-021;Phi Varejo ME;PROD-017;Camiseta Polo;7;51398;24500;SG-05;Vestuario;VND-008;Juliana Mendes;3;G$;VENDAS
+03/02/2026;PED-00222;Atacado;CLI-016;Pi Distribuidora;PROD-003;Teclado Mecanico;3;230,28;126,00;SG-02;Informatica;VND-006;Fernanda Lima;2;US$;VENDAS
+06/01/2026;PED-00223;Atacado;CLI-019;Tau Comercio Ltda;PROD-026;Feijao Carioca 1kg;8;98,88;48,00;SG-07;Alimentos;VND-007;Ricardo Souza;1;R$;VENDAS
+06/01/2026;PED-00223;Atacado;CLI-019;Tau Comercio Ltda;PROD-010;Micro-ondas 30L;2;1414,40;840,00;SG-03;Eletrodomesticos;VND-007;Ricardo Souza;1;R$;VENDAS
+06/01/2026;PED-00223;Atacado;CLI-019;Tau Comercio Ltda;PROD-032;Cerveja Long Neck cx12;7;618,80;294,00;SG-08;Bebidas;VND-007;Ricardo Souza;1;R$;VENDAS
+06/01/2026;PED-00223;Atacado;CLI-019;Tau Comercio Ltda;PROD-018;Calca Jeans;4;665,60;320,00;SG-05;Vestuario;VND-007;Ricardo Souza;1;R$;VENDAS
+06/01/2026;PED-00224;Atacado;CLI-015;Omicron Atacado;PROD-021;Tenis Esportivo;4;92400;51667;SG-06;Calcados;VND-007;Ricardo Souza;3;G$;VENDAS
+14/03/2026;PED-00225;Atacado;CLI-014;Xi Comercio SA;PROD-032;Cerveja Long Neck cx12;2;163,20;84,00;SG-08;Bebidas;VND-001;Joao Silva;1;R$;VENDAS
+14/03/2026;PED-00225;Atacado;CLI-014;Xi Comercio SA;PROD-028;Macarrao Espaguete;6;51,36;24,00;SG-07;Alimentos;VND-001;Joao Silva;1;R$;VENDAS
+14/03/2026;PED-00225;Atacado;CLI-014;Xi Comercio SA;PROD-020;Jaqueta de Couro;7;4384,80;2170,00;SG-05;Vestuario;VND-001;Joao Silva;1;R$;VENDAS
+14/03/2026;PED-00225;Atacado;CLI-014;Xi Comercio SA;PROD-029;Suco de Laranja 1L;2;32,10;14,00;SG-08;Bebidas;VND-001;Joao Silva;1;R$;VENDAS
+07/01/2026;PED-00226;Atacado;CLI-012;Mu Atacadista;PROD-020;Jaqueta de Couro;1;551,00;310,00;SG-05;Vestuario;VND-005;Pedro Alves;1;R$;VENDAS
+07/01/2026;PED-00226;Atacado;CLI-012;Mu Atacadista;PROD-005;Smartphone 128GB;8;17776,00;11200,00;SG-01;Eletronicos;VND-005;Pedro Alves;1;R$;VENDAS
+29/04/2026;PED-00227;Atacado;CLI-013;Nu Varejo Ltda;PROD-007;Tablet 10 pol;7;13230,00;7700,00;SG-01;Eletronicos;VND-003;Carlos Santos;1;R$;VENDAS
+29/04/2026;PED-00227;Atacado;CLI-013;Nu Varejo Ltda;PROD-029;Suco de Laranja 1L;2;31,50;14,00;SG-08;Bebidas;VND-003;Carlos Santos;1;R$;VENDAS
+29/04/2026;PED-00227;Atacado;CLI-013;Nu Varejo Ltda;PROD-016;Poltrona Conforto;1;1320,00;720,00;SG-04;Moveis e Decoracao;VND-003;Carlos Santos;1;R$;VENDAS
+29/04/2026;PED-00227;Atacado;CLI-013;Nu Varejo Ltda;PROD-001;Notebook Pro 15;5;14420,00;9500,00;SG-02;Informatica;VND-003;Carlos Santos;1;R$;VENDAS
+09/10/2025;PED-00228;Atacado;CLI-009;Iota Distribuicoes;PROD-021;Tenis Esportivo;9;2671,20;1395,00;SG-06;Calcados;VND-007;Ricardo Souza;1;R$;VENDAS
+09/10/2025;PED-00228;Atacado;CLI-009;Iota Distribuicoes;PROD-013;Sofa 3 Lugares;3;7848,00;4500,00;SG-04;Moveis e Decoracao;VND-007;Ricardo Souza;1;R$;VENDAS
+21/12/2025;PED-00229;Varejo;CLI-010;Kappa Logistica;PROD-003;Teclado Mecanico;1;410,40;210,00;SG-02;Informatica;VND-004;Ana Costa;1;R$;VENDAS
+21/12/2025;PED-00229;Varejo;CLI-010;Kappa Logistica;PROD-017;Camiseta Polo;3;269,67;126,00;SG-05;Vestuario;VND-004;Ana Costa;1;R$;VENDAS
+21/12/2025;PED-00229;Varejo;CLI-010;Kappa Logistica;PROD-030;Agua Mineral cx24;2;46,64;22,00;SG-08;Bebidas;VND-004;Ana Costa;1;R$;VENDAS
+21/12/2025;PED-00229;Varejo;CLI-010;Kappa Logistica;PROD-026;Feijao Carioca 1kg;4;47,52;24,00;SG-07;Alimentos;VND-004;Ana Costa;1;R$;VENDAS
+05/11/2025;PED-00230;Atacado;CLI-008;Theta Importacoes;PROD-009;Geladeira Frost Free;3;978500;625000;SG-03;Eletrodomesticos;VND-001;Joao Silva;3;G$;VENDAS
+05/11/2025;PED-00230;Atacado;CLI-008;Theta Importacoes;PROD-025;Arroz Integral 5kg;5;11317;6667;SG-07;Alimentos;VND-001;Joao Silva;3;G$;VENDAS
+05/11/2025;PED-00230;Atacado;CLI-008;Theta Importacoes;PROD-014;Mesa de Jantar;2;309000;183333;SG-04;Moveis e Decoracao;VND-001;Joao Silva;3;G$;VENDAS
+17/03/2026;PED-00231;Atacado;CLI-002;Distribuidora Beta S.A.;PROD-023;Sandalia Feminina;9;336,96;162,00;SG-06;Calcados;VND-005;Pedro Alves;2;US$;VENDAS
+26/04/2026;PED-00232;Varejo;CLI-006;Varejo Zeta ME;PROD-008;Smart TV 50 pol;9;5529,60;3780,00;SG-01;Eletronicos;VND-002;Maria Oliveira;2;US$;VENDAS
+26/04/2026;PED-00232;Varejo;CLI-006;Varejo Zeta ME;PROD-008;Smart TV 50 pol;6;3763,20;2520,00;SG-01;Eletronicos;VND-002;Maria Oliveira;2;US$;VENDAS
+26/04/2026;PED-00232;Varejo;CLI-006;Varejo Zeta ME;PROD-006;Fone Bluetooth;4;378,00;208,00;SG-01;Eletronicos;VND-002;Maria Oliveira;2;US$;VENDAS
+11/12/2025;PED-00233;Varejo;CLI-014;Xi Comercio SA;PROD-001;Notebook Pro 15;2;5712,00;3800,00;SG-02;Informatica;VND-007;Ricardo Souza;1;R$;VENDAS
+08/01/2026;PED-00234;Varejo;CLI-009;Iota Distribuicoes;PROD-001;Notebook Pro 15;10;30800,00;19000,00;SG-02;Informatica;VND-003;Carlos Santos;1;R$;VENDAS
+08/01/2026;PED-00234;Varejo;CLI-009;Iota Distribuicoes;PROD-027;Azeite Extra Virgem;10;420,00;220,00;SG-07;Alimentos;VND-003;Carlos Santos;1;R$;VENDAS
+08/01/2026;PED-00234;Varejo;CLI-009;Iota Distribuicoes;PROD-022;Sapato Social;4;1216,00;700,00;SG-06;Calcados;VND-003;Carlos Santos;1;R$;VENDAS
+08/01/2026;PED-00234;Varejo;CLI-009;Iota Distribuicoes;PROD-012;Ventilador Torre;5;1520,00;925,00;SG-03;Eletrodomesticos;VND-003;Carlos Santos;1;R$;VENDAS
+25/03/2026;PED-00235;Varejo;CLI-026;Gama Delta SA;PROD-024;Bota Couro;9;718,20;414,00;SG-06;Calcados;VND-008;Juliana Mendes;2;US$;VENDAS
+25/03/2026;PED-00235;Varejo;CLI-026;Gama Delta SA;PROD-030;Agua Mineral cx24;1;4,36;2,20;SG-08;Bebidas;VND-008;Juliana Mendes;2;US$;VENDAS
+11/09/2025;PED-00236;Atacado;CLI-028;Eta Teta Comercio;PROD-008;Smart TV 50 pol;5;17440,00;10500,00;SG-01;Eletronicos;VND-008;Juliana Mendes;1;R$;VENDAS
+09/10/2025;PED-00237;Varejo;CLI-014;Xi Comercio SA;PROD-019;Vestido Casual;10;1435,50;680,00;SG-05;Vestuario;VND-004;Ana Costa;1;R$;VENDAS
+09/10/2025;PED-00237;Varejo;CLI-014;Xi Comercio SA;PROD-020;Jaqueta de Couro;1;568,40;310,00;SG-05;Vestuario;VND-004;Ana Costa;1;R$;VENDAS
+09/10/2025;PED-00237;Varejo;CLI-014;Xi Comercio SA;PROD-022;Sapato Social;5;1584,00;875,00;SG-06;Calcados;VND-004;Ana Costa;1;R$;VENDAS
+09/10/2025;PED-00237;Varejo;CLI-014;Xi Comercio SA;PROD-030;Agua Mineral cx24;7;161,70;77,00;SG-08;Bebidas;VND-004;Ana Costa;1;R$;VENDAS
+23/07/2025;PED-00238;Atacado;CLI-006;Varejo Zeta ME;PROD-008;Smart TV 50 pol;1;3520,00;2100,00;SG-01;Eletronicos;VND-001;Joao Silva;1;R$;VENDAS
+06/04/2026;PED-00239;Varejo;CLI-007;Grupo Eta Comercio;PROD-026;Feijao Carioca 1kg;1;11,52;6,00;SG-07;Alimentos;VND-001;Joao Silva;1;R$;VENDAS
+06/04/2026;PED-00239;Varejo;CLI-007;Grupo Eta Comercio;PROD-028;Macarrao Espaguete;4;30,72;16,00;SG-07;Alimentos;VND-001;Joao Silva;1;R$;VENDAS
+08/07/2025;PED-00240;Atacado;CLI-018;Sigma Logistica;PROD-016;Poltrona Conforto;7;8568,00;5040,00;SG-04;Moveis e Decoracao;VND-002;Maria Oliveira;1;R$;VENDAS
+28/06/2025;PED-00241;Atacado;CLI-001;Empresa Alpha Ltda;PROD-002;Monitor 27 pol;7;8484,00;5250,00;SG-02;Informatica;VND-002;Maria Oliveira;1;R$;VENDAS
+28/06/2025;PED-00241;Atacado;CLI-001;Empresa Alpha Ltda;PROD-024;Bota Couro;2;856,80;460,00;SG-06;Calcados;VND-002;Maria Oliveira;1;R$;VENDAS
+28/06/2025;PED-00241;Atacado;CLI-001;Empresa Alpha Ltda;PROD-025;Arroz Integral 5kg;10;285,60;160,00;SG-07;Alimentos;VND-002;Maria Oliveira;1;R$;VENDAS
+28/06/2025;PED-00241;Atacado;CLI-001;Empresa Alpha Ltda;PROD-024;Bota Couro;3;1348,20;690,00;SG-06;Calcados;VND-002;Maria Oliveira;1;R$;VENDAS
+29/04/2026;PED-00242;Varejo;CLI-010;Kappa Logistica;PROD-023;Sandalia Feminina;3;529,20;270,00;SG-06;Calcados;VND-008;Juliana Mendes;1;R$;VENDAS
+29/04/2026;PED-00242;Varejo;CLI-010;Kappa Logistica;PROD-002;Monitor 27 pol;4;4992,00;3000,00;SG-02;Informatica;VND-008;Juliana Mendes;1;R$;VENDAS
+29/04/2026;PED-00242;Varejo;CLI-010;Kappa Logistica;PROD-019;Vestido Casual;1;150,80;68,00;SG-05;Vestuario;VND-008;Juliana Mendes;1;R$;VENDAS
+01/05/2026;PED-00243;Atacado;CLI-006;Varejo Zeta ME;PROD-008;Smart TV 50 pol;6;19776,00;12600,00;SG-01;Eletronicos;VND-003;Carlos Santos;1;R$;VENDAS
+01/05/2026;PED-00243;Atacado;CLI-006;Varejo Zeta ME;PROD-017;Camiseta Polo;9;784,98;378,00;SG-05;Vestuario;VND-003;Carlos Santos;1;R$;VENDAS
+01/05/2026;PED-00243;Atacado;CLI-006;Varejo Zeta ME;PROD-018;Calca Jeans;1;156,80;80,00;SG-05;Vestuario;VND-003;Carlos Santos;1;R$;VENDAS
+01/05/2026;PED-00243;Atacado;CLI-006;Varejo Zeta ME;PROD-004;Mouse Sem Fio;9;1090,80;585,00;SG-02;Informatica;VND-003;Carlos Santos;1;R$;VENDAS
+01/08/2025;PED-00244;Varejo;CLI-016;Pi Distribuidora;PROD-016;Poltrona Conforto;5;490000;300000;SG-04;Moveis e Decoracao;VND-001;Joao Silva;3;G$;VENDAS
+01/08/2025;PED-00244;Varejo;CLI-016;Pi Distribuidora;PROD-014;Mesa de Jantar;6;855000;550000;SG-04;Moveis e Decoracao;VND-001;Joao Silva;3;G$;VENDAS
+13/02/2026;PED-00245;Atacado;CLI-021;Phi Varejo ME;PROD-006;Fone Bluetooth;7;273000;151667;SG-01;Eletronicos;VND-005;Pedro Alves;3;G$;VENDAS
+13/02/2026;PED-00245;Atacado;CLI-021;Phi Varejo ME;PROD-021;Tenis Esportivo;5;116667;64583;SG-06;Calcados;VND-005;Pedro Alves;3;G$;VENDAS
+07/10/2025;PED-00246;Atacado;CLI-029;Iota Kappa Ltda;PROD-006;Fone Bluetooth;6;2646,00;1560,00;SG-01;Eletronicos;VND-002;Maria Oliveira;1;R$;VENDAS
+07/10/2025;PED-00246;Atacado;CLI-029;Iota Kappa Ltda;PROD-015;Estante Modular;4;4028,00;2320,00;SG-04;Moveis e Decoracao;VND-002;Maria Oliveira;1;R$;VENDAS
+07/10/2025;PED-00246;Atacado;CLI-029;Iota Kappa Ltda;PROD-027;Azeite Extra Virgem;5;199,50;110,00;SG-07;Alimentos;VND-002;Maria Oliveira;1;R$;VENDAS
+29/07/2025;PED-00247;Atacado;CLI-017;Rho Importacoes;PROD-028;Macarrao Espaguete;1;707;333;SG-07;Alimentos;VND-005;Pedro Alves;3;G$;VENDAS
+29/07/2025;PED-00247;Atacado;CLI-017;Rho Importacoes;PROD-026;Feijao Carioca 1kg;5;5450;2500;SG-07;Alimentos;VND-005;Pedro Alves;3;G$;VENDAS
+29/07/2025;PED-00247;Atacado;CLI-017;Rho Importacoes;PROD-013;Sofa 3 Lugares;8;1680000;1000000;SG-04;Moveis e Decoracao;VND-005;Pedro Alves;3;G$;VENDAS
+29/07/2025;PED-00247;Atacado;CLI-017;Rho Importacoes;PROD-024;Bota Couro;6;218400;115000;SG-06;Calcados;VND-005;Pedro Alves;3;G$;VENDAS
+17/09/2025;PED-00248;Varejo;CLI-002;Distribuidora Beta S.A.;PROD-011;Cafeteira Eletrica;3;75600;40000;SG-03;Eletrodomesticos;VND-004;Ana Costa;3;G$;VENDAS
+17/09/2025;PED-00248;Varejo;CLI-002;Distribuidora Beta S.A.;PROD-022;Sapato Social;3;80000;43750;SG-06;Calcados;VND-004;Ana Costa;3;G$;VENDAS
+17/09/2025;PED-00248;Varejo;CLI-002;Distribuidora Beta S.A.;PROD-023;Sandalia Feminina;10;145500;75000;SG-06;Calcados;VND-004;Ana Costa;3;G$;VENDAS
+26/09/2025;PED-00249;Varejo;CLI-011;Lambda Suprimentos;PROD-004;Mouse Sem Fio;3;69,84;39,00;SG-02;Informatica;VND-007;Ricardo Souza;2;US$;VENDAS
+13/01/2026;PED-00250;Varejo;CLI-014;Xi Comercio SA;PROD-009;Geladeira Frost Free;10;36860,00;25000,00;SG-03;Eletrodomesticos;VND-004;Ana Costa;1;R$;VENDAS
+26/09/2025;PED-00251;Atacado;CLI-029;Iota Kappa Ltda;PROD-025;Arroz Integral 5kg;1;5,38;3,20;SG-07;Alimentos;VND-003;Carlos Santos;2;US$;VENDAS
+26/09/2025;PED-00251;Atacado;CLI-029;Iota Kappa Ltda;PROD-014;Mesa de Jantar;4;1540,80;880,00;SG-04;Moveis e Decoracao;VND-003;Carlos Santos;2;US$;VENDAS
+26/09/2025;PED-00251;Atacado;CLI-029;Iota Kappa Ltda;PROD-007;Tablet 10 pol;6;2181,60;1320,00;SG-01;Eletronicos;VND-003;Carlos Santos;2;US$;VENDAS
+26/09/2025;PED-00251;Atacado;CLI-029;Iota Kappa Ltda;PROD-029;Suco de Laranja 1L;5;15,90;7,00;SG-08;Bebidas;VND-003;Carlos Santos;2;US$;VENDAS
+21/11/2025;PED-00252;Varejo;CLI-012;Mu Atacadista;PROD-003;Teclado Mecanico;1;72,20;42,00;SG-02;Informatica;VND-006;Fernanda Lima;2;US$;VENDAS
+21/11/2025;PED-00252;Varejo;CLI-012;Mu Atacadista;PROD-022;Sapato Social;2;129,28;70,00;SG-06;Calcados;VND-006;Fernanda Lima;2;US$;VENDAS
+04/11/2025;PED-00253;Atacado;CLI-030;Lambda Mu SA;PROD-025;Arroz Integral 5kg;1;2450;1333;SG-07;Alimentos;VND-001;Joao Silva;3;G$;VENDAS
+04/11/2025;PED-00253;Atacado;CLI-030;Lambda Mu SA;PROD-007;Tablet 10 pol;7;1060500;641667;SG-01;Eletronicos;VND-001;Joao Silva;3;G$;VENDAS
+04/11/2025;PED-00253;Atacado;CLI-030;Lambda Mu SA;PROD-031;Refrigerante 2L;3;4500;2250;SG-08;Bebidas;VND-001;Joao Silva;3;G$;VENDAS
+01/08/2025;PED-00254;Atacado;CLI-016;Pi Distribuidora;PROD-027;Azeite Extra Virgem;3;120,96;66,00;SG-07;Alimentos;VND-004;Ana Costa;1;R$;VENDAS
+01/08/2025;PED-00254;Atacado;CLI-016;Pi Distribuidora;PROD-007;Tablet 10 pol;2;3780,00;2200,00;SG-01;Eletronicos;VND-004;Ana Costa;1;R$;VENDAS
+01/08/2025;PED-00254;Atacado;CLI-016;Pi Distribuidora;PROD-003;Teclado Mecanico;9;3249,00;1890,00;SG-02;Informatica;VND-004;Ana Costa;1;R$;VENDAS
+01/08/2025;PED-00254;Atacado;CLI-016;Pi Distribuidora;PROD-021;Tenis Esportivo;4;1120,00;620,00;SG-06;Calcados;VND-004;Ana Costa;1;R$;VENDAS
+13/06/2025;PED-00255;Varejo;CLI-008;Theta Importacoes;PROD-017;Camiseta Polo;6;555,36;252,00;SG-05;Vestuario;VND-003;Carlos Santos;1;R$;VENDAS
+13/06/2025;PED-00255;Varejo;CLI-008;Theta Importacoes;PROD-006;Fone Bluetooth;9;4333,50;2340,00;SG-01;Eletronicos;VND-003;Carlos Santos;1;R$;VENDAS
+13/06/2025;PED-00255;Varejo;CLI-008;Theta Importacoes;PROD-032;Cerveja Long Neck cx12;3;255,00;126,00;SG-08;Bebidas;VND-003;Carlos Santos;1;R$;VENDAS
+30/10/2025;PED-00256;Varejo;CLI-009;Iota Distribuicoes;PROD-030;Agua Mineral cx24;7;152,46;77,00;SG-08;Bebidas;VND-005;Pedro Alves;1;R$;VENDAS
+30/10/2025;PED-00256;Varejo;CLI-009;Iota Distribuicoes;PROD-013;Sofa 3 Lugares;9;23760,00;13500,00;SG-04;Moveis e Decoracao;VND-005;Pedro Alves;1;R$;VENDAS
+30/10/2025;PED-00256;Varejo;CLI-009;Iota Distribuicoes;PROD-013;Sofa 3 Lugares;4;10560,00;6000,00;SG-04;Moveis e Decoracao;VND-005;Pedro Alves;1;R$;VENDAS
+30/10/2025;PED-00256;Varejo;CLI-009;Iota Distribuicoes;PROD-018;Calca Jeans;2;348,80;160,00;SG-05;Vestuario;VND-005;Pedro Alves;1;R$;VENDAS
+01/12/2025;PED-00257;Atacado;CLI-006;Varejo Zeta ME;PROD-019;Vestido Casual;10;1566,00;680,00;SG-05;Vestuario;VND-002;Maria Oliveira;1;R$;VENDAS
+01/12/2025;PED-00257;Atacado;CLI-006;Varejo Zeta ME;PROD-011;Cafeteira Eletrica;8;2128,00;1280,00;SG-03;Eletrodomesticos;VND-002;Maria Oliveira;1;R$;VENDAS
+05/05/2026;PED-00258;Varejo;CLI-026;Gama Delta SA;PROD-008;Smart TV 50 pol;9;2568000;1575000;SG-01;Eletronicos;VND-005;Pedro Alves;3;G$;VENDAS
+05/05/2026;PED-00258;Varejo;CLI-026;Gama Delta SA;PROD-020;Jaqueta de Couro;9;413250;232500;SG-05;Vestuario;VND-005;Pedro Alves;3;G$;VENDAS
+05/05/2026;PED-00258;Varejo;CLI-026;Gama Delta SA;PROD-013;Sofa 3 Lugares;2;428000;250000;SG-04;Moveis e Decoracao;VND-005;Pedro Alves;3;G$;VENDAS
+24/11/2025;PED-00259;Varejo;CLI-024;Omega Comercio;PROD-030;Agua Mineral cx24;6;125,40;66,00;SG-08;Bebidas;VND-008;Juliana Mendes;1;R$;VENDAS
+24/11/2025;PED-00259;Varejo;CLI-024;Omega Comercio;PROD-001;Notebook Pro 15;2;5712,00;3800,00;SG-02;Informatica;VND-008;Juliana Mendes;1;R$;VENDAS
+12/09/2025;PED-00260;Atacado;CLI-025;Alpha Beta Ltda;PROD-027;Azeite Extra Virgem;4;32,93;17,60;SG-07;Alimentos;VND-006;Fernanda Lima;2;US$;VENDAS
+12/09/2025;PED-00260;Atacado;CLI-025;Alpha Beta Ltda;PROD-018;Calca Jeans;10;304,00;160,00;SG-05;Vestuario;VND-006;Fernanda Lima;2;US$;VENDAS
+12/09/2025;PED-00260;Atacado;CLI-025;Alpha Beta Ltda;PROD-002;Monitor 27 pol;10;2640,00;1500,00;SG-02;Informatica;VND-006;Fernanda Lima;2;US$;VENDAS
+12/09/2025;PED-00260;Atacado;CLI-025;Alpha Beta Ltda;PROD-001;Notebook Pro 15;5;3080,00;1900,00;SG-02;Informatica;VND-006;Fernanda Lima;2;US$;VENDAS
+27/08/2025;PED-00261;Varejo;CLI-014;Xi Comercio SA;PROD-016;Poltrona Conforto;9;11340,00;6480,00;SG-04;Moveis e Decoracao;VND-002;Maria Oliveira;1;R$;VENDAS
+27/08/2025;PED-00261;Varejo;CLI-014;Xi Comercio SA;PROD-004;Mouse Sem Fio;6;691,20;390,00;SG-02;Informatica;VND-002;Maria Oliveira;1;R$;VENDAS
+16/05/2026;PED-00262;Atacado;CLI-002;Distribuidora Beta S.A.;PROD-004;Mouse Sem Fio;1;116,40;65,00;SG-02;Informatica;VND-005;Pedro Alves;1;R$;VENDAS
+16/05/2026;PED-00262;Atacado;CLI-002;Distribuidora Beta S.A.;PROD-025;Arroz Integral 5kg;3;89,88;48,00;SG-07;Alimentos;VND-005;Pedro Alves;1;R$;VENDAS
+16/05/2026;PED-00262;Atacado;CLI-002;Distribuidora Beta S.A.;PROD-017;Camiseta Polo;10;890,00;420,00;SG-05;Vestuario;VND-005;Pedro Alves;1;R$;VENDAS
+16/05/2026;PED-00262;Atacado;CLI-002;Distribuidora Beta S.A.;PROD-009;Geladeira Frost Free;4;15808,00;10000,00;SG-03;Eletrodomesticos;VND-005;Pedro Alves;1;R$;VENDAS
+06/10/2025;PED-00263;Varejo;CLI-001;Empresa Alpha Ltda;PROD-003;Teclado Mecanico;9;3693,60;1890,00;SG-02;Informatica;VND-002;Maria Oliveira;1;R$;VENDAS
+06/10/2025;PED-00263;Varejo;CLI-001;Empresa Alpha Ltda;PROD-027;Azeite Extra Virgem;3;131,04;66,00;SG-07;Alimentos;VND-002;Maria Oliveira;1;R$;VENDAS
+06/10/2025;PED-00263;Varejo;CLI-001;Empresa Alpha Ltda;PROD-026;Feijao Carioca 1kg;1;13,08;6,00;SG-07;Alimentos;VND-002;Maria Oliveira;1;R$;VENDAS
+07/01/2026;PED-00264;Atacado;CLI-002;Distribuidora Beta S.A.;PROD-025;Arroz Integral 5kg;10;282,80;160,00;SG-07;Alimentos;VND-008;Juliana Mendes;1;R$;VENDAS
+07/01/2026;PED-00264;Atacado;CLI-002;Distribuidora Beta S.A.;PROD-018;Calca Jeans;4;608,00;320,00;SG-05;Vestuario;VND-008;Juliana Mendes;1;R$;VENDAS
+07/01/2026;PED-00264;Atacado;CLI-002;Distribuidora Beta S.A.;PROD-016;Poltrona Conforto;3;3528,00;2160,00;SG-04;Moveis e Decoracao;VND-008;Juliana Mendes;1;R$;VENDAS
+07/01/2026;PED-00264;Atacado;CLI-002;Distribuidora Beta S.A.;PROD-003;Teclado Mecanico;3;1197,00;630,00;SG-02;Informatica;VND-008;Juliana Mendes;1;R$;VENDAS
+18/10/2025;PED-00265;Atacado;CLI-007;Grupo Eta Comercio;PROD-010;Micro-ondas 30L;4;2910,40;1680,00;SG-03;Eletrodomesticos;VND-006;Fernanda Lima;1;R$;VENDAS
+18/10/2025;PED-00265;Atacado;CLI-007;Grupo Eta Comercio;PROD-002;Monitor 27 pol;6;7272,00;4500,00;SG-02;Informatica;VND-006;Fernanda Lima;1;R$;VENDAS
+18/10/2025;PED-00265;Atacado;CLI-007;Grupo Eta Comercio;PROD-010;Micro-ondas 30L;3;2019,60;1260,00;SG-03;Eletrodomesticos;VND-006;Fernanda Lima;1;R$;VENDAS
+27/04/2026;PED-00266;Varejo;CLI-019;Tau Comercio Ltda;PROD-011;Cafeteira Eletrica;10;3080,00;1600,00;SG-03;Eletrodomesticos;VND-007;Ricardo Souza;1;R$;VENDAS
+27/04/2026;PED-00266;Varejo;CLI-019;Tau Comercio Ltda;PROD-003;Teclado Mecanico;5;1881,00;1050,00;SG-02;Informatica;VND-007;Ricardo Souza;1;R$;VENDAS
+27/04/2026;PED-00266;Varejo;CLI-019;Tau Comercio Ltda;PROD-012;Ventilador Torre;10;3200,00;1850,00;SG-03;Eletrodomesticos;VND-007;Ricardo Souza;1;R$;VENDAS
+14/02/2026;PED-00267;Atacado;CLI-009;Iota Distribuicoes;PROD-021;Tenis Esportivo;6;1629,60;930,00;SG-06;Calcados;VND-004;Ana Costa;1;R$;VENDAS
+14/02/2026;PED-00267;Atacado;CLI-009;Iota Distribuicoes;PROD-024;Bota Couro;3;1323,00;690,00;SG-06;Calcados;VND-004;Ana Costa;1;R$;VENDAS
+14/08/2025;PED-00268;Atacado;CLI-014;Xi Comercio SA;PROD-014;Mesa de Jantar;8;1308000;733333;SG-04;Moveis e Decoracao;VND-004;Ana Costa;3;G$;VENDAS
+14/08/2025;PED-00268;Atacado;CLI-014;Xi Comercio SA;PROD-025;Arroz Integral 5kg;1;2520;1333;SG-07;Alimentos;VND-004;Ana Costa;3;G$;VENDAS
+14/08/2025;PED-00268;Atacado;CLI-014;Xi Comercio SA;PROD-018;Calca Jeans;9;132000;60000;SG-05;Vestuario;VND-004;Ana Costa;3;G$;VENDAS
+12/04/2026;PED-00269;Atacado;CLI-004;Industria Delta SA;PROD-026;Feijao Carioca 1kg;8;98,88;48,00;SG-07;Alimentos;VND-004;Ana Costa;1;R$;VENDAS
+12/04/2026;PED-00269;Atacado;CLI-004;Industria Delta SA;PROD-010;Micro-ondas 30L;3;2040,00;1260,00;SG-03;Eletrodomesticos;VND-004;Ana Costa;1;R$;VENDAS
+12/04/2026;PED-00269;Atacado;CLI-004;Industria Delta SA;PROD-011;Cafeteira Eletrica;7;2097,20;1120,00;SG-03;Eletrodomesticos;VND-004;Ana Costa;1;R$;VENDAS
+12/04/2026;PED-00269;Atacado;CLI-004;Industria Delta SA;PROD-003;Teclado Mecanico;8;3283,20;1680,00;SG-02;Informatica;VND-004;Ana Costa;1;R$;VENDAS
+05/05/2026;PED-00270;Atacado;CLI-015;Omicron Atacado;PROD-001;Notebook Pro 15;10;29120,00;19000,00;SG-02;Informatica;VND-008;Juliana Mendes;1;R$;VENDAS
+05/05/2026;PED-00270;Atacado;CLI-015;Omicron Atacado;PROD-001;Notebook Pro 15;4;11200,00;7600,00;SG-02;Informatica;VND-008;Juliana Mendes;1;R$;VENDAS
+05/05/2026;PED-00270;Atacado;CLI-015;Omicron Atacado;PROD-027;Azeite Extra Virgem;6;257,04;132,00;SG-07;Alimentos;VND-008;Juliana Mendes;1;R$;VENDAS
+05/05/2026;PED-00270;Atacado;CLI-015;Omicron Atacado;PROD-032;Cerveja Long Neck cx12;7;595,00;294,00;SG-08;Bebidas;VND-008;Juliana Mendes;1;R$;VENDAS
+03/01/2026;PED-00271;Atacado;CLI-011;Lambda Suprimentos;PROD-009;Geladeira Frost Free;3;11400,00;7500,00;SG-03;Eletrodomesticos;VND-008;Juliana Mendes;1;R$;VENDAS
+03/01/2026;PED-00271;Atacado;CLI-011;Lambda Suprimentos;PROD-031;Refrigerante 2L;4;73,44;36,00;SG-08;Bebidas;VND-008;Juliana Mendes;1;R$;VENDAS
+11/12/2025;PED-00272;Varejo;CLI-022;Chi Distribuidora;PROD-020;Jaqueta de Couro;6;3723,60;1860,00;SG-05;Vestuario;VND-004;Ana Costa;1;R$;VENDAS
+04/08/2025;PED-00273;Atacado;CLI-012;Mu Atacadista;PROD-015;Estante Modular;1;912,00;580,00;SG-04;Moveis e Decoracao;VND-001;Joao Silva;1;R$;VENDAS
+04/08/2025;PED-00273;Atacado;CLI-012;Mu Atacadista;PROD-031;Refrigerante 2L;5;97,20;45,00;SG-08;Bebidas;VND-001;Joao Silva;1;R$;VENDAS
+08/02/2026;PED-00274;Atacado;CLI-030;Lambda Mu SA;PROD-014;Mesa de Jantar;7;13734,00;7700,00;SG-04;Moveis e Decoracao;VND-002;Maria Oliveira;1;R$;VENDAS
+08/02/2026;PED-00274;Atacado;CLI-030;Lambda Mu SA;PROD-008;Smart TV 50 pol;10;32000,00;21000,00;SG-01;Eletronicos;VND-002;Maria Oliveira;1;R$;VENDAS
+03/04/2026;PED-00275;Atacado;CLI-020;Upsilon Atacado;PROD-021;Tenis Esportivo;10;2884,00;1550,00;SG-06;Calcados;VND-008;Juliana Mendes;1;R$;VENDAS
+03/04/2026;PED-00275;Atacado;CLI-020;Upsilon Atacado;PROD-027;Azeite Extra Virgem;7;294,00;154,00;SG-07;Alimentos;VND-008;Juliana Mendes;1;R$;VENDAS
+03/04/2026;PED-00275;Atacado;CLI-020;Upsilon Atacado;PROD-031;Refrigerante 2L;4;71,28;36,00;SG-08;Bebidas;VND-008;Juliana Mendes;1;R$;VENDAS
+13/08/2025;PED-00276;Atacado;CLI-007;Grupo Eta Comercio;PROD-018;Calca Jeans;8;245,76;128,00;SG-05;Vestuario;VND-007;Ricardo Souza;2;US$;VENDAS
+13/08/2025;PED-00276;Atacado;CLI-007;Grupo Eta Comercio;PROD-021;Tenis Esportivo;7;403,76;217,00;SG-06;Calcados;VND-007;Ricardo Souza;2;US$;VENDAS
+13/08/2025;PED-00276;Atacado;CLI-007;Grupo Eta Comercio;PROD-002;Monitor 27 pol;10;2640,00;1500,00;SG-02;Informatica;VND-007;Ricardo Souza;2;US$;VENDAS
+13/08/2025;PED-00276;Atacado;CLI-007;Grupo Eta Comercio;PROD-032;Cerveja Long Neck cx12;6;96,90;50,40;SG-08;Bebidas;VND-007;Ricardo Souza;2;US$;VENDAS
+06/10/2025;PED-00277;Varejo;CLI-028;Eta Teta Comercio;PROD-017;Camiseta Polo;4;31743;14000;SG-05;Vestuario;VND-004;Ana Costa;3;G$;VENDAS
+06/10/2025;PED-00277;Varejo;CLI-028;Eta Teta Comercio;PROD-027;Azeite Extra Virgem;5;16800;9167;SG-07;Alimentos;VND-004;Ana Costa;3;G$;VENDAS
+06/10/2025;PED-00277;Varejo;CLI-028;Eta Teta Comercio;PROD-019;Vestido Casual;1;11600;5667;SG-05;Vestuario;VND-004;Ana Costa;3;G$;VENDAS
+06/10/2025;PED-00277;Varejo;CLI-028;Eta Teta Comercio;PROD-013;Sofa 3 Lugares;2;396000;250000;SG-04;Moveis e Decoracao;VND-004;Ana Costa;3;G$;VENDAS
+27/06/2025;PED-00278;Varejo;CLI-007;Grupo Eta Comercio;PROD-030;Agua Mineral cx24;1;21,34;11,00;SG-08;Bebidas;VND-008;Juliana Mendes;1;R$;VENDAS
+07/01/2026;PED-00279;Varejo;CLI-010;Kappa Logistica;PROD-023;Sandalia Feminina;1;38,88;18,00;SG-06;Calcados;VND-007;Ricardo Souza;2;US$;VENDAS
+07/01/2026;PED-00279;Varejo;CLI-010;Kappa Logistica;PROD-015;Estante Modular;8;1550,40;928,00;SG-04;Moveis e Decoracao;VND-007;Ricardo Souza;2;US$;VENDAS
+07/01/2026;PED-00279;Varejo;CLI-010;Kappa Logistica;PROD-025;Arroz Integral 5kg;1;5,60;3,20;SG-07;Alimentos;VND-007;Ricardo Souza;2;US$;VENDAS
+01/02/2026;PED-00280;Varejo;CLI-017;Rho Importacoes;PROD-024;Bota Couro;4;1780,80;920,00;SG-06;Calcados;VND-008;Juliana Mendes;1;R$;VENDAS
+01/02/2026;PED-00280;Varejo;CLI-017;Rho Importacoes;PROD-003;Teclado Mecanico;2;836,00;420,00;SG-02;Informatica;VND-008;Juliana Mendes;1;R$;VENDAS
+01/02/2026;PED-00280;Varejo;CLI-017;Rho Importacoes;PROD-005;Smartphone 128GB;6;12936,00;8400,00;SG-01;Eletronicos;VND-008;Juliana Mendes;1;R$;VENDAS
+01/11/2025;PED-00281;Atacado;CLI-010;Kappa Logistica;PROD-027;Azeite Extra Virgem;5;199,50;110,00;SG-07;Alimentos;VND-005;Pedro Alves;1;R$;VENDAS
+27/10/2025;PED-00282;Atacado;CLI-021;Phi Varejo ME;PROD-013;Sofa 3 Lugares;7;17640,00;10500,00;SG-04;Moveis e Decoracao;VND-004;Ana Costa;1;R$;VENDAS
+14/12/2025;PED-00283;Atacado;CLI-015;Omicron Atacado;PROD-026;Feijao Carioca 1kg;8;19,97;9,60;SG-07;Alimentos;VND-007;Ricardo Souza;2;US$;VENDAS
+11/04/2026;PED-00284;Atacado;CLI-014;Xi Comercio SA;PROD-010;Micro-ondas 30L;6;840,48;504,00;SG-03;Eletrodomesticos;VND-001;Joao Silva;2;US$;VENDAS
+05/09/2025;PED-00285;Atacado;CLI-003;Comercial Gamma ME;PROD-032;Cerveja Long Neck cx12;10;76500;35000;SG-08;Bebidas;VND-006;Fernanda Lima;3;G$;VENDAS
+05/09/2025;PED-00285;Atacado;CLI-003;Comercial Gamma ME;PROD-016;Poltrona Conforto;9;864000;540000;SG-04;Moveis e Decoracao;VND-006;Fernanda Lima;3;G$;VENDAS
+05/09/2025;PED-00285;Atacado;CLI-003;Comercial Gamma ME;PROD-008;Smart TV 50 pol;2;517333;350000;SG-01;Eletronicos;VND-006;Fernanda Lima;3;G$;VENDAS
+05/09/2025;PED-00285;Atacado;CLI-003;Comercial Gamma ME;PROD-007;Tablet 10 pol;7;1144500;641667;SG-01;Eletronicos;VND-006;Fernanda Lima;3;G$;VENDAS
+02/03/2026;PED-00286;Atacado;CLI-016;Pi Distribuidora;PROD-003;Teclado Mecanico;4;134267;70000;SG-02;Informatica;VND-004;Ana Costa;3;G$;VENDAS
+14/10/2025;PED-00287;Atacado;CLI-028;Eta Teta Comercio;PROD-030;Agua Mineral cx24;2;41,80;22,00;SG-08;Bebidas;VND-007;Ricardo Souza;1;R$;VENDAS
+14/10/2025;PED-00287;Atacado;CLI-028;Eta Teta Comercio;PROD-026;Feijao Carioca 1kg;9;113,40;54,00;SG-07;Alimentos;VND-007;Ricardo Souza;1;R$;VENDAS
+14/10/2025;PED-00287;Atacado;CLI-028;Eta Teta Comercio;PROD-021;Tenis Esportivo;6;1831,20;930,00;SG-06;Calcados;VND-007;Ricardo Souza;1;R$;VENDAS
+13/02/2026;PED-00288;Varejo;CLI-008;Theta Importacoes;PROD-009;Geladeira Frost Free;9;32832,00;22500,00;SG-03;Eletrodomesticos;VND-004;Ana Costa;1;R$;VENDAS
+17/08/2025;PED-00289;Atacado;CLI-006;Varejo Zeta ME;PROD-019;Vestido Casual;8;1264,40;544,00;SG-05;Vestuario;VND-007;Ricardo Souza;1;R$;VENDAS
+17/08/2025;PED-00289;Atacado;CLI-006;Varejo Zeta ME;PROD-001;Notebook Pro 15;6;18480,00;11400,00;SG-02;Informatica;VND-007;Ricardo Souza;1;R$;VENDAS
+10/04/2026;PED-00290;Atacado;CLI-007;Grupo Eta Comercio;PROD-007;Tablet 10 pol;2;698,40;440,00;SG-01;Eletronicos;VND-008;Juliana Mendes;2;US$;VENDAS
+10/04/2026;PED-00290;Atacado;CLI-007;Grupo Eta Comercio;PROD-016;Poltrona Conforto;9;2181,60;1296,00;SG-04;Moveis e Decoracao;VND-008;Juliana Mendes;2;US$;VENDAS
+10/04/2026;PED-00290;Atacado;CLI-007;Grupo Eta Comercio;PROD-010;Micro-ondas 30L;5;700,40;420,00;SG-03;Eletrodomesticos;VND-008;Juliana Mendes;2;US$;VENDAS
+10/04/2026;PED-00290;Atacado;CLI-007;Grupo Eta Comercio;PROD-001;Notebook Pro 15;4;2240,00;1520,00;SG-02;Informatica;VND-008;Juliana Mendes;2;US$;VENDAS
+21/06/2025;PED-00291;Atacado;CLI-005;Atacado Epsilon Ltda;PROD-015;Estante Modular;4;3952,00;2320,00;SG-04;Moveis e Decoracao;VND-001;Joao Silva;1;R$;VENDAS
+21/06/2025;PED-00291;Atacado;CLI-005;Atacado Epsilon Ltda;PROD-006;Fone Bluetooth;7;3150,00;1820,00;SG-01;Eletronicos;VND-001;Joao Silva;1;R$;VENDAS
+07/12/2025;PED-00292;Atacado;CLI-009;Iota Distribuicoes;PROD-002;Monitor 27 pol;7;8820,00;5250,00;SG-02;Informatica;VND-003;Carlos Santos;1;R$;VENDAS
+11/01/2026;PED-00293;Atacado;CLI-015;Omicron Atacado;PROD-025;Arroz Integral 5kg;3;17,64;9,60;SG-07;Alimentos;VND-006;Fernanda Lima;2;US$;VENDAS
+11/01/2026;PED-00293;Atacado;CLI-015;Omicron Atacado;PROD-006;Fone Bluetooth;1;96,30;52,00;SG-01;Eletronicos;VND-006;Fernanda Lima;2;US$;VENDAS
+11/01/2026;PED-00293;Atacado;CLI-015;Omicron Atacado;PROD-018;Calca Jeans;8;261,12;128,00;SG-05;Vestuario;VND-006;Fernanda Lima;2;US$;VENDAS
+11/01/2026;PED-00293;Atacado;CLI-015;Omicron Atacado;PROD-002;Monitor 27 pol;9;2203,20;1350,00;SG-02;Informatica;VND-006;Fernanda Lima;2;US$;VENDAS
+28/11/2025;PED-00294;Varejo;CLI-012;Mu Atacadista;PROD-030;Agua Mineral cx24;2;3520;1833;SG-08;Bebidas;VND-006;Fernanda Lima;3;G$;VENDAS
+28/11/2025;PED-00294;Varejo;CLI-012;Mu Atacadista;PROD-015;Estante Modular;9;741000;435000;SG-04;Moveis e Decoracao;VND-006;Fernanda Lima;3;G$;VENDAS
+28/11/2025;PED-00294;Varejo;CLI-012;Mu Atacadista;PROD-013;Sofa 3 Lugares;9;1764000;1125000;SG-04;Moveis e Decoracao;VND-006;Fernanda Lima;3;G$;VENDAS
+26/06/2025;PED-00295;Varejo;CLI-030;Lambda Mu SA;PROD-023;Sandalia Feminina;6;207,36;108,00;SG-06;Calcados;VND-008;Juliana Mendes;2;US$;VENDAS
+26/06/2025;PED-00295;Varejo;CLI-030;Lambda Mu SA;PROD-016;Poltrona Conforto;8;2054,40;1152,00;SG-04;Moveis e Decoracao;VND-008;Juliana Mendes;2;US$;VENDAS
+26/06/2025;PED-00295;Varejo;CLI-030;Lambda Mu SA;PROD-014;Mesa de Jantar;8;3110,40;1760,00;SG-04;Moveis e Decoracao;VND-008;Juliana Mendes;2;US$;VENDAS
+26/06/2025;PED-00295;Varejo;CLI-030;Lambda Mu SA;PROD-012;Ventilador Torre;8;512,00;296,00;SG-03;Eletrodomesticos;VND-008;Juliana Mendes;2;US$;VENDAS
+27/03/2026;PED-00296;Atacado;CLI-028;Eta Teta Comercio;PROD-020;Jaqueta de Couro;10;5800,00;3100,00;SG-05;Vestuario;VND-001;Joao Silva;1;R$;VENDAS
+27/03/2026;PED-00296;Atacado;CLI-028;Eta Teta Comercio;PROD-013;Sofa 3 Lugares;4;9504,00;6000,00;SG-04;Moveis e Decoracao;VND-001;Joao Silva;1;R$;VENDAS
+03/05/2026;PED-00297;Varejo;CLI-007;Grupo Eta Comercio;PROD-007;Tablet 10 pol;4;7704,00;4400,00;SG-01;Eletronicos;VND-007;Ricardo Souza;1;R$;VENDAS
+03/05/2026;PED-00297;Varejo;CLI-007;Grupo Eta Comercio;PROD-020;Jaqueta de Couro;7;3897,60;2170,00;SG-05;Vestuario;VND-007;Ricardo Souza;1;R$;VENDAS
+10/06/2025;PED-00298;Atacado;CLI-015;Omicron Atacado;PROD-029;Suco de Laranja 1L;10;150,00;70,00;SG-08;Bebidas;VND-007;Ricardo Souza;1;R$;VENDAS
+08/03/2026;PED-00299;Varejo;CLI-027;Epsilon Zeta ME;PROD-021;Tenis Esportivo;2;599,20;310,00;SG-06;Calcados;VND-007;Ricardo Souza;1;R$;VENDAS
+08/03/2026;PED-00299;Varejo;CLI-027;Epsilon Zeta ME;PROD-020;Jaqueta de Couro;2;1125,20;620,00;SG-05;Vestuario;VND-007;Ricardo Souza;1;R$;VENDAS
+11/12/2025;PED-00300;Atacado;CLI-024;Omega Comercio;PROD-002;Monitor 27 pol;7;7980,00;5250,00;SG-02;Informatica;VND-007;Ricardo Souza;1;R$;VENDAS
+11/12/2025;PED-00300;Atacado;CLI-024;Omega Comercio;PROD-026;Feijao Carioca 1kg;5;60,60;30,00;SG-07;Alimentos;VND-007;Ricardo Souza;1;R$;VENDAS
+11/12/2025;PED-00300;Atacado;CLI-024;Omega Comercio;PROD-020;Jaqueta de Couro;5;2900,00;1550,00;SG-05;Vestuario;VND-007;Ricardo Souza;1;R$;VENDAS
+11/12/2025;PED-00300;Atacado;CLI-024;Omega Comercio;PROD-032;Cerveja Long Neck cx12;9;787,95;378,00;SG-08;Bebidas;VND-007;Ricardo Souza;1;R$;VENDAS
+14/07/2025;PED-00301;Atacado;CLI-006;Varejo Zeta ME;PROD-028;Macarrao Espaguete;1;667;333;SG-07;Alimentos;VND-006;Fernanda Lima;3;G$;VENDAS
+14/07/2025;PED-00301;Atacado;CLI-006;Varejo Zeta ME;PROD-026;Feijao Carioca 1kg;4;3880;2000;SG-07;Alimentos;VND-006;Fernanda Lima;3;G$;VENDAS
+14/07/2025;PED-00301;Atacado;CLI-006;Varejo Zeta ME;PROD-008;Smart TV 50 pol;10;2880000;1750000;SG-01;Eletronicos;VND-006;Fernanda Lima;3;G$;VENDAS
+25/06/2025;PED-00302;Varejo;CLI-023;Psi Suprimentos;PROD-009;Geladeira Frost Free;1;345167;208333;SG-03;Eletrodomesticos;VND-004;Ana Costa;3;G$;VENDAS
+13/12/2025;PED-00303;Varejo;CLI-023;Psi Suprimentos;PROD-028;Macarrao Espaguete;3;5,04;2,40;SG-07;Alimentos;VND-002;Maria Oliveira;2;US$;VENDAS
+13/12/2025;PED-00303;Varejo;CLI-023;Psi Suprimentos;PROD-014;Mesa de Jantar;2;727,20;440,00;SG-04;Moveis e Decoracao;VND-002;Maria Oliveira;2;US$;VENDAS
+28/08/2025;PED-00304;Atacado;CLI-022;Chi Distribuidora;PROD-002;Monitor 27 pol;9;2160,00;1350,00;SG-02;Informatica;VND-002;Maria Oliveira;2;US$;VENDAS
+28/08/2025;PED-00304;Atacado;CLI-022;Chi Distribuidora;PROD-021;Tenis Esportivo;8;479,36;248,00;SG-06;Calcados;VND-002;Maria Oliveira;2;US$;VENDAS
+28/08/2025;PED-00304;Atacado;CLI-022;Chi Distribuidora;PROD-009;Geladeira Frost Free;2;1459,20;1000,00;SG-03;Eletrodomesticos;VND-002;Maria Oliveira;2;US$;VENDAS
+08/10/2025;PED-00305;Varejo;CLI-019;Tau Comercio Ltda;PROD-008;Smart TV 50 pol;6;1616000;1050000;SG-01;Eletronicos;VND-004;Ana Costa;3;G$;VENDAS
+18/12/2025;PED-00306;Atacado;CLI-010;Kappa Logistica;PROD-015;Estante Modular;10;9215,00;5800,00;SG-04;Moveis e Decoracao;VND-003;Carlos Santos;1;R$;VENDAS
+18/12/2025;PED-00306;Atacado;CLI-010;Kappa Logistica;PROD-024;Bota Couro;9;3855,60;2070,00;SG-06;Calcados;VND-003;Carlos Santos;1;R$;VENDAS
+18/12/2025;PED-00306;Atacado;CLI-010;Kappa Logistica;PROD-019;Vestido Casual;9;1396,35;612,00;SG-05;Vestuario;VND-003;Carlos Santos;1;R$;VENDAS
+15/11/2025;PED-00307;Atacado;CLI-008;Theta Importacoes;PROD-004;Mouse Sem Fio;4;42000;21667;SG-02;Informatica;VND-004;Ana Costa;3;G$;VENDAS
+23/07/2025;PED-00308;Atacado;CLI-026;Gama Delta SA;PROD-003;Teclado Mecanico;4;1444,00;840,00;SG-02;Informatica;VND-008;Juliana Mendes;1;R$;VENDAS
+16/10/2025;PED-00309;Varejo;CLI-016;Pi Distribuidora;PROD-009;Geladeira Frost Free;10;40660,00;25000,00;SG-03;Eletrodomesticos;VND-004;Ana Costa;1;R$;VENDAS
+16/10/2025;PED-00309;Varejo;CLI-016;Pi Distribuidora;PROD-002;Monitor 27 pol;3;3528,00;2250,00;SG-02;Informatica;VND-004;Ana Costa;1;R$;VENDAS
+24/07/2025;PED-00310;Varejo;CLI-029;Iota Kappa Ltda;PROD-021;Tenis Esportivo;3;798,00;465,00;SG-06;Calcados;VND-004;Ana Costa;1;R$;VENDAS
+24/07/2025;PED-00310;Varejo;CLI-029;Iota Kappa Ltda;PROD-012;Ventilador Torre;3;1036,80;555,00;SG-03;Eletrodomesticos;VND-004;Ana Costa;1;R$;VENDAS
+10/07/2025;PED-00311;Varejo;CLI-013;Nu Varejo Ltda;PROD-022;Sapato Social;4;1331,20;700,00;SG-06;Calcados;VND-006;Fernanda Lima;1;R$;VENDAS
+01/12/2025;PED-00312;Atacado;CLI-014;Xi Comercio SA;PROD-001;Notebook Pro 15;6;1358000;950000;SG-02;Informatica;VND-006;Fernanda Lima;3;G$;VENDAS
+01/12/2025;PED-00312;Atacado;CLI-014;Xi Comercio SA;PROD-009;Geladeira Frost Free;7;2327500;1458333;SG-03;Eletrodomesticos;VND-006;Fernanda Lima;3;G$;VENDAS
+24/10/2025;PED-00313;Atacado;CLI-013;Nu Varejo Ltda;PROD-014;Mesa de Jantar;2;3672,00;2200,00;SG-04;Moveis e Decoracao;VND-007;Ricardo Souza;1;R$;VENDAS
+24/10/2025;PED-00313;Atacado;CLI-013;Nu Varejo Ltda;PROD-006;Fone Bluetooth;10;4320,00;2600,00;SG-01;Eletronicos;VND-007;Ricardo Souza;1;R$;VENDAS
+24/10/2025;PED-00313;Atacado;CLI-013;Nu Varejo Ltda;PROD-002;Monitor 27 pol;6;7200,00;4500,00;SG-02;Informatica;VND-007;Ricardo Souza;1;R$;VENDAS
+24/10/2025;PED-00313;Atacado;CLI-013;Nu Varejo Ltda;PROD-032;Cerveja Long Neck cx12;7;636,65;294,00;SG-08;Bebidas;VND-007;Ricardo Souza;1;R$;VENDAS
+11/04/2026;PED-00314;Varejo;CLI-011;Lambda Suprimentos;PROD-015;Estante Modular;6;1083,00;696,00;SG-04;Moveis e Decoracao;VND-002;Maria Oliveira;2;US$;VENDAS
+23/11/2025;PED-00315;Varejo;CLI-026;Gama Delta SA;PROD-020;Jaqueta de Couro;10;5742,00;3100,00;SG-05;Vestuario;VND-005;Pedro Alves;1;R$;VENDAS
+23/11/2025;PED-00315;Varejo;CLI-026;Gama Delta SA;PROD-031;Refrigerante 2L;4;70,56;36,00;SG-08;Bebidas;VND-005;Pedro Alves;1;R$;VENDAS
+17/12/2025;PED-00316;Varejo;CLI-028;Eta Teta Comercio;PROD-031;Refrigerante 2L;8;136,80;72,00;SG-08;Bebidas;VND-003;Carlos Santos;1;R$;VENDAS
+17/12/2025;PED-00316;Varejo;CLI-028;Eta Teta Comercio;PROD-015;Estante Modular;8;7828,00;4640,00;SG-04;Moveis e Decoracao;VND-003;Carlos Santos;1;R$;VENDAS
+17/12/2025;PED-00316;Varejo;CLI-028;Eta Teta Comercio;PROD-032;Cerveja Long Neck cx12;10;892,50;420,00;SG-08;Bebidas;VND-003;Carlos Santos;1;R$;VENDAS
+17/12/2025;PED-00316;Varejo;CLI-028;Eta Teta Comercio;PROD-019;Vestido Casual;8;1125,20;544,00;SG-05;Vestuario;VND-003;Carlos Santos;1;R$;VENDAS
+27/07/2025;PED-00317;Varejo;CLI-009;Iota Distribuicoes;PROD-023;Sandalia Feminina;9;1620,00;810,00;SG-06;Calcados;VND-003;Carlos Santos;1;R$;VENDAS
+27/07/2025;PED-00317;Varejo;CLI-009;Iota Distribuicoes;PROD-008;Smart TV 50 pol;4;13440,00;8400,00;SG-01;Eletronicos;VND-003;Carlos Santos;1;R$;VENDAS
+27/07/2025;PED-00317;Varejo;CLI-009;Iota Distribuicoes;PROD-030;Agua Mineral cx24;2;47,96;22,00;SG-08;Bebidas;VND-003;Carlos Santos;1;R$;VENDAS
+27/07/2025;PED-00317;Varejo;CLI-009;Iota Distribuicoes;PROD-028;Macarrao Espaguete;4;31,36;16,00;SG-07;Alimentos;VND-003;Carlos Santos;1;R$;VENDAS
+15/03/2026;PED-00318;Varejo;CLI-010;Kappa Logistica;PROD-023;Sandalia Feminina;9;1749,60;810,00;SG-06;Calcados;VND-004;Ana Costa;1;R$;VENDAS
+15/03/2026;PED-00318;Varejo;CLI-010;Kappa Logistica;PROD-016;Poltrona Conforto;5;6540,00;3600,00;SG-04;Moveis e Decoracao;VND-004;Ana Costa;1;R$;VENDAS
+15/03/2026;PED-00318;Varejo;CLI-010;Kappa Logistica;PROD-030;Agua Mineral cx24;2;47,52;22,00;SG-08;Bebidas;VND-004;Ana Costa;1;R$;VENDAS
+24/09/2025;PED-00319;Atacado;CLI-018;Sigma Logistica;PROD-022;Sapato Social;5;1568,00;875,00;SG-06;Calcados;VND-007;Ricardo Souza;1;R$;VENDAS
+24/09/2025;PED-00319;Atacado;CLI-018;Sigma Logistica;PROD-009;Geladeira Frost Free;3;11856,00;7500,00;SG-03;Eletrodomesticos;VND-007;Ricardo Souza;1;R$;VENDAS
+24/09/2025;PED-00319;Atacado;CLI-018;Sigma Logistica;PROD-003;Teclado Mecanico;7;2527,00;1470,00;SG-02;Informatica;VND-007;Ricardo Souza;1;R$;VENDAS
+04/08/2025;PED-00320;Atacado;CLI-021;Phi Varejo ME;PROD-010;Micro-ondas 30L;8;1196,80;672,00;SG-03;Eletrodomesticos;VND-008;Juliana Mendes;2;US$;VENDAS
+04/08/2025;PED-00320;Atacado;CLI-021;Phi Varejo ME;PROD-019;Vestido Casual;10;316,10;136,00;SG-05;Vestuario;VND-008;Juliana Mendes;2;US$;VENDAS
+02/08/2025;PED-00321;Varejo;CLI-020;Upsilon Atacado;PROD-010;Micro-ondas 30L;9;489600;315000;SG-03;Eletrodomesticos;VND-006;Fernanda Lima;3;G$;VENDAS
+02/08/2025;PED-00321;Varejo;CLI-020;Upsilon Atacado;PROD-019;Vestido Casual;3;34438;17000;SG-05;Vestuario;VND-006;Fernanda Lima;3;G$;VENDAS
+02/08/2025;PED-00321;Varejo;CLI-020;Upsilon Atacado;PROD-002;Monitor 27 pol;10;970000;625000;SG-02;Informatica;VND-006;Fernanda Lima;3;G$;VENDAS
+02/08/2025;PED-00321;Varejo;CLI-020;Upsilon Atacado;PROD-002;Monitor 27 pol;5;525000;312500;SG-02;Informatica;VND-006;Fernanda Lima;3;G$;VENDAS
+01/03/2026;PED-00322;Varejo;CLI-016;Pi Distribuidora;PROD-008;Smart TV 50 pol;4;12800,00;8400,00;SG-01;Eletronicos;VND-007;Ricardo Souza;1;R$;VENDAS
+01/03/2026;PED-00322;Varejo;CLI-016;Pi Distribuidora;PROD-004;Mouse Sem Fio;2;259,20;130,00;SG-02;Informatica;VND-007;Ricardo Souza;1;R$;VENDAS
+01/03/2026;PED-00322;Varejo;CLI-016;Pi Distribuidora;PROD-002;Monitor 27 pol;3;3960,00;2250,00;SG-02;Informatica;VND-007;Ricardo Souza;1;R$;VENDAS
+01/03/2026;PED-00322;Varejo;CLI-016;Pi Distribuidora;PROD-015;Estante Modular;6;5985,00;3480,00;SG-04;Moveis e Decoracao;VND-007;Ricardo Souza;1;R$;VENDAS
+31/03/2026;PED-00323;Atacado;CLI-015;Omicron Atacado;PROD-029;Suco de Laranja 1L;5;73,50;35,00;SG-08;Bebidas;VND-001;Joao Silva;1;R$;VENDAS
+31/03/2026;PED-00323;Atacado;CLI-015;Omicron Atacado;PROD-023;Sandalia Feminina;9;1701,00;810,00;SG-06;Calcados;VND-001;Joao Silva;1;R$;VENDAS
+31/03/2026;PED-00323;Atacado;CLI-015;Omicron Atacado;PROD-014;Mesa de Jantar;5;8910,00;5500,00;SG-04;Moveis e Decoracao;VND-001;Joao Silva;1;R$;VENDAS
+17/01/2026;PED-00324;Varejo;CLI-028;Eta Teta Comercio;PROD-015;Estante Modular;1;978,50;580,00;SG-04;Moveis e Decoracao;VND-006;Fernanda Lima;1;R$;VENDAS
+30/04/2026;PED-00325;Varejo;CLI-028;Eta Teta Comercio;PROD-026;Feijao Carioca 1kg;3;3300;1500;SG-07;Alimentos;VND-004;Ana Costa;3;G$;VENDAS
+13/05/2026;PED-00326;Varejo;CLI-008;Theta Importacoes;PROD-017;Camiseta Polo;8;690,64;336,00;SG-05;Vestuario;VND-004;Ana Costa;1;R$;VENDAS
+13/05/2026;PED-00326;Varejo;CLI-008;Theta Importacoes;PROD-016;Poltrona Conforto;4;5040,00;2880,00;SG-04;Moveis e Decoracao;VND-004;Ana Costa;1;R$;VENDAS
+13/05/2026;PED-00326;Varejo;CLI-008;Theta Importacoes;PROD-007;Tablet 10 pol;2;3960,00;2200,00;SG-01;Eletronicos;VND-004;Ana Costa;1;R$;VENDAS
+28/01/2026;PED-00327;Atacado;CLI-028;Eta Teta Comercio;PROD-012;Ventilador Torre;9;230400;138750;SG-03;Eletrodomesticos;VND-001;Joao Silva;3;G$;VENDAS
+03/04/2026;PED-00328;Varejo;CLI-028;Eta Teta Comercio;PROD-006;Fone Bluetooth;9;327375;195000;SG-01;Eletronicos;VND-004;Ana Costa;3;G$;VENDAS
+03/04/2026;PED-00328;Varejo;CLI-028;Eta Teta Comercio;PROD-003;Teclado Mecanico;4;129200;70000;SG-02;Informatica;VND-004;Ana Costa;3;G$;VENDAS
+03/04/2026;PED-00328;Varejo;CLI-028;Eta Teta Comercio;PROD-023;Sandalia Feminina;8;129600;60000;SG-06;Calcados;VND-004;Ana Costa;3;G$;VENDAS
+09/05/2026;PED-00329;Atacado;CLI-027;Epsilon Zeta ME;PROD-028;Macarrao Espaguete;1;1,68;0,80;SG-07;Alimentos;VND-008;Juliana Mendes;2;US$;VENDAS
+24/12/2025;PED-00330;Varejo;CLI-006;Varejo Zeta ME;PROD-031;Refrigerante 2L;4;15,41;7,20;SG-08;Bebidas;VND-003;Carlos Santos;2;US$;VENDAS
+24/12/2025;PED-00330;Varejo;CLI-006;Varejo Zeta ME;PROD-024;Bota Couro;3;274,68;138,00;SG-06;Calcados;VND-003;Carlos Santos;2;US$;VENDAS
+24/12/2025;PED-00330;Varejo;CLI-006;Varejo Zeta ME;PROD-005;Smartphone 128GB;2;906,40;560,00;SG-01;Eletronicos;VND-003;Carlos Santos;2;US$;VENDAS
+24/12/2025;PED-00330;Varejo;CLI-006;Varejo Zeta ME;PROD-028;Macarrao Espaguete;9;14,83;7,20;SG-07;Alimentos;VND-003;Carlos Santos;2;US$;VENDAS
+23/03/2026;PED-00331;Atacado;CLI-030;Lambda Mu SA;PROD-032;Cerveja Long Neck cx12;4;374,00;168,00;SG-08;Bebidas;VND-004;Ana Costa;1;R$;VENDAS
+23/03/2026;PED-00331;Atacado;CLI-030;Lambda Mu SA;PROD-005;Smartphone 128GB;2;4400,00;2800,00;SG-01;Eletronicos;VND-004;Ana Costa;1;R$;VENDAS
+23/03/2026;PED-00331;Atacado;CLI-030;Lambda Mu SA;PROD-024;Bota Couro;3;1373,40;690,00;SG-06;Calcados;VND-004;Ana Costa;1;R$;VENDAS
+23/03/2026;PED-00331;Atacado;CLI-030;Lambda Mu SA;PROD-004;Mouse Sem Fio;6;720,00;390,00;SG-02;Informatica;VND-004;Ana Costa;1;R$;VENDAS
+12/04/2026;PED-00332;Atacado;CLI-029;Iota Kappa Ltda;PROD-028;Macarrao Espaguete;1;8,32;4,00;SG-07;Alimentos;VND-002;Maria Oliveira;1;R$;VENDAS
+08/12/2025;PED-00333;Atacado;CLI-012;Mu Atacadista;PROD-026;Feijao Carioca 1kg;5;11,52;6,00;SG-07;Alimentos;VND-001;Joao Silva;2;US$;VENDAS
+30/12/2025;PED-00334;Atacado;CLI-002;Distribuidora Beta S.A.;PROD-008;Smart TV 50 pol;2;506667;350000;SG-01;Eletronicos;VND-002;Maria Oliveira;3;G$;VENDAS
+30/12/2025;PED-00334;Atacado;CLI-002;Distribuidora Beta S.A.;PROD-013;Sofa 3 Lugares;8;1728000;1000000;SG-04;Moveis e Decoracao;VND-002;Maria Oliveira;3;G$;VENDAS
+30/12/2025;PED-00334;Atacado;CLI-002;Distribuidora Beta S.A.;PROD-029;Suco de Laranja 1L;8;10400;4667;SG-08;Bebidas;VND-002;Maria Oliveira;3;G$;VENDAS
+30/12/2025;PED-00334;Atacado;CLI-002;Distribuidora Beta S.A.;PROD-016;Poltrona Conforto;1;96000;60000;SG-04;Moveis e Decoracao;VND-002;Maria Oliveira;3;G$;VENDAS
+28/10/2025;PED-00335;Varejo;CLI-012;Mu Atacadista;PROD-003;Teclado Mecanico;7;2819,60;1470,00;SG-02;Informatica;VND-003;Carlos Santos;1;R$;VENDAS
+28/10/2025;PED-00335;Varejo;CLI-012;Mu Atacadista;PROD-002;Monitor 27 pol;7;8568,00;5250,00;SG-02;Informatica;VND-003;Carlos Santos;1;R$;VENDAS
+14/08/2025;PED-00336;Varejo;CLI-005;Atacado Epsilon Ltda;PROD-004;Mouse Sem Fio;8;203,52;104,00;SG-02;Informatica;VND-003;Carlos Santos;2;US$;VENDAS
+14/08/2025;PED-00336;Varejo;CLI-005;Atacado Epsilon Ltda;PROD-029;Suco de Laranja 1L;9;27,27;12,60;SG-08;Bebidas;VND-003;Carlos Santos;2;US$;VENDAS
+06/07/2025;PED-00337;Varejo;CLI-011;Lambda Suprimentos;PROD-023;Sandalia Feminina;9;346,68;162,00;SG-06;Calcados;VND-006;Fernanda Lima;2;US$;VENDAS
+28/03/2026;PED-00338;Atacado;CLI-005;Atacado Epsilon Ltda;PROD-032;Cerveja Long Neck cx12;7;565,25;294,00;SG-08;Bebidas;VND-008;Juliana Mendes;1;R$;VENDAS
+28/03/2026;PED-00338;Atacado;CLI-005;Atacado Epsilon Ltda;PROD-024;Bota Couro;7;3028,20;1610,00;SG-06;Calcados;VND-008;Juliana Mendes;1;R$;VENDAS
+19/12/2025;PED-00339;Varejo;CLI-010;Kappa Logistica;PROD-005;Smartphone 128GB;7;3110,80;1960,00;SG-01;Eletronicos;VND-002;Maria Oliveira;2;US$;VENDAS
+27/10/2025;PED-00340;Varejo;CLI-003;Comercial Gamma ME;PROD-001;Notebook Pro 15;6;17976,00;11400,00;SG-02;Informatica;VND-007;Ricardo Souza;1;R$;VENDAS
+27/10/2025;PED-00340;Varejo;CLI-003;Comercial Gamma ME;PROD-023;Sandalia Feminina;4;720,00;360,00;SG-06;Calcados;VND-007;Ricardo Souza;1;R$;VENDAS
+27/10/2025;PED-00340;Varejo;CLI-003;Comercial Gamma ME;PROD-006;Fone Bluetooth;5;2340,00;1300,00;SG-01;Eletronicos;VND-007;Ricardo Souza;1;R$;VENDAS
+27/10/2025;PED-00340;Varejo;CLI-003;Comercial Gamma ME;PROD-008;Smart TV 50 pol;2;6848,00;4200,00;SG-01;Eletronicos;VND-007;Ricardo Souza;1;R$;VENDAS
+08/11/2025;PED-00341;Atacado;CLI-007;Grupo Eta Comercio;PROD-005;Smartphone 128GB;8;3414,40;2240,00;SG-01;Eletronicos;VND-002;Maria Oliveira;2;US$;VENDAS
+08/11/2025;PED-00341;Atacado;CLI-007;Grupo Eta Comercio;PROD-016;Poltrona Conforto;4;1046,40;576,00;SG-04;Moveis e Decoracao;VND-002;Maria Oliveira;2;US$;VENDAS
+08/11/2025;PED-00341;Atacado;CLI-007;Grupo Eta Comercio;PROD-023;Sandalia Feminina;3;112,32;54,00;SG-06;Calcados;VND-002;Maria Oliveira;2;US$;VENDAS
+08/11/2025;PED-00341;Atacado;CLI-007;Grupo Eta Comercio;PROD-027;Azeite Extra Virgem;10;79,80;44,00;SG-07;Alimentos;VND-002;Maria Oliveira;2;US$;VENDAS
+02/07/2025;PED-00342;Varejo;CLI-017;Rho Importacoes;PROD-031;Refrigerante 2L;9;14175;6750;SG-08;Bebidas;VND-007;Ricardo Souza;3;G$;VENDAS
+02/07/2025;PED-00342;Varejo;CLI-017;Rho Importacoes;PROD-012;Ventilador Torre;5;142667;77083;SG-03;Eletrodomesticos;VND-007;Ricardo Souza;3;G$;VENDAS
+02/07/2025;PED-00342;Varejo;CLI-017;Rho Importacoes;PROD-020;Jaqueta de Couro;2;101500;51667;SG-05;Vestuario;VND-007;Ricardo Souza;3;G$;VENDAS
+02/07/2025;PED-00342;Varejo;CLI-017;Rho Importacoes;PROD-030;Agua Mineral cx24;6;11770;5500;SG-08;Bebidas;VND-007;Ricardo Souza;3;G$;VENDAS
+22/09/2025;PED-00343;Atacado;CLI-022;Chi Distribuidora;PROD-025;Arroz Integral 5kg;7;39,98;22,40;SG-07;Alimentos;VND-001;Joao Silva;2;US$;VENDAS
+22/09/2025;PED-00343;Atacado;CLI-022;Chi Distribuidora;PROD-020;Jaqueta de Couro;4;468,64;248,00;SG-05;Vestuario;VND-001;Joao Silva;2;US$;VENDAS
+22/09/2025;PED-00343;Atacado;CLI-022;Chi Distribuidora;PROD-029;Suco de Laranja 1L;3;9,09;4,20;SG-08;Bebidas;VND-001;Joao Silva;2;US$;VENDAS
+22/09/2025;PED-00343;Atacado;CLI-022;Chi Distribuidora;PROD-009;Geladeira Frost Free;6;4560,00;3000,00;SG-03;Eletrodomesticos;VND-001;Joao Silva;2;US$;VENDAS
+31/07/2025;PED-00344;Atacado;CLI-021;Phi Varejo ME;PROD-017;Camiseta Polo;1;96,12;42,00;SG-05;Vestuario;VND-003;Carlos Santos;1;R$;VENDAS
+31/07/2025;PED-00344;Atacado;CLI-021;Phi Varejo ME;PROD-024;Bota Couro;8;3460,80;1840,00;SG-06;Calcados;VND-003;Carlos Santos;1;R$;VENDAS
+31/07/2025;PED-00344;Atacado;CLI-021;Phi Varejo ME;PROD-029;Suco de Laranja 1L;5;78,00;35,00;SG-08;Bebidas;VND-003;Carlos Santos;1;R$;VENDAS
+27/01/2026;PED-00345;Atacado;CLI-002;Distribuidora Beta S.A.;PROD-022;Sapato Social;9;552,96;315,00;SG-06;Calcados;VND-003;Carlos Santos;2;US$;VENDAS
+27/01/2026;PED-00345;Atacado;CLI-002;Distribuidora Beta S.A.;PROD-007;Tablet 10 pol;8;3052,80;1760,00;SG-01;Eletronicos;VND-003;Carlos Santos;2;US$;VENDAS
+27/01/2026;PED-00345;Atacado;CLI-002;Distribuidora Beta S.A.;PROD-024;Bota Couro;7;611,52;322,00;SG-06;Calcados;VND-003;Carlos Santos;2;US$;VENDAS
+27/01/2026;PED-00345;Atacado;CLI-002;Distribuidora Beta S.A.;PROD-012;Ventilador Torre;2;140,80;74,00;SG-03;Eletrodomesticos;VND-003;Carlos Santos;2;US$;VENDAS
+10/04/2026;PED-00346;Atacado;CLI-023;Psi Suprimentos;PROD-015;Estante Modular;3;2850,00;1740,00;SG-04;Moveis e Decoracao;VND-001;Joao Silva;1;R$;VENDAS
+10/04/2026;PED-00346;Atacado;CLI-023;Psi Suprimentos;PROD-021;Tenis Esportivo;8;2195,20;1240,00;SG-06;Calcados;VND-001;Joao Silva;1;R$;VENDAS
+10/04/2026;PED-00346;Atacado;CLI-023;Psi Suprimentos;PROD-024;Bota Couro;1;457,80;230,00;SG-06;Calcados;VND-001;Joao Silva;1;R$;VENDAS
+10/04/2026;PED-00346;Atacado;CLI-023;Psi Suprimentos;PROD-030;Agua Mineral cx24;6;133,32;66,00;SG-08;Bebidas;VND-001;Joao Silva;1;R$;VENDAS
+20/03/2026;PED-00347;Atacado;CLI-001;Empresa Alpha Ltda;PROD-031;Refrigerante 2L;5;7350;3750;SG-08;Bebidas;VND-005;Pedro Alves;3;G$;VENDAS
+20/03/2026;PED-00347;Atacado;CLI-001;Empresa Alpha Ltda;PROD-028;Macarrao Espaguete;7;4667;2333;SG-07;Alimentos;VND-005;Pedro Alves;3;G$;VENDAS
+20/03/2026;PED-00347;Atacado;CLI-001;Empresa Alpha Ltda;PROD-009;Geladeira Frost Free;9;2707500;1875000;SG-03;Eletrodomesticos;VND-005;Pedro Alves;3;G$;VENDAS
+02/03/2026;PED-00348;Atacado;CLI-003;Comercial Gamma ME;PROD-016;Poltrona Conforto;6;7416,00;4320,00;SG-04;Moveis e Decoracao;VND-007;Ricardo Souza;1;R$;VENDAS
+02/03/2026;PED-00348;Atacado;CLI-003;Comercial Gamma ME;PROD-005;Smartphone 128GB;5;11440,00;7000,00;SG-01;Eletronicos;VND-007;Ricardo Souza;1;R$;VENDAS
+10/03/2026;PED-00349;Atacado;CLI-015;Omicron Atacado;PROD-008;Smart TV 50 pol;1;256000;175000;SG-01;Eletronicos;VND-001;Joao Silva;3;G$;VENDAS
+10/03/2026;PED-00349;Atacado;CLI-015;Omicron Atacado;PROD-023;Sandalia Feminina;6;93600;45000;SG-06;Calcados;VND-001;Joao Silva;3;G$;VENDAS
+10/03/2026;PED-00349;Atacado;CLI-015;Omicron Atacado;PROD-019;Vestido Casual;10;129292;56667;SG-05;Vestuario;VND-001;Joao Silva;3;G$;VENDAS
+10/03/2026;PED-00349;Atacado;CLI-015;Omicron Atacado;PROD-029;Suco de Laranja 1L;2;2650;1167;SG-08;Bebidas;VND-001;Joao Silva;3;G$;VENDAS
+26/12/2025;PED-00350;Atacado;CLI-015;Omicron Atacado;PROD-023;Sandalia Feminina;7;1260,00;630,00;SG-06;Calcados;VND-008;Juliana Mendes;1;R$;VENDAS
+26/12/2025;PED-00350;Atacado;CLI-015;Omicron Atacado;PROD-011;Cafeteira Eletrica;3;831,60;480,00;SG-03;Eletrodomesticos;VND-008;Juliana Mendes;1;R$;VENDAS
+26/12/2025;PED-00350;Atacado;CLI-015;Omicron Atacado;PROD-014;Mesa de Jantar;8;14544,00;8800,00;SG-04;Moveis e Decoracao;VND-008;Juliana Mendes;1;R$;VENDAS
+26/12/2025;PED-00350;Atacado;CLI-015;Omicron Atacado;PROD-007;Tablet 10 pol;5;9720,00;5500,00;SG-01;Eletronicos;VND-008;Juliana Mendes;1;R$;VENDAS
+07/11/2025;PED-00351;Varejo;CLI-012;Mu Atacadista;PROD-013;Sofa 3 Lugares;4;9984,00;6000,00;SG-04;Moveis e Decoracao;VND-004;Ana Costa;1;R$;VENDAS
+07/11/2025;PED-00351;Varejo;CLI-012;Mu Atacadista;PROD-005;Smartphone 128GB;8;16896,00;11200,00;SG-01;Eletronicos;VND-004;Ana Costa;1;R$;VENDAS
+07/11/2025;PED-00351;Varejo;CLI-012;Mu Atacadista;PROD-018;Calca Jeans;3;465,60;240,00;SG-05;Vestuario;VND-004;Ana Costa;1;R$;VENDAS
+07/11/2025;PED-00351;Varejo;CLI-012;Mu Atacadista;PROD-002;Monitor 27 pol;2;2544,00;1500,00;SG-02;Informatica;VND-004;Ana Costa;1;R$;VENDAS
+23/11/2025;PED-00352;Varejo;CLI-026;Gama Delta SA;PROD-024;Bota Couro;8;739,20;368,00;SG-06;Calcados;VND-002;Maria Oliveira;2;US$;VENDAS
+23/11/2025;PED-00352;Varejo;CLI-026;Gama Delta SA;PROD-001;Notebook Pro 15;10;5376,00;3800,00;SG-02;Informatica;VND-002;Maria Oliveira;2;US$;VENDAS
+26/03/2026;PED-00353;Varejo;CLI-022;Chi Distribuidora;PROD-030;Agua Mineral cx24;8;33,44;17,60;SG-08;Bebidas;VND-001;Joao Silva;2;US$;VENDAS
+26/03/2026;PED-00353;Varejo;CLI-022;Chi Distribuidora;PROD-003;Teclado Mecanico;3;225,72;126,00;SG-02;Informatica;VND-001;Joao Silva;2;US$;VENDAS
+19/02/2026;PED-00354;Varejo;CLI-007;Grupo Eta Comercio;PROD-013;Sofa 3 Lugares;9;1818000;1125000;SG-04;Moveis e Decoracao;VND-001;Joao Silva;3;G$;VENDAS
+19/02/2026;PED-00354;Varejo;CLI-007;Grupo Eta Comercio;PROD-012;Ventilador Torre;6;172800;92500;SG-03;Eletrodomesticos;VND-001;Joao Silva;3;G$;VENDAS
+19/02/2026;PED-00354;Varejo;CLI-007;Grupo Eta Comercio;PROD-011;Cafeteira Eletrica;1;23567;13333;SG-03;Eletrodomesticos;VND-001;Joao Silva;3;G$;VENDAS
+19/02/2026;PED-00354;Varejo;CLI-007;Grupo Eta Comercio;PROD-032;Cerveja Long Neck cx12;8;56667;28000;SG-08;Bebidas;VND-001;Joao Silva;3;G$;VENDAS
+01/12/2025;PED-00355;Atacado;CLI-009;Iota Distribuicoes;PROD-018;Calca Jeans;5;872,00;400,00;SG-05;Vestuario;VND-003;Carlos Santos;1;R$;VENDAS
+01/12/2025;PED-00355;Atacado;CLI-009;Iota Distribuicoes;PROD-015;Estante Modular;7;7315,00;4060,00;SG-04;Moveis e Decoracao;VND-003;Carlos Santos;1;R$;VENDAS
+30/03/2026;PED-00356;Atacado;CLI-020;Upsilon Atacado;PROD-028;Macarrao Espaguete;10;86,40;40,00;SG-07;Alimentos;VND-002;Maria Oliveira;1;R$;VENDAS
+04/10/2025;PED-00357;Atacado;CLI-018;Sigma Logistica;PROD-023;Sandalia Feminina;10;1962,00;900,00;SG-06;Calcados;VND-007;Ricardo Souza;1;R$;VENDAS
+04/10/2025;PED-00357;Atacado;CLI-018;Sigma Logistica;PROD-030;Agua Mineral cx24;4;86,24;44,00;SG-08;Bebidas;VND-007;Ricardo Souza;1;R$;VENDAS
+04/10/2025;PED-00357;Atacado;CLI-018;Sigma Logistica;PROD-005;Smartphone 128GB;6;12936,00;8400,00;SG-01;Eletronicos;VND-007;Ricardo Souza;1;R$;VENDAS
+04/10/2025;PED-00357;Atacado;CLI-018;Sigma Logistica;PROD-025;Arroz Integral 5kg;6;171,36;96,00;SG-07;Alimentos;VND-007;Ricardo Souza;1;R$;VENDAS
+21/03/2026;PED-00358;Atacado;CLI-025;Alpha Beta Ltda;PROD-032;Cerveja Long Neck cx12;6;515,10;252,00;SG-08;Bebidas;VND-006;Fernanda Lima;1;R$;VENDAS
+21/03/2026;PED-00358;Atacado;CLI-025;Alpha Beta Ltda;PROD-016;Poltrona Conforto;4;4752,00;2880,00;SG-04;Moveis e Decoracao;VND-006;Fernanda Lima;1;R$;VENDAS
+21/03/2026;PED-00358;Atacado;CLI-025;Alpha Beta Ltda;PROD-017;Camiseta Polo;5;427,20;210,00;SG-05;Vestuario;VND-006;Fernanda Lima;1;R$;VENDAS
+21/03/2026;PED-00358;Atacado;CLI-025;Alpha Beta Ltda;PROD-019;Vestido Casual;7;1015,00;476,00;SG-05;Vestuario;VND-006;Fernanda Lima;1;R$;VENDAS
+11/01/2026;PED-00359;Varejo;CLI-026;Gama Delta SA;PROD-013;Sofa 3 Lugares;8;3686,40;2400,00;SG-04;Moveis e Decoracao;VND-005;Pedro Alves;2;US$;VENDAS
+25/10/2025;PED-00360;Varejo;CLI-022;Chi Distribuidora;PROD-028;Macarrao Espaguete;6;46,56;24,00;SG-07;Alimentos;VND-001;Joao Silva;1;R$;VENDAS
+09/11/2025;PED-00361;Atacado;CLI-030;Lambda Mu SA;PROD-026;Feijao Carioca 1kg;2;4,66;2,40;SG-07;Alimentos;VND-008;Juliana Mendes;2;US$;VENDAS
+09/11/2025;PED-00361;Atacado;CLI-030;Lambda Mu SA;PROD-003;Teclado Mecanico;2;162,64;84,00;SG-02;Informatica;VND-008;Juliana Mendes;2;US$;VENDAS
+04/12/2025;PED-00362;Varejo;CLI-013;Nu Varejo Ltda;PROD-031;Refrigerante 2L;1;1590;750;SG-08;Bebidas;VND-005;Pedro Alves;3;G$;VENDAS
+04/12/2025;PED-00362;Varejo;CLI-013;Nu Varejo Ltda;PROD-013;Sofa 3 Lugares;3;618000;375000;SG-04;Moveis e Decoracao;VND-005;Pedro Alves;3;G$;VENDAS
+04/12/2025;PED-00362;Varejo;CLI-013;Nu Varejo Ltda;PROD-006;Fone Bluetooth;1;39000;21667;SG-01;Eletronicos;VND-005;Pedro Alves;3;G$;VENDAS
+26/08/2025;PED-00363;Atacado;CLI-003;Comercial Gamma ME;PROD-016;Poltrona Conforto;8;1843,20;1152,00;SG-04;Moveis e Decoracao;VND-007;Ricardo Souza;2;US$;VENDAS
+26/08/2025;PED-00363;Atacado;CLI-003;Comercial Gamma ME;PROD-023;Sandalia Feminina;3;114,48;54,00;SG-06;Calcados;VND-007;Ricardo Souza;2;US$;VENDAS
+26/08/2025;PED-00363;Atacado;CLI-003;Comercial Gamma ME;PROD-010;Micro-ondas 30L;1;131,92;84,00;SG-03;Eletrodomesticos;VND-007;Ricardo Souza;2;US$;VENDAS
+26/08/2025;PED-00363;Atacado;CLI-003;Comercial Gamma ME;PROD-001;Notebook Pro 15;5;3080,00;1900,00;SG-02;Informatica;VND-007;Ricardo Souza;2;US$;VENDAS
+14/10/2025;PED-00364;Atacado;CLI-008;Theta Importacoes;PROD-004;Mouse Sem Fio;7;798,00;455,00;SG-02;Informatica;VND-001;Joao Silva;1;R$;VENDAS
+14/10/2025;PED-00364;Atacado;CLI-008;Theta Importacoes;PROD-028;Macarrao Espaguete;9;74,16;36,00;SG-07;Alimentos;VND-001;Joao Silva;1;R$;VENDAS
+21/12/2025;PED-00365;Varejo;CLI-029;Iota Kappa Ltda;PROD-005;Smartphone 128GB;7;1360333;816667;SG-01;Eletronicos;VND-007;Ricardo Souza;3;G$;VENDAS
+21/12/2025;PED-00365;Varejo;CLI-029;Iota Kappa Ltda;PROD-016;Poltrona Conforto;10;1090000;600000;SG-04;Moveis e Decoracao;VND-007;Ricardo Souza;3;G$;VENDAS
+06/04/2026;PED-00366;Varejo;CLI-010;Kappa Logistica;PROD-019;Vestido Casual;3;456,75;204,00;SG-05;Vestuario;VND-002;Maria Oliveira;1;R$;VENDAS
+06/04/2026;PED-00366;Varejo;CLI-010;Kappa Logistica;PROD-015;Estante Modular;4;3686,00;2320,00;SG-04;Moveis e Decoracao;VND-002;Maria Oliveira;1;R$;VENDAS
+06/04/2026;PED-00366;Varejo;CLI-010;Kappa Logistica;PROD-015;Estante Modular;9;9319,50;5220,00;SG-04;Moveis e Decoracao;VND-002;Maria Oliveira;1;R$;VENDAS
+14/06/2025;PED-00367;Varejo;CLI-025;Alpha Beta Ltda;PROD-024;Bota Couro;3;274,68;138,00;SG-06;Calcados;VND-008;Juliana Mendes;2;US$;VENDAS
+14/06/2025;PED-00367;Varejo;CLI-025;Alpha Beta Ltda;PROD-013;Sofa 3 Lugares;7;3561,60;2100,00;SG-04;Moveis e Decoracao;VND-008;Juliana Mendes;2;US$;VENDAS
+14/06/2025;PED-00367;Varejo;CLI-025;Alpha Beta Ltda;PROD-022;Sapato Social;7;456,96;245,00;SG-06;Calcados;VND-008;Juliana Mendes;2;US$;VENDAS
+14/06/2025;PED-00367;Varejo;CLI-025;Alpha Beta Ltda;PROD-005;Smartphone 128GB;1;470,80;280,00;SG-01;Eletronicos;VND-008;Juliana Mendes;2;US$;VENDAS
+01/02/2026;PED-00368;Varejo;CLI-016;Pi Distribuidora;PROD-011;Cafeteira Eletrica;6;1680,00;960,00;SG-03;Eletrodomesticos;VND-001;Joao Silva;1;R$;VENDAS
+01/02/2026;PED-00368;Varejo;CLI-016;Pi Distribuidora;PROD-019;Vestido Casual;1;158,05;68,00;SG-05;Vestuario;VND-001;Joao Silva;1;R$;VENDAS
+01/02/2026;PED-00368;Varejo;CLI-016;Pi Distribuidora;PROD-006;Fone Bluetooth;8;3924,00;2080,00;SG-01;Eletronicos;VND-001;Joao Silva;1;R$;VENDAS
+23/01/2026;PED-00369;Varejo;CLI-023;Psi Suprimentos;PROD-026;Feijao Carioca 1kg;6;5820;3000;SG-07;Alimentos;VND-001;Joao Silva;3;G$;VENDAS
+01/11/2025;PED-00370;Atacado;CLI-014;Xi Comercio SA;PROD-017;Camiseta Polo;4;29073;14000;SG-05;Vestuario;VND-002;Maria Oliveira;3;G$;VENDAS
+01/11/2025;PED-00370;Atacado;CLI-014;Xi Comercio SA;PROD-027;Azeite Extra Virgem;3;11340;5500;SG-07;Alimentos;VND-002;Maria Oliveira;3;G$;VENDAS
+06/05/2026;PED-00371;Atacado;CLI-024;Omega Comercio;PROD-017;Camiseta Polo;4;363,12;168,00;SG-05;Vestuario;VND-004;Ana Costa;1;R$;VENDAS
+06/05/2026;PED-00371;Atacado;CLI-024;Omega Comercio;PROD-030;Agua Mineral cx24;10;224,40;110,00;SG-08;Bebidas;VND-004;Ana Costa;1;R$;VENDAS
+06/05/2026;PED-00371;Atacado;CLI-024;Omega Comercio;PROD-020;Jaqueta de Couro;8;4454,40;2480,00;SG-05;Vestuario;VND-004;Ana Costa;1;R$;VENDAS
+06/05/2026;PED-00371;Atacado;CLI-024;Omega Comercio;PROD-032;Cerveja Long Neck cx12;4;336,60;168,00;SG-08;Bebidas;VND-004;Ana Costa;1;R$;VENDAS
+18/01/2026;PED-00372;Atacado;CLI-014;Xi Comercio SA;PROD-031;Refrigerante 2L;6;22,46;10,80;SG-08;Bebidas;VND-003;Carlos Santos;2;US$;VENDAS
+18/01/2026;PED-00372;Atacado;CLI-014;Xi Comercio SA;PROD-009;Geladeira Frost Free;3;2439,60;1500,00;SG-03;Eletrodomesticos;VND-003;Carlos Santos;2;US$;VENDAS
+18/01/2026;PED-00372;Atacado;CLI-014;Xi Comercio SA;PROD-022;Sapato Social;3;197,76;105,00;SG-06;Calcados;VND-003;Carlos Santos;2;US$;VENDAS
+31/03/2026;PED-00373;Atacado;CLI-010;Kappa Logistica;PROD-002;Monitor 27 pol;8;1900,80;1200,00;SG-02;Informatica;VND-008;Juliana Mendes;2;US$;VENDAS
+31/03/2026;PED-00373;Atacado;CLI-010;Kappa Logistica;PROD-022;Sapato Social;1;65,28;35,00;SG-06;Calcados;VND-008;Juliana Mendes;2;US$;VENDAS
+30/06/2025;PED-00374;Atacado;CLI-004;Industria Delta SA;PROD-031;Refrigerante 2L;9;170,10;81,00;SG-08;Bebidas;VND-008;Juliana Mendes;1;R$;VENDAS
+08/07/2025;PED-00375;Varejo;CLI-012;Mu Atacadista;PROD-021;Tenis Esportivo;8;2329,60;1240,00;SG-06;Calcados;VND-006;Fernanda Lima;1;R$;VENDAS
+08/07/2025;PED-00375;Varejo;CLI-012;Mu Atacadista;PROD-015;Estante Modular;8;8284,00;4640,00;SG-04;Moveis e Decoracao;VND-006;Fernanda Lima;1;R$;VENDAS
+08/07/2025;PED-00375;Varejo;CLI-012;Mu Atacadista;PROD-011;Cafeteira Eletrica;6;1696,80;960,00;SG-03;Eletrodomesticos;VND-006;Fernanda Lima;1;R$;VENDAS
+17/04/2026;PED-00376;Varejo;CLI-013;Nu Varejo Ltda;PROD-013;Sofa 3 Lugares;6;13824,00;9000,00;SG-04;Moveis e Decoracao;VND-002;Maria Oliveira;1;R$;VENDAS
+17/04/2026;PED-00376;Varejo;CLI-013;Nu Varejo Ltda;PROD-009;Geladeira Frost Free;3;10830,00;7500,00;SG-03;Eletrodomesticos;VND-002;Maria Oliveira;1;R$;VENDAS
+17/04/2026;PED-00376;Varejo;CLI-013;Nu Varejo Ltda;PROD-029;Suco de Laranja 1L;2;32,10;14,00;SG-08;Bebidas;VND-002;Maria Oliveira;1;R$;VENDAS
+15/02/2026;PED-00377;Atacado;CLI-023;Psi Suprimentos;PROD-020;Jaqueta de Couro;5;2755,00;1550,00;SG-05;Vestuario;VND-007;Ricardo Souza;1;R$;VENDAS
+08/02/2026;PED-00378;Atacado;CLI-029;Iota Kappa Ltda;PROD-001;Notebook Pro 15;5;1260000;791667;SG-02;Informatica;VND-005;Pedro Alves;3;G$;VENDAS
+27/12/2025;PED-00379;Atacado;CLI-024;Omega Comercio;PROD-005;Smartphone 128GB;1;2354,00;1400,00;SG-01;Eletronicos;VND-003;Carlos Santos;1;R$;VENDAS
+27/12/2025;PED-00379;Atacado;CLI-024;Omega Comercio;PROD-022;Sapato Social;7;2284,80;1225,00;SG-06;Calcados;VND-003;Carlos Santos;1;R$;VENDAS
+27/12/2025;PED-00379;Atacado;CLI-024;Omega Comercio;PROD-014;Mesa de Jantar;3;5238,00;3300,00;SG-04;Moveis e Decoracao;VND-003;Carlos Santos;1;R$;VENDAS
+27/12/2025;PED-00379;Atacado;CLI-024;Omega Comercio;PROD-006;Fone Bluetooth;8;3744,00;2080,00;SG-01;Eletronicos;VND-003;Carlos Santos;1;R$;VENDAS
+11/05/2026;PED-00380;Varejo;CLI-008;Theta Importacoes;PROD-016;Poltrona Conforto;2;2568,00;1440,00;SG-04;Moveis e Decoracao;VND-006;Fernanda Lima;1;R$;VENDAS
+06/10/2025;PED-00381;Varejo;CLI-023;Psi Suprimentos;PROD-027;Azeite Extra Virgem;3;122,22;66,00;SG-07;Alimentos;VND-002;Maria Oliveira;1;R$;VENDAS
+06/10/2025;PED-00381;Varejo;CLI-023;Psi Suprimentos;PROD-005;Smartphone 128GB;5;12100,00;7000,00;SG-01;Eletronicos;VND-002;Maria Oliveira;1;R$;VENDAS
+06/10/2025;PED-00381;Varejo;CLI-023;Psi Suprimentos;PROD-023;Sandalia Feminina;5;855,00;450,00;SG-06;Calcados;VND-002;Maria Oliveira;1;R$;VENDAS
+06/10/2025;PED-00381;Varejo;CLI-023;Psi Suprimentos;PROD-032;Cerveja Long Neck cx12;10;935,00;420,00;SG-08;Bebidas;VND-002;Maria Oliveira;1;R$;VENDAS
+19/09/2025;PED-00382;Atacado;CLI-009;Iota Distribuicoes;PROD-023;Sandalia Feminina;6;1166,40;540,00;SG-06;Calcados;VND-007;Ricardo Souza;1;R$;VENDAS
+19/09/2025;PED-00382;Atacado;CLI-009;Iota Distribuicoes;PROD-025;Arroz Integral 5kg;1;29,96;16,00;SG-07;Alimentos;VND-007;Ricardo Souza;1;R$;VENDAS
+18/05/2026;PED-00383;Varejo;CLI-017;Rho Importacoes;PROD-004;Mouse Sem Fio;9;1144,80;585,00;SG-02;Informatica;VND-004;Ana Costa;1;R$;VENDAS
+18/05/2026;PED-00383;Varejo;CLI-017;Rho Importacoes;PROD-002;Monitor 27 pol;9;11340,00;6750,00;SG-02;Informatica;VND-004;Ana Costa;1;R$;VENDAS
+26/06/2025;PED-00384;Atacado;CLI-016;Pi Distribuidora;PROD-014;Mesa de Jantar;5;9450,00;5500,00;SG-04;Moveis e Decoracao;VND-008;Juliana Mendes;1;R$;VENDAS
+01/01/2026;PED-00385;Atacado;CLI-024;Omega Comercio;PROD-022;Sapato Social;6;2035,20;1050,00;SG-06;Calcados;VND-007;Ricardo Souza;1;R$;VENDAS
+19/06/2025;PED-00386;Atacado;CLI-019;Tau Comercio Ltda;PROD-009;Geladeira Frost Free;7;2150167;1458333;SG-03;Eletrodomesticos;VND-005;Pedro Alves;3;G$;VENDAS
+19/06/2025;PED-00386;Atacado;CLI-019;Tau Comercio Ltda;PROD-023;Sandalia Feminina;9;130950;67500;SG-06;Calcados;VND-005;Pedro Alves;3;G$;VENDAS
+19/06/2025;PED-00386;Atacado;CLI-019;Tau Comercio Ltda;PROD-031;Refrigerante 2L;6;9450;4500;SG-08;Bebidas;VND-005;Pedro Alves;3;G$;VENDAS
+19/06/2025;PED-00386;Atacado;CLI-019;Tau Comercio Ltda;PROD-023;Sandalia Feminina;6;93600;45000;SG-06;Calcados;VND-005;Pedro Alves;3;G$;VENDAS
+19/03/2026;PED-00387;Atacado;CLI-012;Mu Atacadista;PROD-003;Teclado Mecanico;5;387,60;210,00;SG-02;Informatica;VND-008;Juliana Mendes;2;US$;VENDAS
+19/03/2026;PED-00387;Atacado;CLI-012;Mu Atacadista;PROD-013;Sofa 3 Lugares;10;5184,00;3000,00;SG-04;Moveis e Decoracao;VND-008;Juliana Mendes;2;US$;VENDAS
+15/01/2026;PED-00388;Atacado;CLI-029;Iota Kappa Ltda;PROD-001;Notebook Pro 15;6;16968,00;11400,00;SG-02;Informatica;VND-001;Joao Silva;1;R$;VENDAS
+15/01/2026;PED-00388;Atacado;CLI-029;Iota Kappa Ltda;PROD-029;Suco de Laranja 1L;9;139,05;63,00;SG-08;Bebidas;VND-001;Joao Silva;1;R$;VENDAS
+15/01/2026;PED-00388;Atacado;CLI-029;Iota Kappa Ltda;PROD-030;Agua Mineral cx24;4;93,28;44,00;SG-08;Bebidas;VND-001;Joao Silva;1;R$;VENDAS
+15/01/2026;PED-00388;Atacado;CLI-029;Iota Kappa Ltda;PROD-006;Fone Bluetooth;8;3492,00;2080,00;SG-01;Eletronicos;VND-001;Joao Silva;1;R$;VENDAS
+23/09/2025;PED-00389;Atacado;CLI-003;Comercial Gamma ME;PROD-031;Refrigerante 2L;3;4635;2250;SG-08;Bebidas;VND-007;Ricardo Souza;3;G$;VENDAS
+23/09/2025;PED-00389;Atacado;CLI-003;Comercial Gamma ME;PROD-025;Arroz Integral 5kg;8;20160;10667;SG-07;Alimentos;VND-007;Ricardo Souza;3;G$;VENDAS
+14/06/2025;PED-00390;Varejo;CLI-018;Sigma Logistica;PROD-004;Mouse Sem Fio;2;228,00;130,00;SG-02;Informatica;VND-005;Pedro Alves;1;R$;VENDAS
+14/06/2025;PED-00390;Varejo;CLI-018;Sigma Logistica;PROD-031;Refrigerante 2L;10;196,20;90,00;SG-08;Bebidas;VND-005;Pedro Alves;1;R$;VENDAS
+30/10/2025;PED-00391;Atacado;CLI-005;Atacado Epsilon Ltda;PROD-026;Feijao Carioca 1kg;1;12,84;6,00;SG-07;Alimentos;VND-002;Maria Oliveira;1;R$;VENDAS
+30/10/2025;PED-00391;Atacado;CLI-005;Atacado Epsilon Ltda;PROD-012;Ventilador Torre;10;3072,00;1850,00;SG-03;Eletrodomesticos;VND-002;Maria Oliveira;1;R$;VENDAS
+30/10/2025;PED-00391;Atacado;CLI-005;Atacado Epsilon Ltda;PROD-011;Cafeteira Eletrica;5;1386,00;800,00;SG-03;Eletrodomesticos;VND-002;Maria Oliveira;1;R$;VENDAS
+14/03/2026;PED-00392;Atacado;CLI-002;Distribuidora Beta S.A.;PROD-016;Poltrona Conforto;2;212000;120000;SG-04;Moveis e Decoracao;VND-001;Joao Silva;3;G$;VENDAS
+14/03/2026;PED-00392;Atacado;CLI-002;Distribuidora Beta S.A.;PROD-024;Bota Couro;7;269500;134167;SG-06;Calcados;VND-001;Joao Silva;3;G$;VENDAS
+14/03/2026;PED-00392;Atacado;CLI-002;Distribuidora Beta S.A.;PROD-025;Arroz Integral 5kg;7;17640;9333;SG-07;Alimentos;VND-001;Joao Silva;3;G$;VENDAS
+14/03/2026;PED-00392;Atacado;CLI-002;Distribuidora Beta S.A.;PROD-011;Cafeteira Eletrica;8;197867;106667;SG-03;Eletrodomesticos;VND-001;Joao Silva;3;G$;VENDAS
+06/03/2026;PED-00393;Atacado;CLI-025;Alpha Beta Ltda;PROD-003;Teclado Mecanico;3;1140,00;630,00;SG-02;Informatica;VND-001;Joao Silva;1;R$;VENDAS
+22/11/2025;PED-00394;Atacado;CLI-018;Sigma Logistica;PROD-007;Tablet 10 pol;9;17496,00;9900,00;SG-01;Eletronicos;VND-006;Fernanda Lima;1;R$;VENDAS
+22/11/2025;PED-00394;Atacado;CLI-018;Sigma Logistica;PROD-020;Jaqueta de Couro;9;4959,00;2790,00;SG-05;Vestuario;VND-006;Fernanda Lima;1;R$;VENDAS
+08/08/2025;PED-00395;Atacado;CLI-021;Phi Varejo ME;PROD-007;Tablet 10 pol;2;3708,00;2200,00;SG-01;Eletronicos;VND-007;Ricardo Souza;1;R$;VENDAS
+08/08/2025;PED-00395;Atacado;CLI-021;Phi Varejo ME;PROD-015;Estante Modular;4;3724,00;2320,00;SG-04;Moveis e Decoracao;VND-007;Ricardo Souza;1;R$;VENDAS
+09/03/2026;PED-00396;Varejo;CLI-017;Rho Importacoes;PROD-014;Mesa de Jantar;1;142500;91667;SG-04;Moveis e Decoracao;VND-004;Ana Costa;3;G$;VENDAS
+29/06/2025;PED-00397;Atacado;CLI-007;Grupo Eta Comercio;PROD-008;Smart TV 50 pol;8;2154667;1400000;SG-01;Eletronicos;VND-004;Ana Costa;3;G$;VENDAS
+29/06/2025;PED-00397;Atacado;CLI-007;Grupo Eta Comercio;PROD-008;Smart TV 50 pol;7;1792000;1225000;SG-01;Eletronicos;VND-004;Ana Costa;3;G$;VENDAS
+29/06/2025;PED-00397;Atacado;CLI-007;Grupo Eta Comercio;PROD-008;Smart TV 50 pol;8;2240000;1400000;SG-01;Eletronicos;VND-004;Ana Costa;3;G$;VENDAS
+29/06/2025;PED-00397;Atacado;CLI-007;Grupo Eta Comercio;PROD-024;Bota Couro;4;151200;76667;SG-06;Calcados;VND-004;Ana Costa;3;G$;VENDAS
+26/02/2026;PED-00398;Varejo;CLI-006;Varejo Zeta ME;PROD-004;Mouse Sem Fio;3;33000;16250;SG-02;Informatica;VND-005;Pedro Alves;3;G$;VENDAS
+26/02/2026;PED-00398;Varejo;CLI-006;Varejo Zeta ME;PROD-017;Camiseta Polo;7;57108;24500;SG-05;Vestuario;VND-005;Pedro Alves;3;G$;VENDAS
+26/02/2026;PED-00398;Varejo;CLI-006;Varejo Zeta ME;PROD-022;Sapato Social;3;88000;43750;SG-06;Calcados;VND-005;Pedro Alves;3;G$;VENDAS
+26/02/2026;PED-00398;Varejo;CLI-006;Varejo Zeta ME;PROD-003;Teclado Mecanico;2;67133;35000;SG-02;Informatica;VND-005;Pedro Alves;3;G$;VENDAS
+18/06/2025;PED-00399;Atacado;CLI-007;Grupo Eta Comercio;PROD-007;Tablet 10 pol;1;374,40;220,00;SG-01;Eletronicos;VND-001;Joao Silva;2;US$;VENDAS
+08/07/2025;PED-00400;Atacado;CLI-019;Tau Comercio Ltda;PROD-002;Monitor 27 pol;9;10368,00;6750,00;SG-02;Informatica;VND-008;Juliana Mendes;1;R$;VENDAS
+08/07/2025;PED-00400;Atacado;CLI-019;Tau Comercio Ltda;PROD-013;Sofa 3 Lugares;6;15552,00;9000,00;SG-04;Moveis e Decoracao;VND-008;Juliana Mendes;1;R$;VENDAS
+08/07/2025;PED-00400;Atacado;CLI-019;Tau Comercio Ltda;PROD-012;Ventilador Torre;1;342,40;185,00;SG-03;Eletrodomesticos;VND-008;Juliana Mendes;1;R$;VENDAS
+08/07/2025;PED-00400;Atacado;CLI-019;Tau Comercio Ltda;PROD-030;Agua Mineral cx24;7;150,92;77,00;SG-08;Bebidas;VND-008;Juliana Mendes;1;R$;VENDAS
+05/12/2025;PED-00401;Atacado;CLI-019;Tau Comercio Ltda;PROD-010;Micro-ondas 30L;8;462400;280000;SG-03;Eletrodomesticos;VND-005;Pedro Alves;3;G$;VENDAS
+05/12/2025;PED-00401;Atacado;CLI-019;Tau Comercio Ltda;PROD-031;Refrigerante 2L;7;11445;5250;SG-08;Bebidas;VND-005;Pedro Alves;3;G$;VENDAS
+27/01/2026;PED-00402;Atacado;CLI-006;Varejo Zeta ME;PROD-008;Smart TV 50 pol;5;16000,00;10500,00;SG-01;Eletronicos;VND-003;Carlos Santos;1;R$;VENDAS
+12/10/2025;PED-00403;Varejo;CLI-022;Chi Distribuidora;PROD-016;Poltrona Conforto;1;1284,00;720,00;SG-04;Moveis e Decoracao;VND-005;Pedro Alves;1;R$;VENDAS
+12/10/2025;PED-00403;Varejo;CLI-022;Chi Distribuidora;PROD-017;Camiseta Polo;4;380,92;168,00;SG-05;Vestuario;VND-005;Pedro Alves;1;R$;VENDAS
+09/10/2025;PED-00404;Atacado;CLI-005;Atacado Epsilon Ltda;PROD-015;Estante Modular;2;152000;96667;SG-04;Moveis e Decoracao;VND-007;Ricardo Souza;3;G$;VENDAS
+09/10/2025;PED-00404;Atacado;CLI-005;Atacado Epsilon Ltda;PROD-026;Feijao Carioca 1kg;5;4900;2500;SG-07;Alimentos;VND-007;Ricardo Souza;3;G$;VENDAS
+09/10/2025;PED-00404;Atacado;CLI-005;Atacado Epsilon Ltda;PROD-008;Smart TV 50 pol;6;1664000;1050000;SG-01;Eletronicos;VND-007;Ricardo Souza;3;G$;VENDAS
+09/10/2025;PED-00404;Atacado;CLI-005;Atacado Epsilon Ltda;PROD-010;Micro-ondas 30L;1;62333;35000;SG-03;Eletrodomesticos;VND-007;Ricardo Souza;3;G$;VENDAS
+08/10/2025;PED-00405;Atacado;CLI-028;Eta Teta Comercio;PROD-006;Fone Bluetooth;7;604,80;364,00;SG-01;Eletronicos;VND-004;Ana Costa;2;US$;VENDAS
+08/10/2025;PED-00405;Atacado;CLI-028;Eta Teta Comercio;PROD-021;Tenis Esportivo;8;488,32;248,00;SG-06;Calcados;VND-004;Ana Costa;2;US$;VENDAS
+22/11/2025;PED-00406;Varejo;CLI-017;Rho Importacoes;PROD-032;Cerveja Long Neck cx12;8;748,00;336,00;SG-08;Bebidas;VND-007;Ricardo Souza;1;R$;VENDAS
+22/11/2025;PED-00406;Varejo;CLI-017;Rho Importacoes;PROD-028;Macarrao Espaguete;10;84,80;40,00;SG-07;Alimentos;VND-007;Ricardo Souza;1;R$;VENDAS
+12/01/2026;PED-00407;Atacado;CLI-028;Eta Teta Comercio;PROD-022;Sapato Social;1;345,60;175,00;SG-06;Calcados;VND-002;Maria Oliveira;1;R$;VENDAS
+12/01/2026;PED-00407;Atacado;CLI-028;Eta Teta Comercio;PROD-002;Monitor 27 pol;2;2448,00;1500,00;SG-02;Informatica;VND-002;Maria Oliveira;1;R$;VENDAS
+02/04/2026;PED-00408;Varejo;CLI-023;Psi Suprimentos;PROD-029;Suco de Laranja 1L;1;14,40;7,00;SG-08;Bebidas;VND-004;Ana Costa;1;R$;VENDAS
+08/04/2026;PED-00409;Atacado;CLI-002;Distribuidora Beta S.A.;PROD-006;Fone Bluetooth;7;611,10;364,00;SG-01;Eletronicos;VND-003;Carlos Santos;2;US$;VENDAS
+08/04/2026;PED-00409;Atacado;CLI-002;Distribuidora Beta S.A.;PROD-013;Sofa 3 Lugares;10;4608,00;3000,00;SG-04;Moveis e Decoracao;VND-003;Carlos Santos;2;US$;VENDAS
+08/04/2026;PED-00409;Atacado;CLI-002;Distribuidora Beta S.A.;PROD-012;Ventilador Torre;3;195,84;111,00;SG-03;Eletrodomesticos;VND-003;Carlos Santos;2;US$;VENDAS
+08/04/2026;PED-00409;Atacado;CLI-002;Distribuidora Beta S.A.;PROD-024;Bota Couro;7;617,40;322,00;SG-06;Calcados;VND-003;Carlos Santos;2;US$;VENDAS
+07/03/2026;PED-00410;Varejo;CLI-024;Omega Comercio;PROD-002;Monitor 27 pol;6;7632,00;4500,00;SG-02;Informatica;VND-007;Ricardo Souza;1;R$;VENDAS
+07/03/2026;PED-00410;Varejo;CLI-024;Omega Comercio;PROD-016;Poltrona Conforto;4;4800,00;2880,00;SG-04;Moveis e Decoracao;VND-007;Ricardo Souza;1;R$;VENDAS
+07/03/2026;PED-00410;Varejo;CLI-024;Omega Comercio;PROD-012;Ventilador Torre;10;3232,00;1850,00;SG-03;Eletrodomesticos;VND-007;Ricardo Souza;1;R$;VENDAS
+03/12/2025;PED-00411;Atacado;CLI-012;Mu Atacadista;PROD-029;Suco de Laranja 1L;8;9800;4667;SG-08;Bebidas;VND-008;Juliana Mendes;3;G$;VENDAS
+03/12/2025;PED-00411;Atacado;CLI-012;Mu Atacadista;PROD-021;Tenis Esportivo;4;97067;51667;SG-06;Calcados;VND-008;Juliana Mendes;3;G$;VENDAS
+30/07/2025;PED-00412;Varejo;CLI-021;Phi Varejo ME;PROD-020;Jaqueta de Couro;3;348,00;186,00;SG-05;Vestuario;VND-003;Carlos Santos;2;US$;VENDAS
+30/07/2025;PED-00412;Varejo;CLI-021;Phi Varejo ME;PROD-021;Tenis Esportivo;9;504,00;279,00;SG-06;Calcados;VND-003;Carlos Santos;2;US$;VENDAS
+30/07/2025;PED-00412;Varejo;CLI-021;Phi Varejo ME;PROD-021;Tenis Esportivo;6;366,24;186,00;SG-06;Calcados;VND-003;Carlos Santos;2;US$;VENDAS
+27/04/2026;PED-00413;Atacado;CLI-029;Iota Kappa Ltda;PROD-028;Macarrao Espaguete;4;2693;1333;SG-07;Alimentos;VND-003;Carlos Santos;3;G$;VENDAS
+12/12/2025;PED-00414;Varejo;CLI-002;Distribuidora Beta S.A.;PROD-014;Mesa de Jantar;5;8820,00;5500,00;SG-04;Moveis e Decoracao;VND-003;Carlos Santos;1;R$;VENDAS
+12/12/2025;PED-00414;Varejo;CLI-002;Distribuidora Beta S.A.;PROD-016;Poltrona Conforto;1;1260,00;720,00;SG-04;Moveis e Decoracao;VND-003;Carlos Santos;1;R$;VENDAS
+29/09/2025;PED-00415;Atacado;CLI-028;Eta Teta Comercio;PROD-032;Cerveja Long Neck cx12;1;90,95;42,00;SG-08;Bebidas;VND-003;Carlos Santos;1;R$;VENDAS
+16/11/2025;PED-00416;Atacado;CLI-022;Chi Distribuidora;PROD-022;Sapato Social;6;1843,20;1050,00;SG-06;Calcados;VND-002;Maria Oliveira;1;R$;VENDAS
+01/06/2025;PED-00417;Atacado;CLI-009;Iota Distribuicoes;PROD-011;Cafeteira Eletrica;7;2136,40;1120,00;SG-03;Eletrodomesticos;VND-003;Carlos Santos;1;R$;VENDAS
+01/06/2025;PED-00417;Atacado;CLI-009;Iota Distribuicoes;PROD-009;Geladeira Frost Free;2;8056,00;5000,00;SG-03;Eletrodomesticos;VND-003;Carlos Santos;1;R$;VENDAS
+01/01/2026;PED-00418;Varejo;CLI-017;Rho Importacoes;PROD-019;Vestido Casual;3;456,75;204,00;SG-05;Vestuario;VND-005;Pedro Alves;1;R$;VENDAS
+09/06/2025;PED-00419;Atacado;CLI-005;Atacado Epsilon Ltda;PROD-016;Poltrona Conforto;3;763,20;432,00;SG-04;Moveis e Decoracao;VND-008;Juliana Mendes;2;US$;VENDAS
+10/08/2025;PED-00420;Atacado;CLI-002;Distribuidora Beta S.A.;PROD-017;Camiseta Polo;7;616,77;294,00;SG-05;Vestuario;VND-008;Juliana Mendes;1;R$;VENDAS
+10/08/2025;PED-00420;Atacado;CLI-002;Distribuidora Beta S.A.;PROD-026;Feijao Carioca 1kg;5;64,20;30,00;SG-07;Alimentos;VND-008;Juliana Mendes;1;R$;VENDAS
+19/09/2025;PED-00421;Varejo;CLI-023;Psi Suprimentos;PROD-013;Sofa 3 Lugares;8;20736,00;12000,00;SG-04;Moveis e Decoracao;VND-003;Carlos Santos;1;R$;VENDAS
+19/09/2025;PED-00421;Varejo;CLI-023;Psi Suprimentos;PROD-021;Tenis Esportivo;8;2262,40;1240,00;SG-06;Calcados;VND-003;Carlos Santos;1;R$;VENDAS
+19/09/2025;PED-00421;Varejo;CLI-023;Psi Suprimentos;PROD-016;Poltrona Conforto;10;11880,00;7200,00;SG-04;Moveis e Decoracao;VND-003;Carlos Santos;1;R$;VENDAS
+19/09/2025;PED-00421;Varejo;CLI-023;Psi Suprimentos;PROD-007;Tablet 10 pol;10;19800,00;11000,00;SG-01;Eletronicos;VND-003;Carlos Santos;1;R$;VENDAS
+23/11/2025;PED-00422;Atacado;CLI-012;Mu Atacadista;PROD-022;Sapato Social;3;912,00;525,00;SG-06;Calcados;VND-006;Fernanda Lima;1;R$;VENDAS
+23/11/2025;PED-00422;Atacado;CLI-012;Mu Atacadista;PROD-027;Azeite Extra Virgem;7;314,58;154,00;SG-07;Alimentos;VND-006;Fernanda Lima;1;R$;VENDAS
+06/09/2025;PED-00423;Atacado;CLI-008;Theta Importacoes;PROD-014;Mesa de Jantar;4;7704,00;4400,00;SG-04;Moveis e Decoracao;VND-008;Juliana Mendes;1;R$;VENDAS
+06/09/2025;PED-00423;Atacado;CLI-008;Theta Importacoes;PROD-032;Cerveja Long Neck cx12;4;340,00;168,00;SG-08;Bebidas;VND-008;Juliana Mendes;1;R$;VENDAS
+06/09/2025;PED-00423;Atacado;CLI-008;Theta Importacoes;PROD-002;Monitor 27 pol;4;4944,00;3000,00;SG-02;Informatica;VND-008;Juliana Mendes;1;R$;VENDAS
+06/09/2025;PED-00423;Atacado;CLI-008;Theta Importacoes;PROD-024;Bota Couro;9;3969,00;2070,00;SG-06;Calcados;VND-008;Juliana Mendes;1;R$;VENDAS
+19/11/2025;PED-00424;Varejo;CLI-012;Mu Atacadista;PROD-007;Tablet 10 pol;10;18180,00;11000,00;SG-01;Eletronicos;VND-003;Carlos Santos;1;R$;VENDAS
+08/01/2026;PED-00425;Atacado;CLI-008;Theta Importacoes;PROD-024;Bota Couro;6;2671,20;1380,00;SG-06;Calcados;VND-004;Ana Costa;1;R$;VENDAS
+08/01/2026;PED-00425;Atacado;CLI-008;Theta Importacoes;PROD-019;Vestido Casual;9;1252,80;612,00;SG-05;Vestuario;VND-004;Ana Costa;1;R$;VENDAS
+11/02/2026;PED-00426;Atacado;CLI-023;Psi Suprimentos;PROD-016;Poltrona Conforto;10;2352,00;1440,00;SG-04;Moveis e Decoracao;VND-005;Pedro Alves;2;US$;VENDAS
+11/02/2026;PED-00426;Atacado;CLI-023;Psi Suprimentos;PROD-016;Poltrona Conforto;3;698,40;432,00;SG-04;Moveis e Decoracao;VND-005;Pedro Alves;2;US$;VENDAS
+11/02/2026;PED-00426;Atacado;CLI-023;Psi Suprimentos;PROD-003;Teclado Mecanico;7;553,28;294,00;SG-02;Informatica;VND-005;Pedro Alves;2;US$;VENDAS
+22/01/2026;PED-00427;Atacado;CLI-020;Upsilon Atacado;PROD-022;Sapato Social;8;226133;116667;SG-06;Calcados;VND-004;Ana Costa;3;G$;VENDAS
+22/01/2026;PED-00427;Atacado;CLI-020;Upsilon Atacado;PROD-019;Vestido Casual;6;71775;34000;SG-05;Vestuario;VND-004;Ana Costa;3;G$;VENDAS
+09/06/2025;PED-00428;Varejo;CLI-011;Lambda Suprimentos;PROD-006;Fone Bluetooth;6;2943,00;1560,00;SG-01;Eletronicos;VND-006;Fernanda Lima;1;R$;VENDAS
+03/03/2026;PED-00429;Atacado;CLI-010;Kappa Logistica;PROD-015;Estante Modular;5;4750,00;2900,00;SG-04;Moveis e Decoracao;VND-006;Fernanda Lima;1;R$;VENDAS
+03/03/2026;PED-00429;Atacado;CLI-010;Kappa Logistica;PROD-003;Teclado Mecanico;3;1117,20;630,00;SG-02;Informatica;VND-006;Fernanda Lima;1;R$;VENDAS
+03/03/2026;PED-00429;Atacado;CLI-010;Kappa Logistica;PROD-024;Bota Couro;2;831,60;460,00;SG-06;Calcados;VND-006;Fernanda Lima;1;R$;VENDAS
+03/03/2026;PED-00429;Atacado;CLI-010;Kappa Logistica;PROD-032;Cerveja Long Neck cx12;3;244,80;126,00;SG-08;Bebidas;VND-006;Fernanda Lima;1;R$;VENDAS
+06/06/2025;PED-00430;Varejo;CLI-003;Comercial Gamma ME;PROD-030;Agua Mineral cx24;3;13,86;6,60;SG-08;Bebidas;VND-002;Maria Oliveira;2;US$;VENDAS
+06/06/2025;PED-00430;Varejo;CLI-003;Comercial Gamma ME;PROD-022;Sapato Social;3;192,00;105,00;SG-06;Calcados;VND-002;Maria Oliveira;2;US$;VENDAS
+25/06/2025;PED-00431;Atacado;CLI-030;Lambda Mu SA;PROD-017;Camiseta Polo;10;970,10;420,00;SG-05;Vestuario;VND-003;Carlos Santos;1;R$;VENDAS
+25/06/2025;PED-00431;Atacado;CLI-030;Lambda Mu SA;PROD-020;Jaqueta de Couro;5;3132,00;1550,00;SG-05;Vestuario;VND-003;Carlos Santos;1;R$;VENDAS
+14/10/2025;PED-00432;Varejo;CLI-007;Grupo Eta Comercio;PROD-022;Sapato Social;6;1881,60;1050,00;SG-06;Calcados;VND-006;Fernanda Lima;1;R$;VENDAS
+14/10/2025;PED-00432;Varejo;CLI-007;Grupo Eta Comercio;PROD-011;Cafeteira Eletrica;7;2077,60;1120,00;SG-03;Eletrodomesticos;VND-006;Fernanda Lima;1;R$;VENDAS
+14/10/2025;PED-00432;Varejo;CLI-007;Grupo Eta Comercio;PROD-026;Feijao Carioca 1kg;4;50,88;24,00;SG-07;Alimentos;VND-006;Fernanda Lima;1;R$;VENDAS
+14/10/2025;PED-00432;Varejo;CLI-007;Grupo Eta Comercio;PROD-003;Teclado Mecanico;9;3625,20;1890,00;SG-02;Informatica;VND-006;Fernanda Lima;1;R$;VENDAS
+30/07/2025;PED-00433;Varejo;CLI-017;Rho Importacoes;PROD-027;Azeite Extra Virgem;1;44,52;22,00;SG-07;Alimentos;VND-001;Joao Silva;1;R$;VENDAS
+30/07/2025;PED-00433;Varejo;CLI-017;Rho Importacoes;PROD-025;Arroz Integral 5kg;1;28,00;16,00;SG-07;Alimentos;VND-001;Joao Silva;1;R$;VENDAS
+23/01/2026;PED-00434;Atacado;CLI-020;Upsilon Atacado;PROD-022;Sapato Social;7;425,60;245,00;SG-06;Calcados;VND-005;Pedro Alves;2;US$;VENDAS
+23/01/2026;PED-00434;Atacado;CLI-020;Upsilon Atacado;PROD-030;Agua Mineral cx24;7;33,26;15,40;SG-08;Bebidas;VND-005;Pedro Alves;2;US$;VENDAS
+23/01/2026;PED-00434;Atacado;CLI-020;Upsilon Atacado;PROD-016;Poltrona Conforto;6;1584,00;864,00;SG-04;Moveis e Decoracao;VND-005;Pedro Alves;2;US$;VENDAS
+13/06/2025;PED-00435;Varejo;CLI-022;Chi Distribuidora;PROD-028;Macarrao Espaguete;1;693;333;SG-07;Alimentos;VND-008;Juliana Mendes;3;G$;VENDAS
+13/06/2025;PED-00435;Varejo;CLI-022;Chi Distribuidora;PROD-010;Micro-ondas 30L;7;384767;245000;SG-03;Eletrodomesticos;VND-008;Juliana Mendes;3;G$;VENDAS
+11/02/2026;PED-00436;Atacado;CLI-002;Distribuidora Beta S.A.;PROD-004;Mouse Sem Fio;10;254,40;130,00;SG-02;Informatica;VND-006;Fernanda Lima;2;US$;VENDAS
+10/01/2026;PED-00437;Varejo;CLI-014;Xi Comercio SA;PROD-014;Mesa de Jantar;5;720000;458333;SG-04;Moveis e Decoracao;VND-006;Fernanda Lima;3;G$;VENDAS
+10/01/2026;PED-00437;Varejo;CLI-014;Xi Comercio SA;PROD-015;Estante Modular;5;391875;241667;SG-04;Moveis e Decoracao;VND-006;Fernanda Lima;3;G$;VENDAS
+06/12/2025;PED-00438;Atacado;CLI-003;Comercial Gamma ME;PROD-020;Jaqueta de Couro;10;1206,40;620,00;SG-05;Vestuario;VND-001;Joao Silva;2;US$;VENDAS
+06/12/2025;PED-00438;Atacado;CLI-003;Comercial Gamma ME;PROD-020;Jaqueta de Couro;4;496,48;248,00;SG-05;Vestuario;VND-001;Joao Silva;2;US$;VENDAS
+06/12/2025;PED-00438;Atacado;CLI-003;Comercial Gamma ME;PROD-009;Geladeira Frost Free;9;6771,60;4500,00;SG-03;Eletrodomesticos;VND-001;Joao Silva;2;US$;VENDAS
+06/12/2025;PED-00438;Atacado;CLI-003;Comercial Gamma ME;PROD-001;Notebook Pro 15;3;1730,40;1140,00;SG-02;Informatica;VND-001;Joao Silva;2;US$;VENDAS
+05/05/2026;PED-00439;Atacado;CLI-019;Tau Comercio Ltda;PROD-030;Agua Mineral cx24;8;38,37;17,60;SG-08;Bebidas;VND-007;Ricardo Souza;2;US$;VENDAS
+05/05/2026;PED-00439;Atacado;CLI-019;Tau Comercio Ltda;PROD-008;Smart TV 50 pol;7;4748,80;2940,00;SG-01;Eletronicos;VND-007;Ricardo Souza;2;US$;VENDAS
+05/05/2026;PED-00439;Atacado;CLI-019;Tau Comercio Ltda;PROD-020;Jaqueta de Couro;9;1148,40;558,00;SG-05;Vestuario;VND-007;Ricardo Souza;2;US$;VENDAS
+22/02/2026;PED-00440;Atacado;CLI-024;Omega Comercio;PROD-008;Smart TV 50 pol;8;4864,00;3360,00;SG-01;Eletronicos;VND-006;Fernanda Lima;2;US$;VENDAS
+22/02/2026;PED-00440;Atacado;CLI-024;Omega Comercio;PROD-007;Tablet 10 pol;8;3168,00;1760,00;SG-01;Eletronicos;VND-006;Fernanda Lima;2;US$;VENDAS
+22/02/2026;PED-00440;Atacado;CLI-024;Omega Comercio;PROD-002;Monitor 27 pol;5;1152,00;750,00;SG-02;Informatica;VND-006;Fernanda Lima;2;US$;VENDAS
+22/02/2026;PED-00440;Atacado;CLI-024;Omega Comercio;PROD-022;Sapato Social;7;470,40;245,00;SG-06;Calcados;VND-006;Fernanda Lima;2;US$;VENDAS
+12/07/2025;PED-00441;Atacado;CLI-005;Atacado Epsilon Ltda;PROD-016;Poltrona Conforto;8;10368,00;5760,00;SG-04;Moveis e Decoracao;VND-006;Fernanda Lima;1;R$;VENDAS
+12/07/2025;PED-00441;Atacado;CLI-005;Atacado Epsilon Ltda;PROD-027;Azeite Extra Virgem;6;239,40;132,00;SG-07;Alimentos;VND-006;Fernanda Lima;1;R$;VENDAS
+25/10/2025;PED-00442;Atacado;CLI-005;Atacado Epsilon Ltda;PROD-015;Estante Modular;1;87083;48333;SG-04;Moveis e Decoracao;VND-001;Joao Silva;3;G$;VENDAS
+25/10/2025;PED-00442;Atacado;CLI-005;Atacado Epsilon Ltda;PROD-012;Ventilador Torre;3;82400;46250;SG-03;Eletrodomesticos;VND-001;Joao Silva;3;G$;VENDAS
+25/10/2025;PED-00442;Atacado;CLI-005;Atacado Epsilon Ltda;PROD-002;Monitor 27 pol;2;196000;125000;SG-02;Informatica;VND-001;Joao Silva;3;G$;VENDAS
+25/10/2025;PED-00442;Atacado;CLI-005;Atacado Epsilon Ltda;PROD-019;Vestido Casual;9;116363;51000;SG-05;Vestuario;VND-001;Joao Silva;3;G$;VENDAS
+14/10/2025;PED-00443;Varejo;CLI-011;Lambda Suprimentos;PROD-024;Bota Couro;9;3780,00;2070,00;SG-06;Calcados;VND-006;Fernanda Lima;1;R$;VENDAS
+14/10/2025;PED-00443;Varejo;CLI-011;Lambda Suprimentos;PROD-019;Vestido Casual;1;145,00;68,00;SG-05;Vestuario;VND-006;Fernanda Lima;1;R$;VENDAS
+29/08/2025;PED-00444;Atacado;CLI-013;Nu Varejo Ltda;PROD-016;Poltrona Conforto;8;1843,20;1152,00;SG-04;Moveis e Decoracao;VND-006;Fernanda Lima;2;US$;VENDAS
+01/10/2025;PED-00445;Atacado;CLI-025;Alpha Beta Ltda;PROD-016;Poltrona Conforto;4;979,20;576,00;SG-04;Moveis e Decoracao;VND-007;Ricardo Souza;2;US$;VENDAS
+01/10/2025;PED-00445;Atacado;CLI-025;Alpha Beta Ltda;PROD-026;Feijao Carioca 1kg;3;7,49;3,60;SG-07;Alimentos;VND-007;Ricardo Souza;2;US$;VENDAS
+01/10/2025;PED-00445;Atacado;CLI-025;Alpha Beta Ltda;PROD-011;Cafeteira Eletrica;9;524,16;288,00;SG-03;Eletrodomesticos;VND-007;Ricardo Souza;2;US$;VENDAS
+01/10/2025;PED-00445;Atacado;CLI-025;Alpha Beta Ltda;PROD-023;Sandalia Feminina;2;71,28;36,00;SG-06;Calcados;VND-007;Ricardo Souza;2;US$;VENDAS
+26/01/2026;PED-00446;Atacado;CLI-017;Rho Importacoes;PROD-011;Cafeteira Eletrica;6;1797,60;960,00;SG-03;Eletrodomesticos;VND-004;Ana Costa;1;R$;VENDAS
+26/01/2026;PED-00446;Atacado;CLI-017;Rho Importacoes;PROD-029;Suco de Laranja 1L;10;154,50;70,00;SG-08;Bebidas;VND-004;Ana Costa;1;R$;VENDAS
+23/01/2026;PED-00447;Atacado;CLI-010;Kappa Logistica;PROD-013;Sofa 3 Lugares;9;20952,00;13500,00;SG-04;Moveis e Decoracao;VND-006;Fernanda Lima;1;R$;VENDAS
+23/01/2026;PED-00447;Atacado;CLI-010;Kappa Logistica;PROD-028;Macarrao Espaguete;9;69,84;36,00;SG-07;Alimentos;VND-006;Fernanda Lima;1;R$;VENDAS
+28/12/2025;PED-00448;Atacado;CLI-023;Psi Suprimentos;PROD-020;Jaqueta de Couro;3;1757,40;930,00;SG-05;Vestuario;VND-005;Pedro Alves;1;R$;VENDAS
+28/12/2025;PED-00448;Atacado;CLI-023;Psi Suprimentos;PROD-017;Camiseta Polo;1;84,55;42,00;SG-05;Vestuario;VND-005;Pedro Alves;1;R$;VENDAS
+28/12/2025;PED-00448;Atacado;CLI-023;Psi Suprimentos;PROD-004;Mouse Sem Fio;7;915,60;455,00;SG-02;Informatica;VND-005;Pedro Alves;1;R$;VENDAS
+28/12/2025;PED-00448;Atacado;CLI-023;Psi Suprimentos;PROD-007;Tablet 10 pol;2;3528,00;2200,00;SG-01;Eletronicos;VND-005;Pedro Alves;1;R$;VENDAS
+25/11/2025;PED-00449;Atacado;CLI-023;Psi Suprimentos;PROD-006;Fone Bluetooth;8;3780,00;2080,00;SG-01;Eletronicos;VND-008;Juliana Mendes;1;R$;VENDAS
+25/11/2025;PED-00449;Atacado;CLI-023;Psi Suprimentos;PROD-016;Poltrona Conforto;5;6540,00;3600,00;SG-04;Moveis e Decoracao;VND-008;Juliana Mendes;1;R$;VENDAS
+07/09/2025;PED-00450;Atacado;CLI-001;Empresa Alpha Ltda;PROD-025;Arroz Integral 5kg;7;15680;9333;SG-07;Alimentos;VND-006;Fernanda Lima;3;G$;VENDAS
+07/09/2025;PED-00450;Atacado;CLI-001;Empresa Alpha Ltda;PROD-028;Macarrao Espaguete;4;2667;1333;SG-07;Alimentos;VND-006;Fernanda Lima;3;G$;VENDAS
+08/06/2025;PED-00451;Varejo;CLI-001;Empresa Alpha Ltda;PROD-008;Smart TV 50 pol;8;24832,00;16800,00;SG-01;Eletronicos;VND-001;Joao Silva;1;R$;VENDAS
+16/11/2025;PED-00452;Varejo;CLI-008;Theta Importacoes;PROD-017;Camiseta Polo;7;666,61;294,00;SG-05;Vestuario;VND-002;Maria Oliveira;1;R$;VENDAS
+27/12/2025;PED-00453;Atacado;CLI-011;Lambda Suprimentos;PROD-029;Suco de Laranja 1L;8;24,48;11,20;SG-08;Bebidas;VND-007;Ricardo Souza;2;US$;VENDAS
+26/10/2025;PED-00454;Atacado;CLI-021;Phi Varejo ME;PROD-025;Arroz Integral 5kg;7;201,88;112,00;SG-07;Alimentos;VND-003;Carlos Santos;1;R$;VENDAS
+26/10/2025;PED-00454;Atacado;CLI-021;Phi Varejo ME;PROD-019;Vestido Casual;10;1421,00;680,00;SG-05;Vestuario;VND-003;Carlos Santos;1;R$;VENDAS
+26/10/2025;PED-00454;Atacado;CLI-021;Phi Varejo ME;PROD-030;Agua Mineral cx24;7;152,46;77,00;SG-08;Bebidas;VND-003;Carlos Santos;1;R$;VENDAS
+26/10/2025;PED-00454;Atacado;CLI-021;Phi Varejo ME;PROD-028;Macarrao Espaguete;1;7,84;4,00;SG-07;Alimentos;VND-003;Carlos Santos;1;R$;VENDAS
+04/09/2025;PED-00455;Varejo;CLI-030;Lambda Mu SA;PROD-021;Tenis Esportivo;3;831,60;465,00;SG-06;Calcados;VND-003;Carlos Santos;1;R$;VENDAS
+04/09/2025;PED-00455;Varejo;CLI-030;Lambda Mu SA;PROD-020;Jaqueta de Couro;1;585,80;310,00;SG-05;Vestuario;VND-003;Carlos Santos;1;R$;VENDAS
+04/09/2025;PED-00455;Varejo;CLI-030;Lambda Mu SA;PROD-025;Arroz Integral 5kg;3;87,36;48,00;SG-07;Alimentos;VND-003;Carlos Santos;1;R$;VENDAS
+04/09/2025;PED-00455;Varejo;CLI-030;Lambda Mu SA;PROD-003;Teclado Mecanico;9;3659,40;1890,00;SG-02;Informatica;VND-003;Carlos Santos;1;R$;VENDAS
+26/01/2026;PED-00456;Atacado;CLI-003;Comercial Gamma ME;PROD-022;Sapato Social;9;3081,60;1575,00;SG-06;Calcados;VND-003;Carlos Santos;1;R$;VENDAS
+26/01/2026;PED-00456;Atacado;CLI-003;Comercial Gamma ME;PROD-012;Ventilador Torre;2;646,40;370,00;SG-03;Eletrodomesticos;VND-003;Carlos Santos;1;R$;VENDAS
+26/01/2026;PED-00456;Atacado;CLI-003;Comercial Gamma ME;PROD-012;Ventilador Torre;10;3392,00;1850,00;SG-03;Eletrodomesticos;VND-003;Carlos Santos;1;R$;VENDAS
+08/04/2026;PED-00457;Varejo;CLI-005;Atacado Epsilon Ltda;PROD-030;Agua Mineral cx24;9;213,84;99,00;SG-08;Bebidas;VND-001;Joao Silva;1;R$;VENDAS
+23/09/2025;PED-00458;Atacado;CLI-004;Industria Delta SA;PROD-020;Jaqueta de Couro;6;292900;155000;SG-05;Vestuario;VND-003;Carlos Santos;3;G$;VENDAS
+23/09/2025;PED-00458;Atacado;CLI-004;Industria Delta SA;PROD-018;Calca Jeans;4;53333;26667;SG-05;Vestuario;VND-003;Carlos Santos;3;G$;VENDAS
+23/09/2025;PED-00458;Atacado;CLI-004;Industria Delta SA;PROD-018;Calca Jeans;7;89600;46667;SG-05;Vestuario;VND-003;Carlos Santos;3;G$;VENDAS
+26/08/2025;PED-00459;Atacado;CLI-029;Iota Kappa Ltda;PROD-011;Cafeteira Eletrica;9;2671,20;1440,00;SG-03;Eletrodomesticos;VND-007;Ricardo Souza;1;R$;VENDAS
+26/08/2025;PED-00459;Atacado;CLI-029;Iota Kappa Ltda;PROD-027;Azeite Extra Virgem;4;178,08;88,00;SG-07;Alimentos;VND-007;Ricardo Souza;1;R$;VENDAS
+28/11/2025;PED-00460;Varejo;CLI-006;Varejo Zeta ME;PROD-001;Notebook Pro 15;3;8568,00;5700,00;SG-02;Informatica;VND-003;Carlos Santos;1;R$;VENDAS
+28/11/2025;PED-00460;Varejo;CLI-006;Varejo Zeta ME;PROD-004;Mouse Sem Fio;5;630,00;325,00;SG-02;Informatica;VND-003;Carlos Santos;1;R$;VENDAS
+28/11/2025;PED-00460;Varejo;CLI-006;Varejo Zeta ME;PROD-020;Jaqueta de Couro;2;1241,20;620,00;SG-05;Vestuario;VND-003;Carlos Santos;1;R$;VENDAS
+30/07/2025;PED-00461;Varejo;CLI-002;Distribuidora Beta S.A.;PROD-013;Sofa 3 Lugares;2;4800,00;3000,00;SG-04;Moveis e Decoracao;VND-003;Carlos Santos;1;R$;VENDAS
+30/07/2025;PED-00461;Varejo;CLI-002;Distribuidora Beta S.A.;PROD-013;Sofa 3 Lugares;1;2376,00;1500,00;SG-04;Moveis e Decoracao;VND-003;Carlos Santos;1;R$;VENDAS
+15/04/2026;PED-00462;Atacado;CLI-009;Iota Distribuicoes;PROD-006;Fone Bluetooth;6;2592,00;1560,00;SG-01;Eletronicos;VND-002;Maria Oliveira;1;R$;VENDAS
+15/04/2026;PED-00462;Atacado;CLI-009;Iota Distribuicoes;PROD-006;Fone Bluetooth;3;1350,00;780,00;SG-01;Eletronicos;VND-002;Maria Oliveira;1;R$;VENDAS
+15/04/2026;PED-00462;Atacado;CLI-009;Iota Distribuicoes;PROD-016;Poltrona Conforto;3;3924,00;2160,00;SG-04;Moveis e Decoracao;VND-002;Maria Oliveira;1;R$;VENDAS
+15/04/2026;PED-00462;Atacado;CLI-009;Iota Distribuicoes;PROD-012;Ventilador Torre;10;3104,00;1850,00;SG-03;Eletrodomesticos;VND-002;Maria Oliveira;1;R$;VENDAS
+22/04/2026;PED-00463;Atacado;CLI-005;Atacado Epsilon Ltda;PROD-012;Ventilador Torre;3;201,60;111,00;SG-03;Eletrodomesticos;VND-003;Carlos Santos;2;US$;VENDAS
+22/04/2026;PED-00463;Atacado;CLI-005;Atacado Epsilon Ltda;PROD-024;Bota Couro;3;259,56;138,00;SG-06;Calcados;VND-003;Carlos Santos;2;US$;VENDAS
+22/04/2026;PED-00463;Atacado;CLI-005;Atacado Epsilon Ltda;PROD-018;Calca Jeans;3;99,84;48,00;SG-05;Vestuario;VND-003;Carlos Santos;2;US$;VENDAS
+22/08/2025;PED-00464;Varejo;CLI-011;Lambda Suprimentos;PROD-012;Ventilador Torre;10;672,00;370,00;SG-03;Eletrodomesticos;VND-002;Maria Oliveira;2;US$;VENDAS
+07/04/2026;PED-00465;Atacado;CLI-007;Grupo Eta Comercio;PROD-018;Calca Jeans;6;1036,80;480,00;SG-05;Vestuario;VND-003;Carlos Santos;1;R$;VENDAS
+07/04/2026;PED-00465;Atacado;CLI-007;Grupo Eta Comercio;PROD-022;Sapato Social;1;323,20;175,00;SG-06;Calcados;VND-003;Carlos Santos;1;R$;VENDAS
+09/05/2026;PED-00466;Atacado;CLI-017;Rho Importacoes;PROD-007;Tablet 10 pol;1;385,20;220,00;SG-01;Eletronicos;VND-004;Ana Costa;2;US$;VENDAS
+09/05/2026;PED-00466;Atacado;CLI-017;Rho Importacoes;PROD-001;Notebook Pro 15;1;616,00;380,00;SG-02;Informatica;VND-004;Ana Costa;2;US$;VENDAS
+09/05/2026;PED-00466;Atacado;CLI-017;Rho Importacoes;PROD-018;Calca Jeans;2;69,76;32,00;SG-05;Vestuario;VND-004;Ana Costa;2;US$;VENDAS
+09/05/2026;PED-00466;Atacado;CLI-017;Rho Importacoes;PROD-024;Bota Couro;2;161,28;92,00;SG-06;Calcados;VND-004;Ana Costa;2;US$;VENDAS
+13/12/2025;PED-00467;Varejo;CLI-018;Sigma Logistica;PROD-005;Smartphone 128GB;8;3449,60;2240,00;SG-01;Eletronicos;VND-008;Juliana Mendes;2;US$;VENDAS
+24/12/2025;PED-00468;Atacado;CLI-022;Chi Distribuidora;PROD-025;Arroz Integral 5kg;5;12600;6667;SG-07;Alimentos;VND-008;Juliana Mendes;3;G$;VENDAS
+24/12/2025;PED-00468;Atacado;CLI-022;Chi Distribuidora;PROD-026;Feijao Carioca 1kg;10;10400;5000;SG-07;Alimentos;VND-008;Juliana Mendes;3;G$;VENDAS
+18/02/2026;PED-00469;Varejo;CLI-014;Xi Comercio SA;PROD-010;Micro-ondas 30L;9;6242,40;3780,00;SG-03;Eletrodomesticos;VND-005;Pedro Alves;1;R$;VENDAS
+18/02/2026;PED-00469;Varejo;CLI-014;Xi Comercio SA;PROD-031;Refrigerante 2L;4;77,04;36,00;SG-08;Bebidas;VND-005;Pedro Alves;1;R$;VENDAS
+18/02/2026;PED-00469;Varejo;CLI-014;Xi Comercio SA;PROD-029;Suco de Laranja 1L;9;135,00;63,00;SG-08;Bebidas;VND-005;Pedro Alves;1;R$;VENDAS
+14/01/2026;PED-00470;Atacado;CLI-009;Iota Distribuicoes;PROD-024;Bota Couro;9;3780,00;2070,00;SG-06;Calcados;VND-008;Juliana Mendes;1;R$;VENDAS
+14/01/2026;PED-00470;Atacado;CLI-009;Iota Distribuicoes;PROD-024;Bota Couro;2;890,40;460,00;SG-06;Calcados;VND-008;Juliana Mendes;1;R$;VENDAS
+14/01/2026;PED-00470;Atacado;CLI-009;Iota Distribuicoes;PROD-031;Refrigerante 2L;9;173,34;81,00;SG-08;Bebidas;VND-008;Juliana Mendes;1;R$;VENDAS
+29/06/2025;PED-00471;Atacado;CLI-030;Lambda Mu SA;PROD-009;Geladeira Frost Free;5;1504167;1041667;SG-03;Eletrodomesticos;VND-004;Ana Costa;3;G$;VENDAS
+29/06/2025;PED-00471;Atacado;CLI-030;Lambda Mu SA;PROD-013;Sofa 3 Lugares;5;1040000;625000;SG-04;Moveis e Decoracao;VND-004;Ana Costa;3;G$;VENDAS
+29/06/2025;PED-00471;Atacado;CLI-030;Lambda Mu SA;PROD-009;Geladeira Frost Free;10;3198333;2083333;SG-03;Eletrodomesticos;VND-004;Ana Costa;3;G$;VENDAS
+20/09/2025;PED-00472;Atacado;CLI-028;Eta Teta Comercio;PROD-029;Suco de Laranja 1L;10;12500;5833;SG-08;Bebidas;VND-004;Ana Costa;3;G$;VENDAS
+20/09/2025;PED-00472;Atacado;CLI-028;Eta Teta Comercio;PROD-016;Poltrona Conforto;9;927000;540000;SG-04;Moveis e Decoracao;VND-004;Ana Costa;3;G$;VENDAS
+02/08/2025;PED-00473;Atacado;CLI-005;Atacado Epsilon Ltda;PROD-021;Tenis Esportivo;9;2646,00;1395,00;SG-06;Calcados;VND-004;Ana Costa;1;R$;VENDAS
+28/01/2026;PED-00474;Atacado;CLI-009;Iota Distribuicoes;PROD-032;Cerveja Long Neck cx12;10;807,50;420,00;SG-08;Bebidas;VND-005;Pedro Alves;1;R$;VENDAS
+28/01/2026;PED-00474;Atacado;CLI-009;Iota Distribuicoes;PROD-020;Jaqueta de Couro;8;4825,60;2480,00;SG-05;Vestuario;VND-005;Pedro Alves;1;R$;VENDAS
+28/01/2026;PED-00474;Atacado;CLI-009;Iota Distribuicoes;PROD-028;Macarrao Espaguete;1;7,68;4,00;SG-07;Alimentos;VND-005;Pedro Alves;1;R$;VENDAS
+28/01/2026;PED-00474;Atacado;CLI-009;Iota Distribuicoes;PROD-019;Vestido Casual;1;142,10;68,00;SG-05;Vestuario;VND-005;Pedro Alves;1;R$;VENDAS
+12/11/2025;PED-00475;Atacado;CLI-014;Xi Comercio SA;PROD-028;Macarrao Espaguete;3;24,96;12,00;SG-07;Alimentos;VND-008;Juliana Mendes;1;R$;VENDAS
+12/11/2025;PED-00475;Atacado;CLI-014;Xi Comercio SA;PROD-028;Macarrao Espaguete;4;34,56;16,00;SG-07;Alimentos;VND-008;Juliana Mendes;1;R$;VENDAS
+12/11/2025;PED-00475;Atacado;CLI-014;Xi Comercio SA;PROD-013;Sofa 3 Lugares;10;23040,00;15000,00;SG-04;Moveis e Decoracao;VND-008;Juliana Mendes;1;R$;VENDAS
+12/11/2025;PED-00475;Atacado;CLI-014;Xi Comercio SA;PROD-023;Sandalia Feminina;10;1728,00;900,00;SG-06;Calcados;VND-008;Juliana Mendes;1;R$;VENDAS
+02/03/2026;PED-00476;Atacado;CLI-022;Chi Distribuidora;PROD-028;Macarrao Espaguete;3;24,00;12,00;SG-07;Alimentos;VND-002;Maria Oliveira;1;R$;VENDAS
+02/03/2026;PED-00476;Atacado;CLI-022;Chi Distribuidora;PROD-020;Jaqueta de Couro;2;1160,00;620,00;SG-05;Vestuario;VND-002;Maria Oliveira;1;R$;VENDAS
+02/03/2026;PED-00476;Atacado;CLI-022;Chi Distribuidora;PROD-004;Mouse Sem Fio;9;1112,40;585,00;SG-02;Informatica;VND-002;Maria Oliveira;1;R$;VENDAS
+06/02/2026;PED-00477;Atacado;CLI-013;Nu Varejo Ltda;PROD-024;Bota Couro;1;407,40;230,00;SG-06;Calcados;VND-007;Ricardo Souza;1;R$;VENDAS
+06/02/2026;PED-00477;Atacado;CLI-013;Nu Varejo Ltda;PROD-030;Agua Mineral cx24;10;220,00;110,00;SG-08;Bebidas;VND-007;Ricardo Souza;1;R$;VENDAS
+06/02/2026;PED-00477;Atacado;CLI-013;Nu Varejo Ltda;PROD-026;Feijao Carioca 1kg;5;60,00;30,00;SG-07;Alimentos;VND-007;Ricardo Souza;1;R$;VENDAS
+07/07/2025;PED-00478;Atacado;CLI-008;Theta Importacoes;PROD-014;Mesa de Jantar;10;17460,00;11000,00;SG-04;Moveis e Decoracao;VND-006;Fernanda Lima;1;R$;VENDAS
+07/07/2025;PED-00478;Atacado;CLI-008;Theta Importacoes;PROD-006;Fone Bluetooth;2;963,00;520,00;SG-01;Eletronicos;VND-006;Fernanda Lima;1;R$;VENDAS
+07/07/2025;PED-00478;Atacado;CLI-008;Theta Importacoes;PROD-005;Smartphone 128GB;10;22880,00;14000,00;SG-01;Eletronicos;VND-006;Fernanda Lima;1;R$;VENDAS
+07/07/2025;PED-00478;Atacado;CLI-008;Theta Importacoes;PROD-006;Fone Bluetooth;2;882,00;520,00;SG-01;Eletronicos;VND-006;Fernanda Lima;1;R$;VENDAS
+05/08/2025;PED-00479;Atacado;CLI-027;Epsilon Zeta ME;PROD-001;Notebook Pro 15;5;15260,00;9500,00;SG-02;Informatica;VND-006;Fernanda Lima;1;R$;VENDAS
+05/08/2025;PED-00479;Atacado;CLI-027;Epsilon Zeta ME;PROD-022;Sapato Social;4;1344,00;700,00;SG-06;Calcados;VND-006;Fernanda Lima;1;R$;VENDAS
+05/08/2025;PED-00479;Atacado;CLI-027;Epsilon Zeta ME;PROD-032;Cerveja Long Neck cx12;2;181,90;84,00;SG-08;Bebidas;VND-006;Fernanda Lima;1;R$;VENDAS
+24/07/2025;PED-00480;Atacado;CLI-003;Comercial Gamma ME;PROD-006;Fone Bluetooth;8;720,00;416,00;SG-01;Eletronicos;VND-006;Fernanda Lima;2;US$;VENDAS
+24/07/2025;PED-00480;Atacado;CLI-003;Comercial Gamma ME;PROD-010;Micro-ondas 30L;5;646,00;420,00;SG-03;Eletrodomesticos;VND-006;Fernanda Lima;2;US$;VENDAS
+24/07/2025;PED-00480;Atacado;CLI-003;Comercial Gamma ME;PROD-012;Ventilador Torre;2;134,40;74,00;SG-03;Eletrodomesticos;VND-006;Fernanda Lima;2;US$;VENDAS
+08/07/2025;PED-00481;Atacado;CLI-019;Tau Comercio Ltda;PROD-001;Notebook Pro 15;1;245000;158333;SG-02;Informatica;VND-006;Fernanda Lima;3;G$;VENDAS
+08/07/2025;PED-00481;Atacado;CLI-019;Tau Comercio Ltda;PROD-023;Sandalia Feminina;7;113400;52500;SG-06;Calcados;VND-006;Fernanda Lima;3;G$;VENDAS
+08/07/2025;PED-00481;Atacado;CLI-019;Tau Comercio Ltda;PROD-016;Poltrona Conforto;2;200000;120000;SG-04;Moveis e Decoracao;VND-006;Fernanda Lima;3;G$;VENDAS
+19/12/2025;PED-00482;Varejo;CLI-009;Iota Distribuicoes;PROD-032;Cerveja Long Neck cx12;4;28900;14000;SG-08;Bebidas;VND-003;Carlos Santos;3;G$;VENDAS
+19/12/2025;PED-00482;Varejo;CLI-009;Iota Distribuicoes;PROD-020;Jaqueta de Couro;5;244083;129167;SG-05;Vestuario;VND-003;Carlos Santos;3;G$;VENDAS
+13/10/2025;PED-00483;Atacado;CLI-027;Epsilon Zeta ME;PROD-012;Ventilador Torre;7;2217,60;1295,00;SG-03;Eletrodomesticos;VND-004;Ana Costa;1;R$;VENDAS
+13/10/2025;PED-00483;Atacado;CLI-027;Epsilon Zeta ME;PROD-011;Cafeteira Eletrica;2;571,20;320,00;SG-03;Eletrodomesticos;VND-004;Ana Costa;1;R$;VENDAS
+05/03/2026;PED-00484;Atacado;CLI-017;Rho Importacoes;PROD-011;Cafeteira Eletrica;4;1164,80;640,00;SG-03;Eletrodomesticos;VND-001;Joao Silva;1;R$;VENDAS
+05/03/2026;PED-00484;Atacado;CLI-017;Rho Importacoes;PROD-031;Refrigerante 2L;4;75,60;36,00;SG-08;Bebidas;VND-001;Joao Silva;1;R$;VENDAS
+05/03/2026;PED-00484;Atacado;CLI-017;Rho Importacoes;PROD-007;Tablet 10 pol;9;17334,00;9900,00;SG-01;Eletronicos;VND-001;Joao Silva;1;R$;VENDAS
+22/01/2026;PED-00485;Varejo;CLI-012;Mu Atacadista;PROD-012;Ventilador Torre;10;3456,00;1850,00;SG-03;Eletrodomesticos;VND-003;Carlos Santos;1;R$;VENDAS
+19/08/2025;PED-00486;Varejo;CLI-025;Alpha Beta Ltda;PROD-028;Macarrao Espaguete;10;15,84;8,00;SG-07;Alimentos;VND-008;Juliana Mendes;2;US$;VENDAS
+19/08/2025;PED-00486;Varejo;CLI-025;Alpha Beta Ltda;PROD-027;Azeite Extra Virgem;9;77,11;39,60;SG-07;Alimentos;VND-008;Juliana Mendes;2;US$;VENDAS
+19/08/2025;PED-00486;Varejo;CLI-025;Alpha Beta Ltda;PROD-023;Sandalia Feminina;7;259,56;126,00;SG-06;Calcados;VND-008;Juliana Mendes;2;US$;VENDAS
+15/12/2025;PED-00487;Varejo;CLI-017;Rho Importacoes;PROD-022;Sapato Social;1;339,20;175,00;SG-06;Calcados;VND-003;Carlos Santos;1;R$;VENDAS
+15/12/2025;PED-00487;Varejo;CLI-017;Rho Importacoes;PROD-023;Sandalia Feminina;1;196,20;90,00;SG-06;Calcados;VND-003;Carlos Santos;1;R$;VENDAS
+15/12/2025;PED-00487;Varejo;CLI-017;Rho Importacoes;PROD-001;Notebook Pro 15;7;20580,00;13300,00;SG-02;Informatica;VND-003;Carlos Santos;1;R$;VENDAS
+15/12/2025;PED-00487;Varejo;CLI-017;Rho Importacoes;PROD-001;Notebook Pro 15;2;5712,00;3800,00;SG-02;Informatica;VND-003;Carlos Santos;1;R$;VENDAS
+23/04/2026;PED-00488;Atacado;CLI-018;Sigma Logistica;PROD-003;Teclado Mecanico;3;1128,60;630,00;SG-02;Informatica;VND-004;Ana Costa;1;R$;VENDAS
+23/04/2026;PED-00488;Atacado;CLI-018;Sigma Logistica;PROD-006;Fone Bluetooth;7;3181,50;1820,00;SG-01;Eletronicos;VND-004;Ana Costa;1;R$;VENDAS
+23/04/2026;PED-00488;Atacado;CLI-018;Sigma Logistica;PROD-013;Sofa 3 Lugares;10;23520,00;15000,00;SG-04;Moveis e Decoracao;VND-004;Ana Costa;1;R$;VENDAS
+23/04/2026;PED-00488;Atacado;CLI-018;Sigma Logistica;PROD-009;Geladeira Frost Free;6;22344,00;15000,00;SG-03;Eletrodomesticos;VND-004;Ana Costa;1;R$;VENDAS
+12/10/2025;PED-00489;Atacado;CLI-021;Phi Varejo ME;PROD-031;Refrigerante 2L;1;18,36;9,00;SG-08;Bebidas;VND-002;Maria Oliveira;1;R$;VENDAS
+12/10/2025;PED-00489;Atacado;CLI-021;Phi Varejo ME;PROD-008;Smart TV 50 pol;6;19968,00;12600,00;SG-01;Eletronicos;VND-002;Maria Oliveira;1;R$;VENDAS
+12/10/2025;PED-00489;Atacado;CLI-021;Phi Varejo ME;PROD-023;Sandalia Feminina;3;594,00;270,00;SG-06;Calcados;VND-002;Maria Oliveira;1;R$;VENDAS
+30/12/2025;PED-00490;Varejo;CLI-030;Lambda Mu SA;PROD-004;Mouse Sem Fio;3;378,00;195,00;SG-02;Informatica;VND-006;Fernanda Lima;1;R$;VENDAS
+30/12/2025;PED-00490;Varejo;CLI-030;Lambda Mu SA;PROD-032;Cerveja Long Neck cx12;3;255,00;126,00;SG-08;Bebidas;VND-006;Fernanda Lima;1;R$;VENDAS
+23/11/2025;PED-00491;Atacado;CLI-012;Mu Atacadista;PROD-024;Bota Couro;5;399,00;230,00;SG-06;Calcados;VND-008;Juliana Mendes;2;US$;VENDAS
+28/01/2026;PED-00492;Atacado;CLI-001;Empresa Alpha Ltda;PROD-018;Calca Jeans;3;456,00;240,00;SG-05;Vestuario;VND-005;Pedro Alves;1;R$;VENDAS
+28/01/2026;PED-00492;Atacado;CLI-001;Empresa Alpha Ltda;PROD-030;Agua Mineral cx24;2;43,56;22,00;SG-08;Bebidas;VND-005;Pedro Alves;1;R$;VENDAS
+28/01/2026;PED-00492;Atacado;CLI-001;Empresa Alpha Ltda;PROD-024;Bota Couro;6;2696,40;1380,00;SG-06;Calcados;VND-005;Pedro Alves;1;R$;VENDAS
+28/01/2026;PED-00492;Atacado;CLI-001;Empresa Alpha Ltda;PROD-006;Fone Bluetooth;6;2916,00;1560,00;SG-01;Eletronicos;VND-005;Pedro Alves;1;R$;VENDAS
+22/06/2025;PED-00493;Atacado;CLI-021;Phi Varejo ME;PROD-024;Bota Couro;10;856,80;460,00;SG-06;Calcados;VND-008;Juliana Mendes;2;US$;VENDAS
+14/09/2025;PED-00494;Atacado;CLI-013;Nu Varejo Ltda;PROD-010;Micro-ondas 30L;6;889,44;504,00;SG-03;Eletrodomesticos;VND-004;Ana Costa;2;US$;VENDAS
+14/09/2025;PED-00494;Atacado;CLI-013;Nu Varejo Ltda;PROD-023;Sandalia Feminina;1;35,28;18,00;SG-06;Calcados;VND-004;Ana Costa;2;US$;VENDAS
+31/07/2025;PED-00495;Atacado;CLI-018;Sigma Logistica;PROD-003;Teclado Mecanico;5;1957,00;1050,00;SG-02;Informatica;VND-002;Maria Oliveira;1;R$;VENDAS
+01/07/2025;PED-00496;Varejo;CLI-018;Sigma Logistica;PROD-001;Notebook Pro 15;2;504000;316667;SG-02;Informatica;VND-004;Ana Costa;3;G$;VENDAS
+01/07/2025;PED-00496;Varejo;CLI-018;Sigma Logistica;PROD-027;Azeite Extra Virgem;6;23100;11000;SG-07;Alimentos;VND-004;Ana Costa;3;G$;VENDAS
+19/06/2025;PED-00497;Atacado;CLI-009;Iota Distribuicoes;PROD-020;Jaqueta de Couro;7;4181,80;2170,00;SG-05;Vestuario;VND-001;Joao Silva;1;R$;VENDAS
+19/06/2025;PED-00497;Atacado;CLI-009;Iota Distribuicoes;PROD-009;Geladeira Frost Free;3;12312,00;7500,00;SG-03;Eletrodomesticos;VND-001;Joao Silva;1;R$;VENDAS
+19/06/2025;PED-00497;Atacado;CLI-009;Iota Distribuicoes;PROD-012;Ventilador Torre;9;2995,20;1665,00;SG-03;Eletrodomesticos;VND-001;Joao Silva;1;R$;VENDAS
+11/03/2026;PED-00498;Varejo;CLI-020;Upsilon Atacado;PROD-006;Fone Bluetooth;8;777,60;416,00;SG-01;Eletronicos;VND-004;Ana Costa;2;US$;VENDAS
+11/03/2026;PED-00498;Varejo;CLI-020;Upsilon Atacado;PROD-032;Cerveja Long Neck cx12;9;163,71;75,60;SG-08;Bebidas;VND-004;Ana Costa;2;US$;VENDAS
+12/09/2025;PED-00499;Varejo;CLI-005;Atacado Epsilon Ltda;PROD-024;Bota Couro;9;4082,40;2070,00;SG-06;Calcados;VND-001;Joao Silva;1;R$;VENDAS
+12/09/2025;PED-00499;Varejo;CLI-005;Atacado Epsilon Ltda;PROD-027;Azeite Extra Virgem;10;441,00;220,00;SG-07;Alimentos;VND-001;Joao Silva;1;R$;VENDAS
