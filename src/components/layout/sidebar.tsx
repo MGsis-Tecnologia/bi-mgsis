@@ -8,9 +8,12 @@ import {
   ArrowUpRight,
   Banknote,
   BarChart3,
+  ChevronDown,
+  CreditCard,
   Package,
   Receipt,
   Sparkles,
+  TrendingDown,
   Upload,
   Users,
   UserSquare2,
@@ -20,10 +23,17 @@ import { cn } from "@/lib/utils";
 import { useTranslation } from "@/lib/hooks/use-translation";
 import { DictionaryKey } from "@/lib/i18n/dictionaries";
 
+type SubNavItem = {
+  href: string;
+  labelKey: DictionaryKey;
+  icon: React.ElementType;
+};
+
 type NavItem = {
   href: string;
   labelKey: DictionaryKey;
   icon: React.ElementType;
+  children?: SubNavItem[];
 };
 
 type NavGroup = {
@@ -50,7 +60,15 @@ const NAV: NavGroup[] = [
   {
     sectionKey: "sidebar.section.financial",
     items: [
-      { href: "/financeiro", labelKey: "sidebar.nav.revenue", icon: Banknote },
+      {
+        href: "/financeiro",
+        labelKey: "sidebar.nav.revenue",
+        icon: Banknote,
+        children: [
+          { href: "/financeiro/receber", labelKey: "sidebar.nav.receivable", icon: CreditCard },
+          { href: "/financeiro/pagar", labelKey: "sidebar.nav.payable", icon: TrendingDown },
+        ],
+      },
     ],
   },
   {
@@ -64,10 +82,11 @@ const NAV: NavGroup[] = [
 export function Sidebar() {
   const pathname = usePathname();
   const { t } = useTranslation();
+
   return (
     <aside className="hidden lg:flex h-screen sticky top-0 w-[244px] shrink-0 flex-col border-r border-border bg-surface/40">
       <div className="flex h-14 items-center px-5 border-b border-border">
-        <Link href="/dashboard" aria-label="Dash BI" className="group inline-flex items-center gap-2">
+        <Link href="/dashboard" aria-label="MGSIS Analytics" className="group inline-flex items-center gap-2">
           <BrandMark />
         </Link>
       </div>
@@ -85,6 +104,9 @@ export function Sidebar() {
                     ? pathname === item.href
                     : pathname?.startsWith(item.href);
                 const Icon = item.icon;
+                const hasChildren = item.children && item.children.length > 0;
+                const expanded = hasChildren && pathname?.startsWith(item.href);
+
                 return (
                   <li key={item.href}>
                     <Link
@@ -96,12 +118,48 @@ export function Sidebar() {
                           : "text-muted-foreground hover:text-foreground hover:bg-muted/40"
                       )}
                     >
-                      {active && (
+                      {active && !hasChildren && (
                         <span className="absolute left-0 top-1/2 h-4 -translate-y-1/2 w-px bg-foreground" />
                       )}
                       <Icon className="h-[15px] w-[15px] shrink-0" />
-                      <span className="truncate">{t(item.labelKey)}</span>
+                      <span className="truncate flex-1">{t(item.labelKey)}</span>
+                      {hasChildren && (
+                        <ChevronDown
+                          className={cn(
+                            "h-3 w-3 shrink-0 transition-transform duration-200",
+                            expanded ? "rotate-180" : ""
+                          )}
+                        />
+                      )}
                     </Link>
+
+                    {hasChildren && expanded && (
+                      <ul className="mt-0.5 ml-3 flex flex-col gap-0.5 border-l border-border/50 pl-3">
+                        {item.children!.map((child) => {
+                          const childActive = pathname === child.href;
+                          const ChildIcon = child.icon;
+                          return (
+                            <li key={child.href}>
+                              <Link
+                                href={child.href}
+                                className={cn(
+                                  "relative flex items-center gap-2 rounded-md px-2 py-1.5 text-[13px] transition-colors",
+                                  childActive
+                                    ? "bg-muted/70 text-foreground font-medium"
+                                    : "text-muted-foreground hover:text-foreground hover:bg-muted/40"
+                                )}
+                              >
+                                {childActive && (
+                                  <span className="absolute left-0 top-1/2 h-3 -translate-y-1/2 w-px bg-foreground" />
+                                )}
+                                <ChildIcon className="h-[13px] w-[13px] shrink-0" />
+                                <span className="truncate">{t(child.labelKey)}</span>
+                              </Link>
+                            </li>
+                          );
+                        })}
+                      </ul>
+                    )}
                   </li>
                 );
               })}
@@ -129,7 +187,7 @@ export function Sidebar() {
 
       <div className="border-t border-border px-4 py-3 text-[10px] text-muted-foreground flex items-center gap-2">
         <Receipt className="h-3 w-3" />
-        <span>Dash BI · v0.1 · build {new Date().getFullYear()}</span>
+        <span>MGSIS Analytics · v0.1 · build {new Date().getFullYear()}</span>
       </div>
     </aside>
   );

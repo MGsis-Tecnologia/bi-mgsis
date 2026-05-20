@@ -10,6 +10,8 @@ export const dictionaries = {
     "sidebar.nav.sellers": "Vendedores",
     "sidebar.section.financial": "Financeiro",
     "sidebar.nav.revenue": "Receita & DRE",
+    "sidebar.nav.receivable": "Receber",
+    "sidebar.nav.payable": "Pagar",
     "sidebar.section.operation": "Operação",
     "sidebar.nav.import": "Importação",
     "sidebar.insight.title": "Insight do dia",
@@ -223,6 +225,18 @@ export const dictionaries = {
     "financeiro.indicators.discount": "Desconto médio",
     "financeiro.indicators.shipping": "Frete embarcado",
 
+    // Receber Page
+    "receber.header.eyebrow": "Financeiro · contas a receber",
+    "receber.header.title": "Contas a receber.",
+    "receber.header.desc": "Gestão de recebimentos, inadimplência e previsão de caixa. Em implementação.",
+    "receber.coming_soon": "Módulo em desenvolvimento. Em breve disponível.",
+
+    // Pagar Page
+    "pagar.header.eyebrow": "Financeiro · contas a pagar",
+    "pagar.header.title": "Contas a pagar.",
+    "pagar.header.desc": "Gestão de pagamentos, vencimentos e fluxo de caixa. Em implementação.",
+    "pagar.coming_soon": "Módulo em desenvolvimento. Em breve disponível.",
+
     // Importação Page
     "importacao.header.eyebrow": "Operação · ingestão",
     "importacao.header.title": "Importação de dados.",
@@ -254,6 +268,8 @@ export const dictionaries = {
     "sidebar.nav.sellers": "Vendedores",
     "sidebar.section.financial": "Financiero",
     "sidebar.nav.revenue": "Ingresos y DRE",
+    "sidebar.nav.receivable": "Cobrar",
+    "sidebar.nav.payable": "Pagar",
     "sidebar.section.operation": "Operación",
     "sidebar.nav.import": "Importación",
     "sidebar.insight.title": "Insight del día",
@@ -466,6 +482,18 @@ export const dictionaries = {
     "financeiro.indicators.ticket": "Ticket promedio",
     "financeiro.indicators.discount": "Descuento promedio",
     "financeiro.indicators.shipping": "Flete despachado",
+
+    // Receber Page
+    "receber.header.eyebrow": "Financiero · cuentas a cobrar",
+    "receber.header.title": "Cuentas a cobrar.",
+    "receber.header.desc": "Gestión de cobros, morosidad y previsión de caja. En implementación.",
+    "receber.coming_soon": "Módulo en desarrollo. Próximamente disponible.",
+
+    // Pagar Page
+    "pagar.header.eyebrow": "Financiero · cuentas a pagar",
+    "pagar.header.title": "Cuentas a pagar.",
+    "pagar.header.desc": "Gestión de pagos, vencimientos y flujo de caja. En implementación.",
+    "pagar.coming_soon": "Módulo en desarrollo. Próximamente disponible.",
 
     // Importação Page
     "importacao.header.eyebrow": "Operación · ingesta",

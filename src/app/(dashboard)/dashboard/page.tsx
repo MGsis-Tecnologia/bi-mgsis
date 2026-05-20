@@ -127,6 +127,15 @@ export default function ExecutiveDashboardPage() {
         </Badge>
       </PageHeader>
 
+      {/* Brand tagline */}
+      <div className="flex items-center gap-3">
+        <span className="h-px flex-1 bg-border/60" />
+        <p className="text-[12px] font-serif italic tracking-wide text-muted-foreground select-none whitespace-nowrap">
+          Inteligência que conecta gestão e resultado
+        </p>
+        <span className="h-px flex-1 bg-border/60" />
+      </div>
+
       {/* HERO ROW — 4 large KPIs */}
       <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
         <div className="reveal reveal-1">

@@ -32,8 +32,8 @@ export function BrandMark({
         />
       </svg>
       {showWord && (
-        <span className="font-serif text-[17px] tracking-editorial leading-none">
-          Dash<span className="italic text-muted-foreground">·</span>BI
+        <span className="font-serif text-[15px] tracking-editorial leading-none">
+          MGSIS<span className="italic text-muted-foreground">·</span>Analytics
         </span>
       )}
     </div>

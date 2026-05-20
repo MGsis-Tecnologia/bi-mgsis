@@ -15,13 +15,13 @@ const instrumentSerif = Instrument_Serif({
 
 export const metadata: Metadata = {
   title: {
-    default: "Dash BI — Inteligência comercial executiva",
-    template: "%s · Dash BI",
+    default: "MGSIS Analytics — Inteligência que conecta gestão e resultado",
+    template: "%s · MGSIS Analytics",
   },
   description:
     "Plataforma de inteligência comercial para análise de vendas, clientes, produtos e performance.",
-  applicationName: "Dash BI",
-  authors: [{ name: "Dash BI" }],
+  applicationName: "MGSIS Analytics",
+  authors: [{ name: "MGSIS Analytics" }],
 };
 
 export const viewport: Viewport = {
