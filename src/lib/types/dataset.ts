@@ -1,6 +1,6 @@
 // Raw row parsed from CSV/Excel (one per product per order)
 export interface OrderLineItem {
-  date: Date;
+  date: string;           // ISO date YYYY-MM-DD — stored as string to survive JSON serialization
   orderId: string;        // pedido_documento
   channel: string;        // Atacado | Varejo (normalized)
   clientId: string;

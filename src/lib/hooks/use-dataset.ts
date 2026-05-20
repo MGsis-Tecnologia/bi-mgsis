@@ -49,10 +49,9 @@ function buildOrders(
       existing.marginPct = existing.totalBRL > 0 ? existing.profitBRL / existing.totalBRL : 0;
       existing.items.push(lineItem);
     } else {
-      const isoDate = item.date.toISOString().slice(0, 10);
       map.set(item.orderId, {
         id: item.orderId,
-        date: isoDate,
+        date: item.date,
         channel: item.channel,
         clientId: item.clientId,
         clientName: item.clientName,
@@ -119,6 +118,8 @@ function deriveSubgroups(items: OrderLineItem[]): { id: string; name: string }[]
 
 // ─── Public hooks ─────────────────────────────────────────────────────────────
 
+const EMPTY_ITEMS: OrderLineItem[] = [];
+
 export interface DatasetView {
   orders: ImportedOrder[];
   products: ImportedProduct[];
@@ -130,7 +131,7 @@ export interface DatasetView {
 }
 
 export function useDataset(): DatasetView {
-  const rawItems = useDatasetStore((s) => s.dataset?.items ?? []);
+  const rawItems = useDatasetStore((s) => s.dataset?.items ?? EMPTY_ITEMS);
   const currency = useFilters((s) => s.currency);
   const rates = useExchangeRates((s) => s.rates);
 

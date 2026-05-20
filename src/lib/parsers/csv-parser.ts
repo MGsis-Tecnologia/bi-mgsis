@@ -30,33 +30,31 @@ export interface ParseResult {
   skipped: number;
 }
 
-// Parse DD/MM/YYYY → Date
-function parseDate(raw: string): Date | null {
+// Parse date string → ISO YYYY-MM-DD (string, never a Date object — survives JSON serialization)
+function parseDate(raw: string): string | null {
   if (!raw) return null;
   const trimmed = String(raw).trim();
 
-  // Try DD/MM/YYYY
+  // DD/MM/YYYY
   const ddmmyyyy = trimmed.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
   if (ddmmyyyy) {
     const [, d, m, y] = ddmmyyyy;
-    const dt = new Date(Number(y), Number(m) - 1, Number(d));
-    if (!isNaN(dt.getTime())) return dt;
+    const iso = `${y}-${m!.padStart(2, "0")}-${d!.padStart(2, "0")}`;
+    if (!isNaN(Date.parse(iso))) return iso;
   }
 
-  // Try YYYY-MM-DD fallback
-  const iso = trimmed.match(/^(\d{4})-(\d{2})-(\d{2})/);
-  if (iso) {
-    const [, y, m, d] = iso;
-    const dt = new Date(Number(y), Number(m) - 1, Number(d));
-    if (!isNaN(dt.getTime())) return dt;
+  // YYYY-MM-DD
+  const isoMatch = trimmed.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (isoMatch) {
+    const iso = `${isoMatch[1]}-${isoMatch[2]}-${isoMatch[3]}`;
+    if (!isNaN(Date.parse(iso))) return iso;
   }
 
   // Excel serial number
   const serial = Number(trimmed);
   if (!isNaN(serial) && serial > 10000) {
-    // Excel epoch: Jan 0, 1900 (day 1 = Jan 1 1900)
     const dt = new Date(Date.UTC(1899, 11, 30) + serial * 86400000);
-    if (!isNaN(dt.getTime())) return dt;
+    if (!isNaN(dt.getTime())) return dt.toISOString().slice(0, 10);
   }
 
   return null;
