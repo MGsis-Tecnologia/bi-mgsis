@@ -6,3 +6,6 @@ cmds = ["npm ci --omit=dev", "npm run build"]
 
 [node]
 version = "22"
+
+[cache]
+dirs = []
