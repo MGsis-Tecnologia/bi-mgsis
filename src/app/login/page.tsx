@@ -3,6 +3,8 @@
 import * as React from "react";
 import { Eye, EyeOff } from "lucide-react";
 import { useTranslation } from "@/lib/hooks/use-translation";
+import { LanguageSwitcher } from "@/components/filters/language-switcher";
+import { ClientMounted } from "@/components/providers/client-mounted";
 
 export default function LoginPage() {
   const { t } = useTranslation();
@@ -78,7 +80,12 @@ export default function LoginPage() {
       </div>
 
       {/* Right Side - Login Form */}
-      <div className="w-full lg:w-1/2 bg-slate-50 flex items-center justify-center p-6 lg:p-12">
+      <div className="w-full lg:w-1/2 bg-slate-50 flex items-center justify-center p-6 lg:p-12 relative">
+        <ClientMounted>
+          <div className="absolute top-4 right-4">
+            <LanguageSwitcher />
+          </div>
+        </ClientMounted>
         <div className="w-full max-w-md">
           {/* Mobile Logo */}
           <div className="lg:hidden mb-8">
