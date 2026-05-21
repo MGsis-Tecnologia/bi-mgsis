@@ -6,6 +6,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   Activity,
+  AlertTriangle,
   ArrowUpRight,
   Banknote,
   BarChart3,
@@ -13,6 +14,8 @@ import {
   Package,
   Receipt,
   Sparkles,
+  TrendingDown,
+  TrendingUp,
   Upload,
   Users,
   UserSquare2,
@@ -21,6 +24,9 @@ import {
 import { cn } from "@/lib/utils";
 import { useTranslation } from "@/lib/hooks/use-translation";
 import { DictionaryKey } from "@/lib/i18n/dictionaries";
+import { useDataset } from "@/lib/hooks/use-dataset";
+import { useFilters } from "@/lib/store/filters";
+import { generateInsights, type Insight } from "@/lib/analytics/insights";
 
 type NavItem = {
   href: string;
@@ -65,9 +71,43 @@ const NAV: NavGroup[] = [
   },
 ];
 
+const INSIGHT_TONE_STYLES: Record<Insight["tone"], { icon: React.ElementType; iconClass: string }> = {
+  positive: { icon: TrendingUp, iconClass: "text-emerald-500" },
+  negative: { icon: TrendingDown, iconClass: "text-rose-500" },
+  warning: { icon: AlertTriangle, iconClass: "text-amber-500" },
+  neutral: { icon: Sparkles, iconClass: "text-muted-foreground" },
+};
+
+const INSIGHT_HREF: Record<string, string> = {
+  "top-subgroup": "/produtos",
+  "margin-alert": "/vendas",
+  "revenue-trend": "/vendas",
+  "ticket-trend": "/vendas",
+  "momentum": "/vendas",
+};
+
 export function Sidebar() {
   const pathname = usePathname();
   const { t } = useTranslation();
+
+  const ds = useDataset();
+  const preset = useFilters((s) => s.preset);
+  const customRange = useFilters((s) => s.customRange);
+  const getRange = useFilters((s) => s.getRange);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const range = React.useMemo(() => getRange(), [preset, customRange, getRange]);
+  const dailyInsight = React.useMemo<Insight | null>(() => {
+    if (!ds.hasData) return null;
+    const list = generateInsights(ds.orders, range);
+    return list[0] ?? null;
+  }, [ds.hasData, ds.orders, range]);
+
+  const insightStyle = dailyInsight ? INSIGHT_TONE_STYLES[dailyInsight.tone] : INSIGHT_TONE_STYLES.neutral;
+  const InsightIcon = insightStyle.icon;
+  const investigateHref = dailyInsight ? (INSIGHT_HREF[dailyInsight.id] ?? "/vendas") : "/vendas";
+  const emptyMessage = !ds.hasData
+    ? t("sidebar.insight.empty.noData")
+    : t("sidebar.insight.empty.noHighlights");
 
   return (
     <aside className="hidden lg:flex h-screen sticky top-0 w-[244px] shrink-0 flex-col border-r border-border bg-surface/40">
@@ -127,19 +167,26 @@ export function Sidebar() {
 
       <div className="m-3 rounded-md border border-border bg-surface-sunken p-3">
         <div className="flex items-center gap-1.5 text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
-          <Sparkles className="h-3 w-3" />
+          <InsightIcon className={cn("h-3 w-3", dailyInsight && insightStyle.iconClass)} />
           {t("sidebar.insight.title")}
         </div>
-        <p className="mt-2 text-xs leading-relaxed text-foreground/80">
-          Margem nas categorias <span className="font-medium">Moda</span> e{" "}
-          <span className="font-medium">Beleza</span> está acima da média.
-        </p>
-        <Link
-          href="/vendas"
-          className="mt-2 inline-flex items-center gap-1 text-[11px] text-accent hover:underline"
-        >
-          {t("sidebar.insight.investigate")} <ArrowUpRight className="h-3 w-3" />
-        </Link>
+        {dailyInsight ? (
+          <>
+            <p className="mt-2 text-xs leading-relaxed text-foreground/80">
+              {dailyInsight.title}
+            </p>
+            <Link
+              href={investigateHref}
+              className="mt-2 inline-flex items-center gap-1 text-[11px] text-accent hover:underline"
+            >
+              {t("sidebar.insight.investigate")} <ArrowUpRight className="h-3 w-3" />
+            </Link>
+          </>
+        ) : (
+          <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
+            {emptyMessage}
+          </p>
+        )}
       </div>
 
       <div className="border-t border-border px-4 py-3 text-[10px] text-muted-foreground flex items-center gap-2">

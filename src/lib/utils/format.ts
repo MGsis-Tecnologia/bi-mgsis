@@ -11,12 +11,33 @@ export function formatCurrency(
   const sign = signed && value > 0 ? "+" : "";
 
   if (currencyId === "3") {
-    // Guarani: integer only, no decimals
+    // Guarani: integer only, no decimals.
+    // Compact uses Paraguayan reading: "M" = Millones, "Mil M" = Mil Millones
+    // (since "bi" doesn't apply — 1e9 is read as "Mil Millones").
     const intVal = Math.round(value);
+    if (compact) {
+      const abs = Math.abs(intVal);
+      const fmt = (n: number) =>
+        new Intl.NumberFormat("pt-BR", {
+          minimumFractionDigits: 0,
+          maximumFractionDigits: n < 10 ? 1 : 0,
+        }).format(n);
+      let body: string;
+      if (abs >= 1_000_000_000) {
+        body = `${fmt(intVal / 1_000_000_000)} Mil M`;
+      } else if (abs >= 1_000_000) {
+        body = `${fmt(intVal / 1_000_000)} M`;
+      } else {
+        body = new Intl.NumberFormat("pt-BR", {
+          minimumFractionDigits: 0,
+          maximumFractionDigits: 0,
+        }).format(intVal);
+      }
+      return `${sign}G$ ${body}`;
+    }
     const formatted = new Intl.NumberFormat("pt-BR", {
       minimumFractionDigits: 0,
       maximumFractionDigits: 0,
-      notation: compact ? "compact" : "standard",
     }).format(intVal);
     return `${sign}G$ ${formatted}`;
   }

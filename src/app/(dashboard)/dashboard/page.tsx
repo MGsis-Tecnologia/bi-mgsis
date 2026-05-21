@@ -153,11 +153,19 @@ export default function ExecutiveDashboardPage() {
                   <TabsContent value="profit" className="mt-0"><RevenueAreaChart data={monthly} height={280} compareKey="profit" /></TabsContent>
                 </div>
               </Tabs>
-              <div className="border-t border-border grid grid-cols-3 divide-x divide-border">
-                <MiniStat label={t("dashboard.trend.stat.max")} value={<Money value={Math.max(...monthly.map((m) => m.revenue), 0)} compact />} />
-                <MiniStat label={t("dashboard.trend.stat.min")} value={<Money value={Math.min(...monthly.filter((m) => m.revenue > 0).map((m) => m.revenue), 0)} compact />} />
-                <MiniStat label={t("dashboard.trend.stat.avg")} value={<Money value={monthly.length > 0 ? monthly.reduce((s, m) => s + m.revenue, 0) / monthly.length : 0} compact />} />
-              </div>
+              {(() => {
+                const positives = monthly.filter((m) => m.revenue > 0).map((m) => m.revenue);
+                const maxValue = positives.length > 0 ? Math.max(...positives) : 0;
+                const minValue = positives.length > 0 ? Math.min(...positives) : 0;
+                const avgValue = positives.length > 0 ? positives.reduce((s, v) => s + v, 0) / positives.length : 0;
+                return (
+                  <div className="border-t border-border grid grid-cols-3 divide-x divide-border">
+                    <MiniStat label={t("dashboard.trend.stat.max")} value={<Money value={maxValue} compact />} />
+                    <MiniStat label={t("dashboard.trend.stat.min")} value={<Money value={minValue} compact />} />
+                    <MiniStat label={t("dashboard.trend.stat.avg")} value={<Money value={avgValue} compact />} />
+                  </div>
+                );
+              })()}
             </Card>
 
             <Card className="reveal reveal-3 overflow-hidden">

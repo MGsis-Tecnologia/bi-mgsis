@@ -16,7 +16,9 @@ export const dictionaries = {
     "sidebar.nav.import": "Importação",
     "sidebar.insight.title": "Insight do dia",
     "sidebar.insight.investigate": "Investigar",
-    
+    "sidebar.insight.empty.noData": "Importe um dataset para ver destaques automáticos do período.",
+    "sidebar.insight.empty.noHighlights": "Sem destaques relevantes no período selecionado.",
+
     // Topbar
     "topbar.search.placeholder": "Buscar pedido, cliente, produto…",
     "topbar.currency.title": "Moeda de exibição",
@@ -275,6 +277,8 @@ export const dictionaries = {
     "sidebar.nav.import": "Importación",
     "sidebar.insight.title": "Insight del día",
     "sidebar.insight.investigate": "Investigar",
+    "sidebar.insight.empty.noData": "Importe un dataset para ver destaques automáticos del período.",
+    "sidebar.insight.empty.noHighlights": "Sin destaques relevantes en el período seleccionado.",
     
     // Topbar
     "topbar.search.placeholder": "Buscar pedido, cliente, producto…",
