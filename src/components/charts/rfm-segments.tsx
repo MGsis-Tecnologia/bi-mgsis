@@ -14,6 +14,18 @@ import {
 import type { CustomerRFM, RFMSegment } from "@/lib/analytics/rfm";
 import { getSegmentColor, getSegmentDescription } from "@/lib/analytics/rfm";
 import { Badge } from "@/components/ui/badge";
+import { useTranslation } from "@/lib/hooks/use-translation";
+
+const SEGMENT_TRANSLATIONS: Record<RFMSegment, string> = {
+  Champions: "Campeões",
+  "Loyal Customers": "Clientes Leais",
+  "Potential Loyalists": "Potenciais Leais",
+  "New Customers": "Novos Clientes",
+  "Need Attention": "Precisam Atenção",
+  "At Risk": "Em Risco",
+  "Cant Lose Them": "Não Perder",
+  Lost: "Perdidos",
+};
 
 interface RFMSegmentsProps {
   rfmData: CustomerRFM[];
@@ -31,6 +43,7 @@ const SEGMENT_ORDER: RFMSegment[] = [
 ];
 
 export function RFMSegments({ rfmData }: RFMSegmentsProps) {
+  const { t } = useTranslation();
   const segmentCounts = React.useMemo(() => {
     const counts: Record<RFMSegment, number> = {
       Champions: 0,
@@ -83,23 +96,23 @@ export function RFMSegments({ rfmData }: RFMSegmentsProps) {
     <div className="space-y-6">
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <div className="bg-muted/30 rounded-lg p-4 space-y-1">
-          <p className="text-xs text-muted-foreground">Total Customers</p>
+          <p className="text-xs text-muted-foreground">{t("vendas.rfm.total")}</p>
           <p className="text-2xl font-bold">{rfmData.length.toLocaleString()}</p>
         </div>
         <div className="bg-muted/30 rounded-lg p-4 space-y-1">
-          <p className="text-xs text-muted-foreground">Champions</p>
+          <p className="text-xs text-muted-foreground">{t("vendas.rfm.champions")}</p>
           <p className="text-2xl font-bold">
             {rfmData.filter((c) => c.segment === "Champions").length}
           </p>
         </div>
         <div className="bg-muted/30 rounded-lg p-4 space-y-1">
-          <p className="text-xs text-muted-foreground">At Risk</p>
+          <p className="text-xs text-muted-foreground">{t("vendas.rfm.risk")}</p>
           <p className="text-2xl font-bold">
             {rfmData.filter((c) => c.segment === "At Risk").length}
           </p>
         </div>
         <div className="bg-muted/30 rounded-lg p-4 space-y-1">
-          <p className="text-xs text-muted-foreground">Lost</p>
+          <p className="text-xs text-muted-foreground">{t("vendas.rfm.lost")}</p>
           <p className="text-2xl font-bold">
             {rfmData.filter((c) => c.segment === "Lost").length}
           </p>
@@ -107,9 +120,9 @@ export function RFMSegments({ rfmData }: RFMSegmentsProps) {
       </div>
 
       <div className="bg-white dark:bg-slate-950 rounded-lg p-4 border border-border">
-        <h3 className="text-sm font-semibold mb-4">Customers by Segment</h3>
+        <h3 className="text-sm font-semibold mb-4">Clientes por Segmento</h3>
         <ResponsiveContainer width="100%" height={300}>
-          <BarChart data={segmentCounts}>
+          <BarChart data={segmentCounts.map((s) => ({ ...s, segment: SEGMENT_TRANSLATIONS[s.segment as RFMSegment] }))}>
             <CartesianGrid stroke="hsl(var(--border))" strokeDasharray="2 4" vertical={false} />
             <XAxis
               dataKey="segment"
@@ -137,13 +150,13 @@ export function RFMSegments({ rfmData }: RFMSegmentsProps) {
         {segmentCounts.map((item) => (
           <div key={item.segment} className="bg-muted/30 rounded-lg p-4 space-y-2">
             <div className="flex items-center justify-between">
-              <h4 className="text-sm font-semibold">{item.segment}</h4>
-              <Badge style={{ backgroundColor: getSegmentColor(item.segment) }}>
+              <h4 className="text-sm font-semibold">{SEGMENT_TRANSLATIONS[item.segment as RFMSegment]}</h4>
+              <Badge style={{ backgroundColor: getSegmentColor(item.segment as RFMSegment) }}>
                 {item.count}
               </Badge>
             </div>
-            <p className="text-xs text-muted-foreground">{getSegmentDescription(item.segment)}</p>
-            <p className="text-xs text-muted-foreground">{item.percentage}% of customers</p>
+            <p className="text-xs text-muted-foreground">{getSegmentDescription(item.segment as RFMSegment)}</p>
+            <p className="text-xs text-muted-foreground">{item.percentage}% dos clientes</p>
           </div>
         ))}
       </div>

@@ -13,6 +13,7 @@ import {
 import type { CrossSellPair } from "@/lib/analytics/cross-sell";
 import { formatCurrency } from "@/lib/utils/format";
 import { Badge } from "@/components/ui/badge";
+import { useTranslation } from "@/lib/hooks/use-translation";
 
 interface CrossSellAnalysisProps {
   pairs: CrossSellPair[];
@@ -20,6 +21,7 @@ interface CrossSellAnalysisProps {
 }
 
 export function CrossSellAnalysis({ pairs, currency }: CrossSellAnalysisProps) {
+  const { t } = useTranslation();
   const topByLift = React.useMemo(() => pairs.slice(0, 10), [pairs]);
   const topByRevenue = React.useMemo(
     () => [...pairs].sort((a, b) => b.revenue - a.revenue).slice(0, 10),
@@ -42,28 +44,28 @@ export function CrossSellAnalysis({ pairs, currency }: CrossSellAnalysisProps) {
     <div className="space-y-6">
       <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
         <div className="bg-muted/30 rounded-lg p-4 space-y-1">
-          <p className="text-xs text-muted-foreground">Total Pairs</p>
+          <p className="text-xs text-muted-foreground">{t("vendas.crosssell.pairs")}</p>
           <p className="text-2xl font-bold">{pairs.length}</p>
-          <p className="text-xs text-muted-foreground">Product combinations</p>
+          <p className="text-xs text-muted-foreground">Combinações de produtos</p>
         </div>
         <div className="bg-muted/30 rounded-lg p-4 space-y-1">
-          <p className="text-xs text-muted-foreground">Avg Confidence</p>
+          <p className="text-xs text-muted-foreground">{t("vendas.crosssell.confidence")}</p>
           <p className="text-2xl font-bold">
             {(pairs.reduce((sum, p) => sum + p.confidence, 0) / pairs.length).toFixed(1)}%
           </p>
-          <p className="text-xs text-muted-foreground">Cross-sell rate</p>
+          <p className="text-xs text-muted-foreground">Taxa de cross-sell</p>
         </div>
         <div className="bg-muted/30 rounded-lg p-4 space-y-1">
-          <p className="text-xs text-muted-foreground">Avg Lift</p>
+          <p className="text-xs text-muted-foreground">{t("vendas.crosssell.lift")}</p>
           <p className="text-2xl font-bold">
             {(pairs.reduce((sum, p) => sum + p.lift, 0) / pairs.length).toFixed(2)}x
           </p>
-          <p className="text-xs text-muted-foreground">Correlation strength</p>
+          <p className="text-xs text-muted-foreground">Força de correlação</p>
         </div>
       </div>
 
       <div className="bg-white dark:bg-slate-950 rounded-lg p-4 border border-border">
-        <h3 className="text-sm font-semibold mb-4">Product Correlation (Lift vs Confidence)</h3>
+        <h3 className="text-sm font-semibold mb-4">{t("vendas.crosssell.correlation")}</h3>
         <ResponsiveContainer width="100%" height={300}>
           <ScatterChart margin={{ top: 20, right: 20, bottom: 20, left: 20 }}>
             <CartesianGrid stroke="hsl(var(--border))" strokeDasharray="2 4" />
@@ -73,7 +75,7 @@ export function CrossSellAnalysis({ pairs, currency }: CrossSellAnalysisProps) {
               tickLine={false}
               axisLine={false}
               tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 10 }}
-              label={{ value: "Confidence %", position: "insideBottomRight", offset: -10 }}
+              label={{ value: "Confiança %", position: "insideBottomRight", offset: -10 }}
             />
             <YAxis
               dataKey="lift"
@@ -103,7 +105,7 @@ export function CrossSellAnalysis({ pairs, currency }: CrossSellAnalysisProps) {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <div className="bg-white dark:bg-slate-950 rounded-lg p-4 border border-border">
-          <h3 className="text-sm font-semibold mb-4">Top 10 by Correlation (Lift)</h3>
+          <h3 className="text-sm font-semibold mb-4">{t("vendas.crosssell.bylift")}</h3>
           <div className="space-y-3 max-h-96 overflow-y-auto">
             {topByLift.map((pair, idx) => (
               <div key={`${pair.productAId}-${pair.productBId}`} className="space-y-2 pb-3 border-b border-border last:border-b-0">
@@ -122,15 +124,15 @@ export function CrossSellAnalysis({ pairs, currency }: CrossSellAnalysisProps) {
                 <div className="grid grid-cols-3 gap-2 text-xs text-muted-foreground">
                   <div>
                     <p className="font-semibold">{pair.coOccurrences}x</p>
-                    <p>bought together</p>
+                    <p>{t("vendas.crosssell.together")}</p>
                   </div>
                   <div>
                     <p className="font-semibold">{pair.confidence.toFixed(0)}%</p>
-                    <p>confidence</p>
+                    <p>confiança</p>
                   </div>
                   <div>
                     <p className="font-semibold">{pair.support.toFixed(1)}%</p>
-                    <p>support</p>
+                    <p>suporte</p>
                   </div>
                 </div>
               </div>
@@ -139,7 +141,7 @@ export function CrossSellAnalysis({ pairs, currency }: CrossSellAnalysisProps) {
         </div>
 
         <div className="bg-white dark:bg-slate-950 rounded-lg p-4 border border-border">
-          <h3 className="text-sm font-semibold mb-4">Top 10 by Revenue</h3>
+          <h3 className="text-sm font-semibold mb-4">{t("vendas.crosssell.byrevenue")}</h3>
           <div className="space-y-3 max-h-96 overflow-y-auto">
             {topByRevenue.map((pair, idx) => (
               <div key={`${pair.productAId}-${pair.productBId}`} className="space-y-2 pb-3 border-b border-border last:border-b-0">
@@ -160,7 +162,7 @@ export function CrossSellAnalysis({ pairs, currency }: CrossSellAnalysisProps) {
                 <div className="grid grid-cols-3 gap-2 text-xs text-muted-foreground">
                   <div>
                     <p className="font-semibold">{pair.coOccurrences}x</p>
-                    <p>bought together</p>
+                    <p>{t("vendas.crosssell.together")}</p>
                   </div>
                   <div>
                     <p className="font-semibold">{pair.lift.toFixed(2)}x</p>
@@ -168,7 +170,7 @@ export function CrossSellAnalysis({ pairs, currency }: CrossSellAnalysisProps) {
                   </div>
                   <div>
                     <p className="font-semibold">{(pair.revenue / pair.coOccurrences).toFixed(0)}</p>
-                    <p>avg value</p>
+                    <p>{t("vendas.crosssell.avgvalue")}</p>
                   </div>
                 </div>
               </div>

@@ -176,14 +176,14 @@ export function getSegmentColor(segment: RFMSegment): string {
 
 export function getSegmentDescription(segment: RFMSegment): string {
   const descriptions: Record<RFMSegment, string> = {
-    Champions: "Best customers - high frequency, recent, high spend",
-    "Loyal Customers": "Regular customers with good spending",
-    "Potential Loyalists": "Good customers who could become loyal",
-    "New Customers": "Recently acquired, monitor growth",
-    "Need Attention": "Moderate engagement, needs engagement strategy",
-    "At Risk": "Previously loyal but haven't purchased recently",
-    "Cant Lose Them": "High spenders but haven't purchased recently",
-    Lost: "Haven't purchased in long time",
+    Champions: "Melhores clientes - alta frequência, recentes, alto gasto",
+    "Loyal Customers": "Clientes regulares com bom gasto",
+    "Potential Loyalists": "Bons clientes que podem se tornar leais",
+    "New Customers": "Recém-adquiridos, monitorar crescimento",
+    "Need Attention": "Engajamento moderado, precisa de estratégia",
+    "At Risk": "Eram leais mas não compram há pouco tempo",
+    "Cant Lose Them": "Alto gasto mas não compram há pouco tempo",
+    Lost: "Não compram há muito tempo",
   };
   return descriptions[segment];
 }

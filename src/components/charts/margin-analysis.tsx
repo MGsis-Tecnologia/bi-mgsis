@@ -15,6 +15,7 @@ import {
 } from "recharts";
 import type { MarginMetrics, ProductMargin, SellerMargin } from "@/lib/analytics/margins";
 import { formatCurrency, formatPercent } from "@/lib/utils/format";
+import { useTranslation } from "@/lib/hooks/use-translation";
 
 interface MarginAnalysisProps {
   metrics: MarginMetrics;
@@ -29,6 +30,7 @@ export function MarginAnalysis({
   sellerMargins,
   currency,
 }: MarginAnalysisProps) {
+  const { t } = useTranslation();
   const topProducts = React.useMemo(() => productMargins.slice(0, 10), [productMargins]);
   const topSellers = React.useMemo(() => sellerMargins.slice(0, 8), [sellerMargins]);
 
@@ -48,25 +50,25 @@ export function MarginAnalysis({
     <div className="space-y-6">
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <div className="bg-muted/30 rounded-lg p-4 space-y-1">
-          <p className="text-xs text-muted-foreground">Profit Margin</p>
+          <p className="text-xs text-muted-foreground">{t("vendas.margens.margin")}</p>
           <p className="text-2xl font-bold">{formatPercent(metrics.profitMargin, { decimals: 1 })}</p>
           <p className="text-xs text-muted-foreground">{metrics.profitMarginBps} bps</p>
         </div>
         <div className="bg-muted/30 rounded-lg p-4 space-y-1">
-          <p className="text-xs text-muted-foreground">Total Profit</p>
+          <p className="text-xs text-muted-foreground">{t("vendas.margens.profit")}</p>
           <p className="text-2xl font-bold">{formatCurrency(metrics.totalProfit, currency, { compact: true })}</p>
           <p className="text-xs text-muted-foreground">
-            vs Revenue: {formatPercent((metrics.totalProfit / metrics.totalRevenue) * 100, { decimals: 1 })}
+            vs Receita: {formatPercent((metrics.totalProfit / metrics.totalRevenue) * 100, { decimals: 1 })}
           </p>
         </div>
         <div className="bg-muted/30 rounded-lg p-4 space-y-1">
-          <p className="text-xs text-muted-foreground">Avg Order Margin</p>
+          <p className="text-xs text-muted-foreground">{t("vendas.margens.avg")}</p>
           <p className="text-2xl font-bold">{formatPercent(metrics.averageOrderMargin, { decimals: 1 })}</p>
         </div>
         <div className="bg-muted/30 rounded-lg p-4 space-y-1">
-          <p className="text-xs text-muted-foreground">Margin Range</p>
+          <p className="text-xs text-muted-foreground">{t("vendas.margens.range")}</p>
           <p className="text-sm font-semibold">
-            {formatPercent(metrics.lowestMargin, { decimals: 1 })} to{" "}
+            {formatPercent(metrics.lowestMargin, { decimals: 1 })} a{" "}
             {formatPercent(metrics.highestMargin, { decimals: 1 })}
           </p>
         </div>
@@ -74,15 +76,15 @@ export function MarginAnalysis({
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <div className="bg-white dark:bg-slate-950 rounded-lg p-4 border border-border">
-          <h3 className="text-sm font-semibold mb-4">Cost Structure</h3>
+          <h3 className="text-sm font-semibold mb-4">{t("vendas.margens.cost")}</h3>
           <ResponsiveContainer width="100%" height={250}>
             <BarChart
               data={[
                 {
-                  name: "Financial",
-                  Revenue: metrics.totalRevenue,
-                  Cost: metrics.totalCost,
-                  Profit: metrics.totalProfit,
+                  name: "Financeiro",
+                  Receita: metrics.totalRevenue,
+                  Custo: metrics.totalCost,
+                  Lucro: metrics.totalProfit,
                 },
               ]}
               margin={{ top: 20, right: 30, left: 0, bottom: 0 }}
@@ -99,15 +101,15 @@ export function MarginAnalysis({
                 formatter={(value) => formatCurrency(Number(value), currency, { compact: true })}
               />
               <Legend />
-              <Bar dataKey="Revenue" fill="hsl(var(--primary))" />
-              <Bar dataKey="Cost" fill="hsl(var(--destructive))" />
-              <Bar dataKey="Profit" fill="hsl(var(--accent))" />
+              <Bar dataKey="Receita" fill="hsl(var(--primary))" />
+              <Bar dataKey="Custo" fill="hsl(var(--destructive))" />
+              <Bar dataKey="Lucro" fill="hsl(var(--accent))" />
             </BarChart>
           </ResponsiveContainer>
         </div>
 
         <div className="bg-white dark:bg-slate-950 rounded-lg p-4 border border-border">
-          <h3 className="text-sm font-semibold mb-4">Seller Profitability</h3>
+          <h3 className="text-sm font-semibold mb-4">{t("vendas.margens.sellers")}</h3>
           <ResponsiveContainer width="100%" height={250}>
             <BarChart data={topSellers} margin={{ top: 20, right: 30, left: 0, bottom: 0 }}>
               <CartesianGrid stroke="hsl(var(--border))" strokeDasharray="2 4" vertical={false} />
@@ -129,14 +131,14 @@ export function MarginAnalysis({
                 }}
                 formatter={(value) => formatCurrency(Number(value), currency, { compact: true })}
               />
-              <Bar dataKey="profit" fill="hsl(var(--accent))" name="Profit" />
+              <Bar dataKey="profit" fill="hsl(var(--accent))" name="Lucro" />
             </BarChart>
           </ResponsiveContainer>
         </div>
       </div>
 
       <div className="bg-white dark:bg-slate-950 rounded-lg p-4 border border-border">
-        <h3 className="text-sm font-semibold mb-4">Product Margin Distribution</h3>
+        <h3 className="text-sm font-semibold mb-4">Distribuição de Margens por Produto</h3>
         <ResponsiveContainer width="100%" height={300}>
           <BarChart data={marginTrend}>
             <CartesianGrid stroke="hsl(var(--border))" strokeDasharray="2 4" vertical={false} />
@@ -153,7 +155,7 @@ export function MarginAnalysis({
               tickLine={false}
               axisLine={false}
               tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 10 }}
-              label={{ value: "Margin %", angle: -90, position: "insideLeft" }}
+              label={{ value: "Margem %", angle: -90, position: "insideLeft" }}
             />
             <Tooltip
               contentStyle={{
@@ -170,7 +172,7 @@ export function MarginAnalysis({
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <div className="bg-white dark:bg-slate-950 rounded-lg p-4 border border-border">
-          <h3 className="text-sm font-semibold mb-4">Top 10 Products by Profit</h3>
+          <h3 className="text-sm font-semibold mb-4">{t("vendas.margens.products")}</h3>
           <div className="space-y-2 max-h-96 overflow-y-auto">
             {topProducts.map((product, idx) => (
               <div key={product.productId} className="flex items-center justify-between text-sm pb-2 border-b border-border last:border-b-0">
@@ -192,7 +194,7 @@ export function MarginAnalysis({
         </div>
 
         <div className="bg-white dark:bg-slate-950 rounded-lg p-4 border border-border">
-          <h3 className="text-sm font-semibold mb-4">Top Sellers by Margin</h3>
+          <h3 className="text-sm font-semibold mb-4">Top Vendedores por Margem</h3>
           <div className="space-y-2 max-h-96 overflow-y-auto">
             {topSellers.map((seller) => (
               <div key={seller.sellerId} className="flex items-center justify-between text-sm pb-2 border-b border-border last:border-b-0">

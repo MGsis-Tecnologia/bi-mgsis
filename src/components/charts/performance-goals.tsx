@@ -6,6 +6,7 @@ import type { PerformanceVsGoal } from "@/lib/analytics/performance-goals";
 import { getStatusColor, getStatusLabel } from "@/lib/analytics/performance-goals";
 import { formatCurrency, formatPercent, formatNumber } from "@/lib/utils/format";
 import { Badge } from "@/components/ui/badge";
+import { useTranslation } from "@/lib/hooks/use-translation";
 
 interface PerformanceGoalsProps {
   goals: PerformanceVsGoal[];
@@ -13,6 +14,7 @@ interface PerformanceGoalsProps {
 }
 
 export function PerformanceGoals({ goals, currency }: PerformanceGoalsProps) {
+  const { t } = useTranslation();
   const exceeded = goals.filter((g) => g.status === "exceeded").length;
   const onTrack = goals.filter((g) => g.status === "on-track").length;
   const atRisk = goals.filter((g) => g.status === "at-risk").length;
@@ -30,29 +32,29 @@ export function PerformanceGoals({ goals, currency }: PerformanceGoalsProps) {
     <div className="space-y-6">
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <div className="bg-muted/30 rounded-lg p-4 space-y-1">
-          <p className="text-xs text-muted-foreground">Exceeded</p>
+          <p className="text-xs text-muted-foreground">{t("vendas.metas.exceeded")}</p>
           <p className="text-2xl font-bold text-accent">{exceeded}</p>
-          <p className="text-xs text-muted-foreground">{((exceeded / goals.length) * 100).toFixed(0)}% of goals</p>
+          <p className="text-xs text-muted-foreground">{((exceeded / goals.length) * 100).toFixed(0)}% das metas</p>
         </div>
         <div className="bg-muted/30 rounded-lg p-4 space-y-1">
-          <p className="text-xs text-muted-foreground">On Track</p>
+          <p className="text-xs text-muted-foreground">{t("vendas.metas.ontrack")}</p>
           <p className="text-2xl font-bold text-primary">{onTrack}</p>
-          <p className="text-xs text-muted-foreground">{((onTrack / goals.length) * 100).toFixed(0)}% of goals</p>
+          <p className="text-xs text-muted-foreground">{((onTrack / goals.length) * 100).toFixed(0)}% das metas</p>
         </div>
         <div className="bg-muted/30 rounded-lg p-4 space-y-1">
-          <p className="text-xs text-muted-foreground">At Risk</p>
+          <p className="text-xs text-muted-foreground">{t("vendas.metas.atrisk")}</p>
           <p className="text-2xl font-bold text-chart-4">{atRisk}</p>
-          <p className="text-xs text-muted-foreground">{((atRisk / goals.length) * 100).toFixed(0)}% of goals</p>
+          <p className="text-xs text-muted-foreground">{((atRisk / goals.length) * 100).toFixed(0)}% das metas</p>
         </div>
         <div className="bg-muted/30 rounded-lg p-4 space-y-1">
-          <p className="text-xs text-muted-foreground">Missed</p>
+          <p className="text-xs text-muted-foreground">{t("vendas.metas.missed")}</p>
           <p className="text-2xl font-bold text-destructive">{missed}</p>
-          <p className="text-xs text-muted-foreground">{((missed / goals.length) * 100).toFixed(0)}% of goals</p>
+          <p className="text-xs text-muted-foreground">{((missed / goals.length) * 100).toFixed(0)}% das metas</p>
         </div>
       </div>
 
       <div className="bg-white dark:bg-slate-950 rounded-lg p-4 border border-border">
-        <h3 className="text-sm font-semibold mb-4">Achievement vs Goals</h3>
+        <h3 className="text-sm font-semibold mb-4">{t("vendas.metas.chart")}</h3>
         <ResponsiveContainer width="100%" height={300}>
           <BarChart data={chartData}>
             <CartesianGrid stroke="hsl(var(--border))" strokeDasharray="2 4" vertical={false} />
@@ -84,8 +86,8 @@ export function PerformanceGoals({ goals, currency }: PerformanceGoalsProps) {
           </BarChart>
         </ResponsiveContainer>
         <div className="mt-2 flex justify-center gap-6 text-xs text-muted-foreground">
-          <span>100% = Target Achieved</span>
-          <span>150% = Maximum shown</span>
+          <span>100% = Meta Atingida</span>
+          <span>150% = Máximo exibido</span>
         </div>
       </div>
 
@@ -107,7 +109,7 @@ export function PerformanceGoals({ goals, currency }: PerformanceGoalsProps) {
 
             <div className="space-y-2">
               <div className="flex items-center justify-between text-sm">
-                <span className="text-muted-foreground">Actual vs Target</span>
+                <span className="text-muted-foreground">Realizado vs Meta</span>
                 <span className="font-semibold">
                   {goal.type === "margin" || goal.type === "ticket"
                     ? goal.actual.toFixed(goal.type === "margin" ? 1 : 0)
@@ -132,9 +134,9 @@ export function PerformanceGoals({ goals, currency }: PerformanceGoalsProps) {
               <div className="flex items-center justify-between text-xs text-muted-foreground">
                 <span>
                   {goal.variancePct >= 0 ? "+" : ""}
-                  {formatPercent(goal.variancePct, { decimals: 1 })} vs target
+                  {formatPercent(goal.variancePct, { decimals: 1 })} vs meta
                 </span>
-                <span>{formatPercent(goal.achievement, { decimals: 0 })} achievement</span>
+                <span>{formatPercent(goal.achievement, { decimals: 0 })} atingido</span>
               </div>
             </div>
           </div>

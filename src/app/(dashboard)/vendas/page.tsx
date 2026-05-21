@@ -155,8 +155,8 @@ export default function VendasPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Segmentação RFM - Análise de Clientes</CardTitle>
-          <p className="mt-1 text-xs text-muted-foreground">Recência, Frequência e Valor (Monetary) de Compra</p>
+          <CardTitle>{t("vendas.rfm.title")}</CardTitle>
+          <p className="mt-1 text-xs text-muted-foreground">{t("vendas.rfm.desc")}</p>
         </CardHeader>
         <CardContent>
           <RFMSegments rfmData={rfmData} />
@@ -165,8 +165,8 @@ export default function VendasPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Análise de Margens e Rentabilidade</CardTitle>
-          <p className="mt-1 text-xs text-muted-foreground">Margem de lucro por produto e vendedor</p>
+          <CardTitle>{t("vendas.margens.title")}</CardTitle>
+          <p className="mt-1 text-xs text-muted-foreground">{t("vendas.margens.desc")}</p>
         </CardHeader>
         <CardContent>
           <MarginAnalysis
@@ -180,8 +180,8 @@ export default function VendasPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Performance vs Metas</CardTitle>
-          <p className="mt-1 text-xs text-muted-foreground">Acompanhamento de objetivos de vendas</p>
+          <CardTitle>{t("vendas.metas.title")}</CardTitle>
+          <p className="mt-1 text-xs text-muted-foreground">{t("vendas.metas.desc")}</p>
         </CardHeader>
         <CardContent>
           <PerformanceGoals goals={performanceGoals} currency={currency} />
@@ -190,8 +190,8 @@ export default function VendasPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Análise Cross-Sell - Produtos Relacionados</CardTitle>
-          <p className="mt-1 text-xs text-muted-foreground">Produtos frequentemente comprados juntos</p>
+          <CardTitle>{t("vendas.crosssell.title")}</CardTitle>
+          <p className="mt-1 text-xs text-muted-foreground">{t("vendas.crosssell.desc")}</p>
         </CardHeader>
         <CardContent>
           <CrossSellAnalysis pairs={crossSellPairs} currency={currency} />
