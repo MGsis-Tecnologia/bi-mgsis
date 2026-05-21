@@ -53,16 +53,6 @@ export default function VendasPage() {
   const citiesSales = React.useMemo(() => aggregateSalesByCity(orders), [orders]);
   const maxSales = React.useMemo(() => getMaxSales(citiesSales), [citiesSales]);
 
-  // Debug: log orders com clientCity
-  React.useEffect(() => {
-    console.log("Primeiros 5 orders com clientCity:");
-    orders.slice(0, 5).forEach((o) => {
-      console.log(`  ${o.id}: ${o.clientName} - Cidade: ${o.clientCity || "NÃO DEFINIDA"}`);
-    });
-    console.log(`Total de cidades encontradas: ${Object.keys(citiesSales).length}`);
-    console.log("Cidades com vendas:", Object.keys(citiesSales));
-  }, [orders, citiesSales]);
-
   if (!ds.hasData) {
     return (
       <div className="space-y-8">

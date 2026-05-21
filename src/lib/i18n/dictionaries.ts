@@ -62,7 +62,11 @@ export const dictionaries = {
     "dashboard.chart.category.center": "Total",
     "dashboard.chart.channel.title": "Receita por canal",
     "dashboard.chart.channel.badge": "{{count}} canais",
-    
+
+    // Charts - genéricos
+    "chart.donut.others": "Outros",
+    "chart.donut.othersDetail": "{{count}} categorias",
+
     // Dashboard - Heatmap & Meta
     "dashboard.heatmap.title": "Mapa de calor · dia × semana",
     "dashboard.heatmap.desc": "concentração de receita ao longo do mês",
@@ -323,7 +327,11 @@ export const dictionaries = {
     "dashboard.chart.category.center": "Total",
     "dashboard.chart.channel.title": "Ingresos por canal",
     "dashboard.chart.channel.badge": "{{count}} canales",
-    
+
+    // Charts - genéricos
+    "chart.donut.others": "Otros",
+    "chart.donut.othersDetail": "{{count}} categorías",
+
     // Dashboard - Heatmap & Meta
     "dashboard.heatmap.title": "Mapa de calor · día × semana",
     "dashboard.heatmap.desc": "concentración de ingresos a lo largo del mes",

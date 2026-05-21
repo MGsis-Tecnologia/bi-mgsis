@@ -10,5 +10,6 @@ out/
 coverage/
 .turbo/
 next-env.d.ts
+*.tsbuildinfo
 *.pem
 *.key

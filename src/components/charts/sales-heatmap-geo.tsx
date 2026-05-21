@@ -2,16 +2,39 @@
 "use client";
 
 import * as React from "react";
-import { MapContainer, TileLayer, CircleMarker, Popup } from "react-leaflet";
+import { MapContainer, TileLayer, CircleMarker, Popup, useMap } from "react-leaflet";
 import { useFilters } from "@/lib/store/filters";
 import { formatCurrency, formatNumber } from "@/lib/utils/format";
-import { MAP_BOUNDS, MAP_CENTER, MAP_ZOOM } from "@/lib/mock/cities-geo";
+import { MAP_CENTER, MAP_ZOOM } from "@/lib/mock/cities-geo";
 import type { CityMetrics } from "@/lib/analytics/geo-sales";
 import "leaflet/dist/leaflet.css";
 
 interface SalesHeatmapGeoProps {
   cities: Record<string, CityMetrics>;
   maxSales: number;
+}
+
+// Reenquadra o mapa para mostrar todas as cidades sempre que os dados mudam.
+function FitBounds({ cities }: { cities: CityMetrics[] }) {
+  const map = useMap();
+  // Assinatura estável: muda quando as cidades/coordenadas mudam
+  const signature = cities
+    .map((c) => `${c.city}:${c.lat.toFixed(3)},${c.lng.toFixed(3)}`)
+    .sort()
+    .join("|");
+
+  React.useEffect(() => {
+    if (cities.length === 0) return;
+    if (cities.length === 1) {
+      map.setView([cities[0]!.lat, cities[0]!.lng], 9);
+      return;
+    }
+    const bounds = cities.map((c) => [c.lat, c.lng] as [number, number]);
+    map.fitBounds(bounds, { padding: [40, 40], maxZoom: 9 });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [map, signature]);
+
+  return null;
 }
 
 function getIntensityColor(value: number, max: number): string {
@@ -76,6 +99,8 @@ export function SalesHeatmapGeo({ cities, maxSales }: SalesHeatmapGeoProps) {
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
           {...({} as any)}
         />
+
+        <FitBounds cities={citiesArray} />
 
         {citiesArray.map((city) => (
           <CircleMarker
