@@ -73,7 +73,7 @@ export function Topbar() {
                     className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-foreground hover:bg-muted/60 rounded-md transition-colors first:rounded-t-md last:rounded-b-md"
                   >
                     <LogOut className="h-4 w-4 text-muted-foreground" />
-                    <span>Sair (Logout)</span>
+                    <span>{t("topbar.logout")}</span>
                   </button>
                 </div>
               )}

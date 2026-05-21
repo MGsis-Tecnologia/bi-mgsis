@@ -2,8 +2,10 @@
 
 import * as React from "react";
 import { Eye, EyeOff } from "lucide-react";
+import { useTranslation } from "@/lib/hooks/use-translation";
 
 export default function LoginPage() {
+  const { t } = useTranslation();
   const [showPassword, setShowPassword] = React.useState(false);
   const [isLoading, setIsLoading] = React.useState(false);
 
@@ -43,12 +45,12 @@ export default function LoginPage() {
 
           {/* Main Headline */}
           <div className="mb-24">
-            <p className="text-xs font-semibold tracking-widest text-blue-300 mb-4">INTELIGENCIA COMERCIAL</p>
+            <p className="text-xs font-semibold tracking-widest text-blue-300 mb-4">{t("login.hero.label")}</p>
             <h2 className="font-serif text-5xl leading-tight font-bold mb-6">
-              Los datos que transforman decisiones.
+              {t("login.hero.title")}
             </h2>
             <p className="text-lg text-blue-100 max-w-md">
-              Análisis en tiempo real, insights accionables y rentabilidad mensurable. Tu ERP conectado a la inteligencia que impulsa el crecimiento.
+              {t("login.hero.description")}
             </p>
           </div>
         </div>
@@ -56,22 +58,22 @@ export default function LoginPage() {
         {/* Metrics Footer */}
         <div className="relative z-10 grid grid-cols-3 gap-6 border-t border-blue-300/20 pt-12">
           <div>
-            <div className="text-4xl font-bold mb-2">+320%</div>
-            <p className="text-xs text-blue-200">Precisión Analytics</p>
+            <div className="text-4xl font-bold mb-2">{t("login.hero.metric1.value")}</div>
+            <p className="text-xs text-blue-200">{t("login.hero.metric1.label")}</p>
           </div>
           <div>
-            <div className="text-4xl font-bold mb-2">Real-time</div>
-            <p className="text-xs text-blue-200">Actualización datos</p>
+            <div className="text-4xl font-bold mb-2">{t("login.hero.metric2.value")}</div>
+            <p className="text-xs text-blue-200">{t("login.hero.metric2.label")}</p>
           </div>
           <div>
-            <div className="text-4xl font-bold mb-2">24/7</div>
-            <p className="text-xs text-blue-200">Disponibilidad</p>
+            <div className="text-4xl font-bold mb-2">{t("login.hero.metric3.value")}</div>
+            <p className="text-xs text-blue-200">{t("login.hero.metric3.label")}</p>
           </div>
         </div>
 
         {/* Footer Branding */}
         <div className="relative z-10 text-xs text-blue-300 tracking-widest">
-          MGSIS TECNOLOGÍA · PY · 2026
+          {t("login.footer.branding")}
         </div>
       </div>
 
@@ -92,10 +94,10 @@ export default function LoginPage() {
 
           {/* Form Header */}
           <div className="mb-8">
-            <p className="text-xs font-semibold tracking-widest text-slate-500 mb-3">ACCEDER AL PANEL</p>
-            <h2 className="font-serif text-3xl font-bold text-slate-900 mb-2">Ingresa a tu cuenta</h2>
+            <p className="text-xs font-semibold tracking-widest text-slate-500 mb-3">{t("login.form.label")}</p>
+            <h2 className="font-serif text-3xl font-bold text-slate-900 mb-2">{t("login.form.title")}</h2>
             <p className="text-sm text-slate-600">
-              Continúa con el correo registrado. Los campos vienen pre-completados para demostración.
+              {t("login.form.description")}
             </p>
           </div>
 
@@ -104,7 +106,7 @@ export default function LoginPage() {
             {/* Email Field */}
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-2">
-                Correo corporativo
+                {t("login.form.email.label")}
               </label>
               <input
                 type="email"
@@ -117,12 +119,12 @@ export default function LoginPage() {
             {/* Password Field */}
             <div>
               <div className="flex items-center justify-between mb-2">
-                <label className="block text-sm font-medium text-slate-700">Contraseña</label>
+                <label className="block text-sm font-medium text-slate-700">{t("login.form.password.label")}</label>
                 <button
                   type="button"
                   className="text-xs text-blue-600 hover:text-blue-700 font-medium transition-colors"
                 >
-                  Olvidé mi contraseña
+                  {t("login.form.password.forgot")}
                 </button>
               </div>
               <div className="relative">
@@ -155,7 +157,7 @@ export default function LoginPage() {
                 className="w-4 h-4 border border-slate-300 rounded bg-white accent-blue-600 cursor-pointer"
               />
               <label htmlFor="remember" className="text-sm text-slate-700 cursor-pointer">
-                Mantener sesión iniciada por 7 días
+                {t("login.form.remember")}
               </label>
             </div>
 
@@ -165,21 +167,21 @@ export default function LoginPage() {
               disabled={isLoading}
               className="w-full py-3 px-4 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-semibold rounded-lg transition-all duration-200 disabled:opacity-75 disabled:cursor-not-allowed mt-6 shadow-lg hover:shadow-xl"
             >
-              {isLoading ? "Ingresando..." : "Ingresar al panel"}
+              {isLoading ? t("login.form.submit") : t("login.form.submit")}
             </button>
           </form>
 
           {/* Footer Links */}
           <p className="text-xs text-slate-500 text-center mt-6">
-            Al continuar, aceptas los{" "}
+            {t("login.form.terms")}{" "}
             <a href="#" className="text-blue-600 hover:text-blue-700 font-medium">
-              Términos de Uso
+              {t("login.form.terms.usage")}
             </a>
             {" "}y{" "}
             <a href="#" className="text-blue-600 hover:text-blue-700 font-medium">
-              Política de Privacidad
+              {t("login.form.terms.privacy")}
             </a>
-            {" "}de MGSIS Analytics.
+            {" "}{t("login.form.terms.suffix")}
           </p>
         </div>
       </div>
