@@ -39,6 +39,49 @@ export function productABC(orders: ImportedOrder[], products: ImportedProduct[])
   return classifyABC(entries);
 }
 
+export interface SubgroupABCEntry {
+  id: string;
+  name: string;
+  revenue: number;
+  units: number;
+  productCount: number;
+  share: number;
+  cumulativeShare: number;
+  curve: "A" | "B" | "C";
+}
+
+/** ABC analysis aggregated by product category (subgroup). */
+export function subgroupABC(orders: ImportedOrder[]): SubgroupABCEntry[] {
+  const bySubgroup = new Map<string, { name: string; revenue: number; units: number; products: Set<string> }>();
+  for (const o of orders) {
+    for (const it of o.items) {
+      const cur = bySubgroup.get(it.subgroupId) ?? { name: it.subgroupName, revenue: 0, units: 0, products: new Set<string>() };
+      cur.revenue += it.totalBRL;
+      cur.units += it.quantity;
+      cur.products.add(it.productId);
+      bySubgroup.set(it.subgroupId, cur);
+    }
+  }
+  const total = [...bySubgroup.values()].reduce((s, v) => s + v.revenue, 0);
+  const sorted = [...bySubgroup.entries()].sort((a, b) => b[1].revenue - a[1].revenue);
+  let cum = 0;
+  return sorted.map(([id, v]) => {
+    const share = total === 0 ? 0 : v.revenue / total;
+    cum += share;
+    const curve: "A" | "B" | "C" = total === 0 ? "C" : cum <= 0.8 ? "A" : cum <= 0.95 ? "B" : "C";
+    return {
+      id,
+      name: v.name,
+      revenue: v.revenue,
+      units: v.units,
+      productCount: v.products.size,
+      share,
+      cumulativeShare: cum,
+      curve,
+    };
+  });
+}
+
 export function customerABC(orders: ImportedOrder[], clients: ImportedClient[]): ABCEntry<ImportedClient>[] {
   const byClient = new Map<string, { revenue: number; units: number }>();
   for (const o of orders) {
