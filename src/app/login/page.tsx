@@ -12,7 +12,7 @@ export default function LoginPage() {
     setIsLoading(true);
     // Simulate login
     setTimeout(() => {
-      window.location.href = "/";
+      window.location.href = "/dashboard";
     }, 1000);
   };
 
