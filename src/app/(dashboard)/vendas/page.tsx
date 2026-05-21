@@ -22,6 +22,14 @@ import { aggregateSalesByCity, getMaxSales } from "@/lib/analytics/geo-sales";
 import { dailySeries, heatmapByDayOfWeek, monthlySeries } from "@/lib/analytics/timeseries";
 import { formatCurrency, formatNumber, formatPercent } from "@/lib/utils/format";
 import { useTranslation } from "@/lib/hooks/use-translation";
+import { RFMSegments } from "@/components/charts/rfm-segments";
+import { MarginAnalysis } from "@/components/charts/margin-analysis";
+import { PerformanceGoals } from "@/components/charts/performance-goals";
+import { CrossSellAnalysis } from "@/components/charts/cross-sell-analysis";
+import { calculateRFM } from "@/lib/analytics/rfm";
+import { calculateMarginMetrics, calculateProductMargins, calculateSellerMargins } from "@/lib/analytics/margins";
+import { calculatePerformanceVsGoals } from "@/lib/analytics/performance-goals";
+import { calculateCrossSell } from "@/lib/analytics/cross-sell";
 
 const SalesHeatmapGeo = dynamic(() => import("@/components/charts/sales-heatmap-geo").then((mod) => ({ default: mod.SalesHeatmapGeo })), {
   ssr: false,
@@ -52,6 +60,13 @@ export default function VendasPage() {
 
   const citiesSales = React.useMemo(() => aggregateSalesByCity(orders), [orders]);
   const maxSales = React.useMemo(() => getMaxSales(citiesSales), [citiesSales]);
+
+  const rfmData = React.useMemo(() => calculateRFM(orders), [orders]);
+  const marginMetrics = React.useMemo(() => calculateMarginMetrics(orders), [orders]);
+  const productMargins = React.useMemo(() => calculateProductMargins(orders), [orders]);
+  const sellerMargins = React.useMemo(() => calculateSellerMargins(orders), [orders]);
+  const performanceGoals = React.useMemo(() => calculatePerformanceVsGoals(orders), [orders]);
+  const crossSellPairs = React.useMemo(() => calculateCrossSell(orders), [orders]);
 
   if (!ds.hasData) {
     return (
@@ -135,6 +150,51 @@ export default function VendasPage() {
         </CardHeader>
         <CardContent>
           <SalesHeatmapGeo cities={citiesSales} maxSales={maxSales} />
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Segmentação RFM - Análise de Clientes</CardTitle>
+          <p className="mt-1 text-xs text-muted-foreground">Recência, Frequência e Valor (Monetary) de Compra</p>
+        </CardHeader>
+        <CardContent>
+          <RFMSegments rfmData={rfmData} />
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Análise de Margens e Rentabilidade</CardTitle>
+          <p className="mt-1 text-xs text-muted-foreground">Margem de lucro por produto e vendedor</p>
+        </CardHeader>
+        <CardContent>
+          <MarginAnalysis
+            metrics={marginMetrics}
+            productMargins={productMargins}
+            sellerMargins={sellerMargins}
+            currency={currency}
+          />
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Performance vs Metas</CardTitle>
+          <p className="mt-1 text-xs text-muted-foreground">Acompanhamento de objetivos de vendas</p>
+        </CardHeader>
+        <CardContent>
+          <PerformanceGoals goals={performanceGoals} currency={currency} />
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Análise Cross-Sell - Produtos Relacionados</CardTitle>
+          <p className="mt-1 text-xs text-muted-foreground">Produtos frequentemente comprados juntos</p>
+        </CardHeader>
+        <CardContent>
+          <CrossSellAnalysis pairs={crossSellPairs} currency={currency} />
         </CardContent>
       </Card>
 
