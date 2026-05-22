@@ -72,6 +72,31 @@ export interface StoredDataset {
   rowCount: number;
 }
 
+// ─── Contas a receber (accounts receivable) ──────────────────────────────────
+// One row per open title (receber_documento). The file is a snapshot of the
+// open portfolio — every row is a pending receivable.
+export interface ReceivableItem {
+  documentId: string;     // receber_documento
+  clientId: string;       // pessoa_cliente_id
+  clientName: string;     // pessoa_nome
+  clientCity?: string;    // pessoa_cidade (optional column)
+  issueDate: string;      // data_emissao — ISO YYYY-MM-DD ("" if absent/invalid)
+  dueDate: string;        // data_vencimento — ISO YYYY-MM-DD
+  entryType: string;      // tipolanzamiento — classification only
+  amountOrig: number;     // valor_documento in original currency
+  sellerId: string;       // vendedor_id
+  sellerName: string;     // vendedor_nome
+  currencyId: string;     // moeda_id — "1" | "2" | "3"
+  currencyCode: string;   // moeda_sigla — "R$" | "US$" | "G$"
+}
+
+export interface StoredReceivables {
+  items: ReceivableItem[];
+  importedAt: string;     // ISO
+  filename: string;
+  rowCount: number;
+}
+
 // "1"=R$  "2"=US$  "3"=G$  "ALL"=Todas Moedas (converte para R$)
 export type AppCurrencyId = "1" | "2" | "3" | "ALL";
 

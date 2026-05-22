@@ -1,8 +1,13 @@
 import Papa from "papaparse";
 import * as XLSX from "xlsx";
-import type { OrderLineItem, StoredDataset } from "@/lib/types/dataset";
+import type {
+  OrderLineItem,
+  ReceivableItem,
+  StoredDataset,
+  StoredReceivables,
+} from "@/lib/types/dataset";
 
-// Required column names (lowercase trimmed)
+// Required column names for the VENDAS layout (lowercase trimmed)
 const REQUIRED_COLS = [
   "pedido_data",
   "pedido_documento",
@@ -23,11 +28,34 @@ const REQUIRED_COLS = [
   "pedido_tipo",
 ] as const;
 
+// Required column names for the RECEBER layout (contas a receber)
+const RECEIVABLE_REQUIRED_COLS = [
+  "moeda_id",
+  "moeda_sigla",
+  "pessoa_cliente_id",
+  "pessoa_nome",
+  "data_emissao",
+  "data_vencimento",
+  "receber_documento",
+  "tipolanzamiento",
+  "valor_documento",
+  "vendedor_id",
+  "vendedor_nome",
+] as const;
+
+export type DatasetKind = "sales" | "receivable";
+
 export interface ParseResult {
-  dataset: StoredDataset | null;
+  kind: DatasetKind | null;
+  dataset: StoredDataset | null;          // populated when kind === "sales"
+  receivables: StoredReceivables | null;  // populated when kind === "receivable"
   errors: string[];
   warnings: string[];
   skipped: number;
+}
+
+function errorResult(errors: string[], warnings: string[] = [], skipped = 0): ParseResult {
+  return { kind: null, dataset: null, receivables: null, errors, warnings, skipped };
 }
 
 // Parse date string → ISO YYYY-MM-DD (string, never a Date object — survives JSON serialization)
@@ -86,12 +114,11 @@ function mapRow(row: Record<string, unknown>, colMap: Record<string, string>): R
   return out;
 }
 
-function processRows(
-  rawRows: Record<string, unknown>[],
-  filename: string
-): ParseResult {
+// ─── Dispatcher: detect layout (VENDAS vs RECEBER) and route ──────────────────
+
+function processRows(rawRows: Record<string, unknown>[], filename: string): ParseResult {
   if (rawRows.length === 0) {
-    return { dataset: null, errors: ["Arquivo vazio."], warnings: [], skipped: 0 };
+    return errorResult(["Arquivo vazio."]);
   }
 
   // Build column map: normalized → original header name
@@ -101,19 +128,30 @@ function processRows(
     colMap[normalizeHeader(h)] = h;
   }
 
-  // Debug: log all available columns
-  console.log("Colunas encontradas no CSV:", Object.keys(colMap));
-  console.log("Coluna 'pedido_cidade' encontrada?", "pedido_cidade" in colMap);
+  // Layout detection — the document column is the discriminator
+  if ("receber_documento" in colMap) {
+    return processReceivableRows(rawRows, colMap, filename);
+  }
+  if ("pedido_documento" in colMap || "pedido_tipo" in colMap) {
+    return processSalesRows(rawRows, colMap, filename);
+  }
 
+  return errorResult([
+    "Leiaute não reconhecido. O arquivo deve conter as colunas de Vendas (pedido_documento) ou de Contas a Receber (receber_documento).",
+  ]);
+}
+
+// ─── VENDAS ───────────────────────────────────────────────────────────────────
+
+function processSalesRows(
+  rawRows: Record<string, unknown>[],
+  colMap: Record<string, string>,
+  filename: string
+): ParseResult {
   // Validate required columns
   const missing = REQUIRED_COLS.filter((c) => !(c in colMap));
   if (missing.length > 0) {
-    return {
-      dataset: null,
-      errors: [`Colunas obrigatórias ausentes: ${missing.join(", ")}`],
-      warnings: [],
-      skipped: 0,
-    };
+    return errorResult([`Colunas obrigatórias ausentes (Vendas): ${missing.join(", ")}`]);
   }
 
   const items: OrderLineItem[] = [];
@@ -173,26 +211,117 @@ function processRows(
   }
 
   if (items.length === 0) {
-    return {
-      dataset: null,
-      errors: ["Nenhuma linha válida (pedido_tipo=VENDAS) encontrada."],
-      warnings,
-      skipped,
-    };
+    return errorResult(["Nenhuma linha válida (pedido_tipo=VENDAS) encontrada."], warnings, skipped);
   }
 
   return {
+    kind: "sales",
     dataset: {
       items,
       importedAt: new Date().toISOString(),
       filename,
       rowCount: items.length,
     },
+    receivables: null,
     errors: [],
-    warnings: warnings.slice(0, 20), // cap warnings shown
+    warnings: warnings.slice(0, 20),
     skipped,
   };
 }
+
+// ─── RECEBER (contas a receber) ───────────────────────────────────────────────
+
+function processReceivableRows(
+  rawRows: Record<string, unknown>[],
+  colMap: Record<string, string>,
+  filename: string
+): ParseResult {
+  // Validate required columns
+  const missing = RECEIVABLE_REQUIRED_COLS.filter((c) => !(c in colMap));
+  if (missing.length > 0) {
+    return errorResult([`Colunas obrigatórias ausentes (Contas a Receber): ${missing.join(", ")}`]);
+  }
+
+  const hasCity = "pessoa_cidade" in colMap;
+
+  const items: ReceivableItem[] = [];
+  const warnings: string[] = [];
+  let skipped = 0;
+  let rowNum = 1;
+
+  for (const rawRow of rawRows) {
+    rowNum++;
+    const row = mapRow(rawRow, colMap);
+
+    // Required key fields
+    const documentId = String(row["receber_documento"] ?? "").trim();
+    const clientId   = String(row["pessoa_cliente_id"] ?? "").trim();
+    if (!documentId || !clientId) {
+      warnings.push(`Linha ${rowNum}: campos chave vazios — ignorada.`);
+      skipped++;
+      continue;
+    }
+
+    // Due date is mandatory — drives the aging analysis
+    const dueDate = parseDate(String(row["data_vencimento"] ?? ""));
+    if (!dueDate) {
+      warnings.push(`Linha ${rowNum}: vencimento inválido "${row["data_vencimento"]}" — ignorada.`);
+      skipped++;
+      continue;
+    }
+
+    // Issue date is best-effort (used only for display)
+    const issueDate = parseDate(String(row["data_emissao"] ?? "")) ?? "";
+
+    const amountOrig = parseNumber(row["valor_documento"] as string);
+    if (amountOrig === 0) {
+      warnings.push(`Linha ${rowNum}: valor do documento zerado — ignorada.`);
+      skipped++;
+      continue;
+    }
+
+    items.push({
+      documentId,
+      clientId,
+      clientName: String(row["pessoa_nome"] ?? "").trim(),
+      clientCity: hasCity ? (String(row["pessoa_cidade"] ?? "").trim() || undefined) : undefined,
+      issueDate,
+      dueDate,
+      entryType: String(row["tipolanzamiento"] ?? "").trim(),
+      amountOrig,
+      sellerId:   String(row["vendedor_id"] ?? "").trim(),
+      sellerName: String(row["vendedor_nome"] ?? "").trim(),
+      currencyId:   String(row["moeda_id"] ?? "1").trim(),
+      currencyCode: String(row["moeda_sigla"] ?? "R$").trim(),
+    });
+  }
+
+  if (items.length === 0) {
+    return errorResult(["Nenhum título a receber válido encontrado."], warnings, skipped);
+  }
+
+  if (!hasCity) {
+    warnings.unshift(
+      "Coluna 'pessoa_cidade' ausente — a análise por cidade ficará agrupada em 'Sem cidade'."
+    );
+  }
+
+  return {
+    kind: "receivable",
+    dataset: null,
+    receivables: {
+      items,
+      importedAt: new Date().toISOString(),
+      filename,
+      rowCount: items.length,
+    },
+    errors: [],
+    warnings: warnings.slice(0, 20),
+    skipped,
+  };
+}
+
+// ─── Entry point ──────────────────────────────────────────────────────────────
 
 export async function parseFile(file: File): Promise<ParseResult> {
   const ext = file.name.split(".").pop()?.toLowerCase() ?? "";
@@ -206,7 +335,7 @@ export async function parseFile(file: File): Promise<ParseResult> {
           resolve(processRows(result.data as Record<string, unknown>[], file.name));
         },
         error: (err) => {
-          resolve({ dataset: null, errors: [err.message], warnings: [], skipped: 0 });
+          resolve(errorResult([err.message]));
         },
       });
     });
@@ -223,10 +352,5 @@ export async function parseFile(file: File): Promise<ParseResult> {
     return processRows(rows, file.name);
   }
 
-  return {
-    dataset: null,
-    errors: ["Formato não suportado. Use CSV, XLSX ou XLS."],
-    warnings: [],
-    skipped: 0,
-  };
+  return errorResult(["Formato não suportado. Use CSV, XLSX ou XLS."]);
 }

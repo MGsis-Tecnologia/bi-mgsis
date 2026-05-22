@@ -2,9 +2,9 @@
 
 import * as React from "react";
 import { Loader2 } from "lucide-react";
-import { useDatasetStore, IDB_KEY } from "@/lib/store/dataset";
+import { useDatasetStore, IDB_KEY, RECEIVABLES_IDB_KEY } from "@/lib/store/dataset";
 import { idbGet } from "@/lib/store/idb";
-import type { StoredDataset } from "@/lib/types/dataset";
+import type { StoredDataset, StoredReceivables } from "@/lib/types/dataset";
 
 // Mounts once in the layout. Loads the dataset from IndexedDB into Zustand,
 // then shows a loading overlay until the attempt finishes (fast if empty,
@@ -13,10 +13,14 @@ export function DatasetBootstrap() {
   const isLoaded = useDatasetStore((s) => s.isLoaded);
 
   React.useEffect(() => {
-    idbGet<StoredDataset>(IDB_KEY)
-      .then((data) => {
+    Promise.all([
+      idbGet<StoredDataset>(IDB_KEY),
+      idbGet<StoredReceivables>(RECEIVABLES_IDB_KEY),
+    ])
+      .then(([data, receivables]) => {
         const store = useDatasetStore.getState();
         if (data) store.setDataset(data);
+        if (receivables) store.setReceivables(receivables);
         store._setLoaded();
       })
       .catch(() => {
