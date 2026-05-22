@@ -47,7 +47,9 @@ export function DateRangePicker() {
     }
   }, [open, preset, customRange]);
 
-  // Apply custom range whenever both inputs are valid and complete
+  // Apply custom range whenever both inputs are valid and complete.
+  // Called only on Enter / blur — never on every keystroke — so a manually
+  // typed date doesn't re-filter on each digit (e.g. years 0002, 0020, 2026…).
   function handleCustomChange(from: string, to: string) {
     if (!from || !to) return;
     const fromDate = new Date(from + "T00:00:00");
@@ -55,6 +57,13 @@ export function DateRangePicker() {
     if (isNaN(fromDate.getTime()) || isNaN(toDate.getTime())) return;
     if (fromDate > toDate) return;
     setCustomRange({ from: fromDate, to: toDate });
+  }
+
+  function handleCustomKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      handleCustomChange(fromInput, toInput);
+    }
   }
 
   const range = React.useMemo(() => {
@@ -119,10 +128,9 @@ export function DateRangePicker() {
                 <input
                   type="date"
                   value={fromInput}
-                  onChange={(e) => {
-                    setFromInput(e.target.value);
-                    handleCustomChange(e.target.value, toInput);
-                  }}
+                  onChange={(e) => setFromInput(e.target.value)}
+                  onKeyDown={handleCustomKeyDown}
+                  onBlur={() => handleCustomChange(fromInput, toInput)}
                   className="h-7 flex-1 rounded border border-border bg-surface px-2 text-xs text-foreground [color-scheme:dark] focus:outline-none focus:ring-1 focus:ring-accent"
                 />
               </div>
@@ -132,10 +140,9 @@ export function DateRangePicker() {
                   type="date"
                   value={toInput}
                   min={fromInput || undefined}
-                  onChange={(e) => {
-                    setToInput(e.target.value);
-                    handleCustomChange(fromInput, e.target.value);
-                  }}
+                  onChange={(e) => setToInput(e.target.value)}
+                  onKeyDown={handleCustomKeyDown}
+                  onBlur={() => handleCustomChange(fromInput, toInput)}
                   className="h-7 flex-1 rounded border border-border bg-surface px-2 text-xs text-foreground [color-scheme:dark] focus:outline-none focus:ring-1 focus:ring-accent"
                 />
               </div>
