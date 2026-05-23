@@ -37,15 +37,18 @@ export function DateRangePicker() {
     preset === "custom" && customRange ? customRange.to.slice(0, 10) : ""
   );
 
-  // Sync inputs when popover opens
+  // Keep local inputs in sync with the active filter. When the preset isn't
+  // "custom" the inputs must be cleared — otherwise stale typed values would
+  // re-apply on blur and silently overwrite the chosen preset.
   React.useEffect(() => {
-    if (open) {
-      if (preset === "custom" && customRange) {
-        setFromInput(customRange.from.slice(0, 10));
-        setToInput(customRange.to.slice(0, 10));
-      }
+    if (preset === "custom" && customRange) {
+      setFromInput(customRange.from.slice(0, 10));
+      setToInput(customRange.to.slice(0, 10));
+    } else {
+      setFromInput("");
+      setToInput("");
     }
-  }, [open, preset, customRange]);
+  }, [preset, customRange]);
 
   // Apply custom range whenever both inputs are valid and complete.
   // Called only on Enter / blur — never on every keystroke — so a manually
