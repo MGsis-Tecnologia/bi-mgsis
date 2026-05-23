@@ -119,13 +119,13 @@ export default function ImportacaoPage() {
         <div className="flex items-start gap-3 rounded-lg border border-positive/30 bg-positive/5 p-4">
           <CheckCircle2 className="h-4 w-4 text-positive mt-0.5 shrink-0" />
           <div className="space-y-1">
-            <p className="text-sm font-medium text-foreground flex flex-wrap items-center gap-2">
-              {formatNumber(state.rowCount)} {state.kind === "receivable" ? "título(s)" : "linha(s)"} de{" "}
+            <div className="text-sm font-medium text-foreground flex flex-wrap items-center gap-2">
+              <span>{formatNumber(state.rowCount)} {state.kind === "receivable" ? "título(s)" : "linha(s)"} de</span>
               <span className="font-mono text-xs">{state.filename}</span>
               <Badge variant="ghost">
                 {state.kind === "receivable" ? "Contas a Receber" : "Vendas"}
               </Badge>
-            </p>
+            </div>
             {state.skipped > 0 && (
               <p className="text-xs text-muted-foreground">
                 {state.skipped} linha(s) ignorada(s)
