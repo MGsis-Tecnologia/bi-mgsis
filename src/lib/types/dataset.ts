@@ -99,6 +99,25 @@ export interface StoredReceivables {
   rowCount: number;
 }
 
+// ─── Estoque (inventory snapshot) ────────────────────────────────────────────
+// One row per SKU — a point-in-time photograph of on-hand stock.
+// productId is the same identifier used in OrderLineItem.productId, allowing
+// sales movement to be joined to inventory by SKU.
+export interface InventoryItem {
+  productId: string;          // produto_id — matches OrderLineItem.productId
+  description: string;        // produto_descricao
+  manufacturerCode: string;   // produto_fabricante — manufacturer/supplier reference
+  stock: number;              // estoque_item — quantity on hand
+  costTotalUSD: number;       // valor_estoque — total stock cost in US$
+}
+
+export interface StoredInventory {
+  items: InventoryItem[];
+  importedAt: string;         // ISO
+  filename: string;
+  rowCount: number;
+}
+
 // ─── Contas a pagar (accounts payable) ───────────────────────────────────────
 export interface PayableItem {
   documentId: string;     // pagar_documento (synthetic "row-N" when absent)

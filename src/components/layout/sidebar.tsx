@@ -10,6 +10,7 @@ import {
   ArrowUpRight,
   Banknote,
   BarChart3,
+  Boxes,
   CalendarRange,
   CircleDollarSign,
   Package,
@@ -53,6 +54,7 @@ const NAV: NavGroup[] = [
     sectionKey: "sidebar.section.catalog",
     items: [
       { href: "/produtos", labelKey: "sidebar.nav.products", icon: Package },
+      { href: "/estoque", labelKey: "sidebar.nav.stock", icon: Boxes },
       { href: "/clientes", labelKey: "sidebar.nav.customers", icon: Users },
       { href: "/vendedores", labelKey: "sidebar.nav.sellers", icon: UserSquare2 },
     ],

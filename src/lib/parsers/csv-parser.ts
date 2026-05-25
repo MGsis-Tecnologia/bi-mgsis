@@ -1,10 +1,12 @@
 import Papa from "papaparse";
 import * as XLSX from "xlsx";
 import type {
+  InventoryItem,
   OrderLineItem,
   PayableItem,
   ReceivableItem,
   StoredDataset,
+  StoredInventory,
   StoredPayables,
   StoredReceivables,
 } from "@/lib/types/dataset";
@@ -55,20 +57,30 @@ const PAYABLE_REQUIRED_COLS = [
   "valor_documento",
 ] as const;
 
-export type DatasetKind = "sales" | "receivable" | "payable";
+// Required column names for the ESTOQUE layout (inventory snapshot)
+const INVENTORY_REQUIRED_COLS = [
+  "produto_id",
+  "produto_descricao",
+  "produto_fabricante",
+  "estoque_item",
+  "valor_estoque",
+] as const;
+
+export type DatasetKind = "sales" | "receivable" | "payable" | "inventory";
 
 export interface ParseResult {
   kind: DatasetKind | null;
   dataset: StoredDataset | null;          // populated when kind === "sales"
   receivables: StoredReceivables | null;  // populated when kind === "receivable"
   payables: StoredPayables | null;        // populated when kind === "payable"
+  inventory: StoredInventory | null;      // populated when kind === "inventory"
   errors: string[];
   warnings: string[];
   skipped: number;
 }
 
 function errorResult(errors: string[], warnings: string[] = [], skipped = 0): ParseResult {
-  return { kind: null, dataset: null, receivables: null, payables: null, errors, warnings, skipped };
+  return { kind: null, dataset: null, receivables: null, payables: null, inventory: null, errors, warnings, skipped };
 }
 
 // Parse date string → ISO YYYY-MM-DD (string, never a Date object — survives JSON serialization)
@@ -151,9 +163,12 @@ function processRows(rawRows: Record<string, unknown>[], filename: string): Pars
   if ("pedido_documento" in colMap || "pedido_tipo" in colMap) {
     return processSalesRows(rawRows, colMap, filename);
   }
+  if ("estoque_item" in colMap || ("produto_id" in colMap && "valor_estoque" in colMap)) {
+    return processInventoryRows(rawRows, colMap, filename);
+  }
 
   return errorResult([
-    "Leiaute não reconhecido. O arquivo deve conter colunas de Vendas (pedido_documento), Contas a Receber (pessoa_cliente_id) ou Contas a Pagar (pessoa_fornecedor_id).",
+    "Leiaute não reconhecido. O arquivo deve conter colunas de Vendas (pedido_documento), Contas a Receber (pessoa_cliente_id), Contas a Pagar (pessoa_fornecedor_id) ou Estoque (estoque_item).",
   ]);
 }
 
@@ -240,6 +255,7 @@ function processSalesRows(
     },
     receivables: null,
     payables: null,
+    inventory: null,
     errors: [],
     warnings: warnings.slice(0, 20),
     skipped,
@@ -339,6 +355,7 @@ function processReceivableRows(
       rowCount: items.length,
     },
     payables: null,
+    inventory: null,
     errors: [],
     warnings: warnings.slice(0, 20),
     skipped,
@@ -417,6 +434,78 @@ function processPayableRows(
     dataset: null,
     receivables: null,
     payables: {
+      items,
+      importedAt: new Date().toISOString(),
+      filename,
+      rowCount: items.length,
+    },
+    inventory: null,
+    errors: [],
+    warnings: warnings.slice(0, 20),
+    skipped,
+  };
+}
+
+// ─── ESTOQUE (inventário) ─────────────────────────────────────────────────────
+
+function processInventoryRows(
+  rawRows: Record<string, unknown>[],
+  colMap: Record<string, string>,
+  filename: string
+): ParseResult {
+  const missing = INVENTORY_REQUIRED_COLS.filter((c) => !(c in colMap));
+  if (missing.length > 0) {
+    return errorResult([`Colunas obrigatórias ausentes (Estoque): ${missing.join(", ")}`]);
+  }
+
+  // Snapshot semantics: if the same SKU appears more than once we keep the last
+  // occurrence's stock/cost (assumes ordered export) — but we surface a warning.
+  const map = new Map<string, InventoryItem>();
+  const warnings: string[] = [];
+  let skipped = 0;
+  let rowNum = 1;
+  let duplicates = 0;
+
+  for (const rawRow of rawRows) {
+    rowNum++;
+    const row = mapRow(rawRow, colMap);
+
+    const productId = String(row["produto_id"] ?? "").trim();
+    if (!productId) {
+      warnings.push(`Linha ${rowNum}: produto_id vazio — ignorada.`);
+      skipped++;
+      continue;
+    }
+
+    const stock = parseNumber(row["estoque_item"] as string);
+    const costTotalUSD = parseNumber(row["valor_estoque"] as string);
+
+    if (map.has(productId)) duplicates++;
+
+    map.set(productId, {
+      productId,
+      description:      String(row["produto_descricao"] ?? "").trim(),
+      manufacturerCode: String(row["produto_fabricante"] ?? "").trim(),
+      stock,
+      costTotalUSD,
+    });
+  }
+
+  const items = [...map.values()];
+  if (items.length === 0) {
+    return errorResult(["Nenhum item de estoque válido encontrado."], warnings, skipped);
+  }
+
+  if (duplicates > 0) {
+    warnings.unshift(`${duplicates} SKU(s) duplicado(s) no arquivo — mantida a última ocorrência.`);
+  }
+
+  return {
+    kind: "inventory",
+    dataset: null,
+    receivables: null,
+    payables: null,
+    inventory: {
       items,
       importedAt: new Date().toISOString(),
       filename,

@@ -1,12 +1,12 @@
 "use client";
 
 import * as React from "react";
-import { CheckCircle2, CircleDollarSign, CreditCard, ShoppingCart, Trash2, Upload, XCircle } from "lucide-react";
+import { Boxes, CheckCircle2, CircleDollarSign, CreditCard, ShoppingCart, Trash2, Upload, XCircle } from "lucide-react";
 import { PageHeader } from "@/components/layout/page-header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { parseFile, type DatasetKind } from "@/lib/parsers/csv-parser";
-import { useDatasetStore, IDB_KEY, RECEIVABLES_IDB_KEY, PAYABLES_IDB_KEY } from "@/lib/store/dataset";
+import { useDatasetStore, IDB_KEY, RECEIVABLES_IDB_KEY, PAYABLES_IDB_KEY, INVENTORY_IDB_KEY } from "@/lib/store/dataset";
 import { idbSet, idbDel } from "@/lib/store/idb";
 import { useTranslation } from "@/lib/hooks/use-translation";
 import { formatNumber, formatDate } from "@/lib/utils/format";
@@ -31,6 +31,7 @@ const KIND_LABEL: Record<string, string> = {
   sales: "Vendas",
   receivable: "Contas a Receber",
   payable: "Contas a Pagar",
+  inventory: "Estoque",
 };
 
 export default function ImportacaoPage() {
@@ -39,16 +40,16 @@ export default function ImportacaoPage() {
   const [state, setState] = React.useState<ParseState>(IDLE);
   const inputRef = React.useRef<HTMLInputElement>(null);
   const {
-    dataset, receivables, payables,
-    setDataset, setReceivables, setPayables,
-    clearDataset, clearReceivables, clearPayables,
+    dataset, receivables, payables, inventory,
+    setDataset, setReceivables, setPayables, setInventory,
+    clearDataset, clearReceivables, clearPayables, clearInventory,
   } = useDatasetStore();
 
   async function handleFile(file: File) {
     setState({ ...IDLE, status: "parsing", filename: file.name });
     const result = await parseFile(file);
 
-    if (result.errors.length > 0 || (!result.dataset && !result.receivables && !result.payables)) {
+    if (result.errors.length > 0 || (!result.dataset && !result.receivables && !result.payables && !result.inventory)) {
       setState({
         status: "error", kind: result.kind, errors: result.errors,
         warnings: result.warnings, skipped: result.skipped, rowCount: 0, filename: file.name,
@@ -56,7 +57,14 @@ export default function ImportacaoPage() {
       return;
     }
 
-    if (result.kind === "payable" && result.payables) {
+    if (result.kind === "inventory" && result.inventory) {
+      await idbSet(INVENTORY_IDB_KEY, result.inventory);
+      setInventory(result.inventory);
+      setState({
+        status: "success", kind: "inventory", errors: [], warnings: result.warnings,
+        skipped: result.skipped, rowCount: result.inventory.rowCount, filename: file.name,
+      });
+    } else if (result.kind === "payable" && result.payables) {
       await idbSet(PAYABLES_IDB_KEY, result.payables);
       setPayables(result.payables);
       setState({
@@ -92,7 +100,7 @@ export default function ImportacaoPage() {
     e.target.value = "";
   }
 
-  const hasDatasets = !!(dataset || receivables || payables);
+  const hasDatasets = !!(dataset || receivables || payables || inventory);
 
   return (
     <div className="space-y-8">
@@ -121,7 +129,7 @@ export default function ImportacaoPage() {
               <p className="text-sm font-medium text-foreground">{t("importacao.upload.title")}</p>
               <p className="mt-1 text-xs text-muted-foreground">{t("importacao.upload.desc")}</p>
               <p className="mt-1 text-[11px] text-muted-foreground">
-                Vendas, Contas a Receber e Contas a Pagar — o tipo é identificado automaticamente pelas colunas.
+                Vendas, Contas a Receber, Contas a Pagar e Estoque — o tipo é identificado automaticamente pelas colunas.
               </p>
             </div>
             {state.status === "parsing" && (
@@ -138,7 +146,7 @@ export default function ImportacaoPage() {
           <CheckCircle2 className="h-4 w-4 text-positive mt-0.5 shrink-0" />
           <div className="space-y-1">
             <div className="text-sm font-medium text-foreground flex flex-wrap items-center gap-2">
-              <span>{formatNumber(state.rowCount)} {state.kind === "sales" ? "linha(s)" : "título(s)"} de</span>
+              <span>{formatNumber(state.rowCount)} {state.kind === "sales" ? "linha(s)" : state.kind === "inventory" ? "SKU(s)" : "título(s)"} de</span>
               <span className="font-mono text-xs">{state.filename}</span>
               <Badge variant="ghost">{state.kind ? KIND_LABEL[state.kind] : ""}</Badge>
             </div>
@@ -147,6 +155,8 @@ export default function ImportacaoPage() {
                 {state.skipped} linha(s) ignorada(s)
                 {state.kind === "sales"
                   ? " (pedido_tipo ≠ VENDAS ou campos inválidos)."
+                  : state.kind === "inventory"
+                  ? " (produto_id vazio ou inválido)."
                   : " (campos chave vazios, vencimento ou valor inválido)."}
               </p>
             )}
@@ -215,6 +225,19 @@ export default function ImportacaoPage() {
                 }}
               />
             )}
+            {inventory && (
+              <DatasetRow
+                icon={<Boxes className="h-4 w-4 text-accent" />}
+                title="Estoque"
+                filename={inventory.filename}
+                rowLabel={`${formatNumber(inventory.rowCount)} SKUs`}
+                importedAt={inventory.importedAt}
+                onRemove={() => {
+                  idbDel(INVENTORY_IDB_KEY); clearInventory();
+                  setState((s) => (s.kind === "inventory" ? IDLE : s));
+                }}
+              />
+            )}
           </CardContent>
         </Card>
       )}
@@ -237,6 +260,11 @@ export default function ImportacaoPage() {
             heading="Leiaute · Contas a Pagar"
             note="Cada linha é uma obrigação de pagamento. data_pagamento preenchida = pago; vazia = pendente."
             cols={PAYABLE_SCHEMA}
+          />
+          <SchemaTable
+            heading="Leiaute · Estoque"
+            note="Snapshot do inventário (uma linha por SKU). produto_id liga ao item de venda. valor_estoque é o custo total do estoque em US$."
+            cols={INVENTORY_SCHEMA}
           />
         </CardContent>
       </Card>
@@ -362,4 +390,12 @@ const PAYABLE_SCHEMA = [
   { name: "tipolanzamiento",       type: "Texto",          example: "Nota Fiscal" },
   { name: "valor_documento",       type: "Decimal",        example: "3500,00" },
   { name: "data_pagamento",        type: "Data (opcional)", example: "28/12/2024" },
+];
+
+const INVENTORY_SCHEMA = [
+  { name: "produto_id",            type: "Chave",   example: "PROD-042" },
+  { name: "produto_descricao",     type: "Texto",   example: "Notebook Pro 15" },
+  { name: "produto_fabricante",    type: "Texto",   example: "DL-1500X-BLK" },
+  { name: "estoque_item",          type: "Número",  example: "37" },
+  { name: "valor_estoque",         type: "Decimal · US$", example: "1850,00" },
 ];
