@@ -10,6 +10,7 @@ import {
   ArrowUpRight,
   Banknote,
   BarChart3,
+  CalendarRange,
   CircleDollarSign,
   Package,
   Receipt,
@@ -45,6 +46,7 @@ const NAV: NavGroup[] = [
     items: [
       { href: "/dashboard", labelKey: "sidebar.nav.executive", icon: Activity },
       { href: "/vendas", labelKey: "sidebar.nav.sales_analysis", icon: BarChart3 },
+      { href: "/comparativo", labelKey: "sidebar.nav.annual", icon: CalendarRange },
     ],
   },
   {
