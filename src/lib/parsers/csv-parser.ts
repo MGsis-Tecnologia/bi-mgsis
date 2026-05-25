@@ -2,8 +2,10 @@ import Papa from "papaparse";
 import * as XLSX from "xlsx";
 import type {
   OrderLineItem,
+  PayableItem,
   ReceivableItem,
   StoredDataset,
+  StoredPayables,
   StoredReceivables,
 } from "@/lib/types/dataset";
 
@@ -36,26 +38,37 @@ const RECEIVABLE_REQUIRED_COLS = [
   "pessoa_nome",
   "data_emissao",
   "data_vencimento",
-  "receber_documento",
   "tipolanzamiento",
   "valor_documento",
   "vendedor_id",
   "vendedor_nome",
 ] as const;
 
-export type DatasetKind = "sales" | "receivable";
+// Required column names for the PAGAR layout (contas a pagar)
+const PAYABLE_REQUIRED_COLS = [
+  "moeda_id",
+  "moeda_sigla",
+  "pessoa_fornecedor_id",
+  "pessoa_nome",
+  "data_vencimento",
+  "tipolanzamiento",
+  "valor_documento",
+] as const;
+
+export type DatasetKind = "sales" | "receivable" | "payable";
 
 export interface ParseResult {
   kind: DatasetKind | null;
   dataset: StoredDataset | null;          // populated when kind === "sales"
   receivables: StoredReceivables | null;  // populated when kind === "receivable"
+  payables: StoredPayables | null;        // populated when kind === "payable"
   errors: string[];
   warnings: string[];
   skipped: number;
 }
 
 function errorResult(errors: string[], warnings: string[] = [], skipped = 0): ParseResult {
-  return { kind: null, dataset: null, receivables: null, errors, warnings, skipped };
+  return { kind: null, dataset: null, receivables: null, payables: null, errors, warnings, skipped };
 }
 
 // Parse date string → ISO YYYY-MM-DD (string, never a Date object — survives JSON serialization)
@@ -128,8 +141,11 @@ function processRows(rawRows: Record<string, unknown>[], filename: string): Pars
     colMap[normalizeHeader(h)] = h;
   }
 
-  // Layout detection — the document column is the discriminator
-  if ("receber_documento" in colMap) {
+  // Layout detection — discriminate by key columns
+  if ("pessoa_fornecedor_id" in colMap) {
+    return processPayableRows(rawRows, colMap, filename);
+  }
+  if ("receber_documento" in colMap || ("pessoa_cliente_id" in colMap && "data_vencimento" in colMap)) {
     return processReceivableRows(rawRows, colMap, filename);
   }
   if ("pedido_documento" in colMap || "pedido_tipo" in colMap) {
@@ -137,7 +153,7 @@ function processRows(rawRows: Record<string, unknown>[], filename: string): Pars
   }
 
   return errorResult([
-    "Leiaute não reconhecido. O arquivo deve conter as colunas de Vendas (pedido_documento) ou de Contas a Receber (receber_documento).",
+    "Leiaute não reconhecido. O arquivo deve conter colunas de Vendas (pedido_documento), Contas a Receber (pessoa_cliente_id) ou Contas a Pagar (pessoa_fornecedor_id).",
   ]);
 }
 
@@ -223,6 +239,7 @@ function processSalesRows(
       rowCount: items.length,
     },
     receivables: null,
+    payables: null,
     errors: [],
     warnings: warnings.slice(0, 20),
     skipped,
@@ -253,14 +270,14 @@ function processReceivableRows(
     rowNum++;
     const row = mapRow(rawRow, colMap);
 
-    // Required key fields
-    const documentId = String(row["receber_documento"] ?? "").trim();
+    // clientId é obrigatório; documentId pode estar vazio — gerado sinteticamente se ausente
     const clientId   = String(row["pessoa_cliente_id"] ?? "").trim();
-    if (!documentId || !clientId) {
-      warnings.push(`Linha ${rowNum}: campos chave vazios — ignorada.`);
+    if (!clientId) {
+      warnings.push(`Linha ${rowNum}: cliente_id vazio — ignorada.`);
       skipped++;
       continue;
     }
+    const documentId = String(row["receber_documento"] ?? "").trim() || `row-${rowNum}`;
 
     // Due date is mandatory — drives the aging analysis
     const dueDate = parseDate(String(row["data_vencimento"] ?? ""));
@@ -273,6 +290,10 @@ function processReceivableRows(
     // Issue date is best-effort (used only for display)
     const issueDate = parseDate(String(row["data_emissao"] ?? "")) ?? "";
 
+    // Receipt date: present → item is a received payment; absent → still pending
+    const receivedDate = parseDate(String(row["data_recebimento"] ?? "")) ?? "";
+    const isPaid = receivedDate !== "";
+
     const amountOrig = parseNumber(row["valor_documento"] as string);
     if (amountOrig === 0) {
       warnings.push(`Linha ${rowNum}: valor do documento zerado — ignorada.`);
@@ -283,14 +304,16 @@ function processReceivableRows(
     items.push({
       documentId,
       clientId,
-      clientName: String(row["pessoa_nome"] ?? "").trim(),
-      clientCity: hasCity ? (String(row["pessoa_cidade"] ?? "").trim() || undefined) : undefined,
+      clientName:   String(row["pessoa_nome"] ?? "").trim(),
+      clientCity:   hasCity ? (String(row["pessoa_cidade"] ?? "").trim() || undefined) : undefined,
       issueDate,
       dueDate,
-      entryType: String(row["tipolanzamiento"] ?? "").trim(),
+      receivedDate,
+      isPaid,
+      entryType:    String(row["tipolanzamiento"] ?? "").trim(),
       amountOrig,
-      sellerId:   String(row["vendedor_id"] ?? "").trim(),
-      sellerName: String(row["vendedor_nome"] ?? "").trim(),
+      sellerId:     String(row["vendedor_id"] ?? "").trim(),
+      sellerName:   String(row["vendedor_nome"] ?? "").trim(),
       currencyId:   String(row["moeda_id"] ?? "1").trim(),
       currencyCode: String(row["moeda_sigla"] ?? "R$").trim(),
     });
@@ -310,6 +333,90 @@ function processReceivableRows(
     kind: "receivable",
     dataset: null,
     receivables: {
+      items,
+      importedAt: new Date().toISOString(),
+      filename,
+      rowCount: items.length,
+    },
+    payables: null,
+    errors: [],
+    warnings: warnings.slice(0, 20),
+    skipped,
+  };
+}
+
+// ─── PAGAR (contas a pagar) ───────────────────────────────────────────────────
+
+function processPayableRows(
+  rawRows: Record<string, unknown>[],
+  colMap: Record<string, string>,
+  filename: string
+): ParseResult {
+  const missing = PAYABLE_REQUIRED_COLS.filter((c) => !(c in colMap));
+  if (missing.length > 0) {
+    return errorResult([`Colunas obrigatórias ausentes (Contas a Pagar): ${missing.join(", ")}`]);
+  }
+
+  const items: PayableItem[] = [];
+  const warnings: string[] = [];
+  let skipped = 0;
+  let rowNum = 1;
+
+  for (const rawRow of rawRows) {
+    rowNum++;
+    const row = mapRow(rawRow, colMap);
+
+    const supplierId = String(row["pessoa_fornecedor_id"] ?? "").trim();
+    if (!supplierId) {
+      warnings.push(`Linha ${rowNum}: fornecedor_id vazio — ignorada.`);
+      skipped++;
+      continue;
+    }
+
+    const documentId = String(row["pagar_documento"] ?? "").trim() || `row-${rowNum}`;
+
+    const dueDate = parseDate(String(row["data_vencimento"] ?? ""));
+    if (!dueDate) {
+      warnings.push(`Linha ${rowNum}: vencimento inválido "${row["data_vencimento"]}" — ignorada.`);
+      skipped++;
+      continue;
+    }
+
+    const amountOrig = parseNumber(row["valor_documento"] as string);
+    if (amountOrig === 0) {
+      warnings.push(`Linha ${rowNum}: valor do documento zerado — ignorada.`);
+      skipped++;
+      continue;
+    }
+
+    const issueDate = parseDate(String(row["data_emissao"] ?? "")) ?? "";
+    const paidDate  = parseDate(String(row["data_pagamento"] ?? "")) ?? "";
+    const isPaid    = paidDate !== "";
+
+    items.push({
+      documentId,
+      supplierId,
+      supplierName: String(row["pessoa_nome"] ?? "").trim(),
+      issueDate,
+      dueDate,
+      paidDate,
+      isPaid,
+      entryType:    String(row["tipolanzamiento"] ?? "").trim(),
+      amountOrig,
+      currencyId:   String(row["moeda_id"] ?? "1").trim(),
+      currencyCode: String(row["moeda_sigla"] ?? "R$").trim(),
+    });
+  }
+
+  if (items.length === 0) {
+    return errorResult(["Nenhum título a pagar válido encontrado."], warnings, skipped);
+  }
+
+  return {
+    kind: "payable",
+    dataset: null,
+    receivables: null,
+    payables: {
       items,
       importedAt: new Date().toISOString(),
       filename,

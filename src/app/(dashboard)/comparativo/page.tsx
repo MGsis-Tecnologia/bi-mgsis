@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { ChevronDown, TrendingUp, TrendingDown, Minus, X } from "lucide-react";
+import { ChevronDown, TrendingUp, TrendingDown, Minus, X, Sparkles } from "lucide-react";
 import { PageHeader } from "@/components/layout/page-header";
 import { EmptyState } from "@/components/dashboard/empty-state";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -10,7 +10,14 @@ import { YearComparisonChart } from "@/components/charts/year-comparison-chart";
 import { YearDrilldownChart } from "@/components/charts/year-drilldown-chart";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 import { useDataset } from "@/lib/hooks/use-dataset";
-import { yearlyByOrder, yearlyByItem, type YearlyRow, type YearlyResult } from "@/lib/analytics/yearly";
+import {
+  yearlyByOrder,
+  yearlyByItem,
+  computeProjection,
+  type YearlyRow,
+  type YearlyResult,
+  type YearProjection,
+} from "@/lib/analytics/yearly";
 import { cn } from "@/lib/utils";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -127,25 +134,91 @@ function EntityPicker({ placeholder, options, value, onChange }: PickerProps) {
   );
 }
 
+// ─── Projection banner ────────────────────────────────────────────────────────
+
+function ProjectionBanner({ proj }: { proj: YearProjection }) {
+  const pct = ((1 - proj.elapsedPct) * 100).toFixed(0);
+  const method = proj.method === "seasonal"
+    ? `Sazonalidade de ${proj.priorYearsUsed} ano${proj.priorYearsUsed > 1 ? "s" : ""} anterior${proj.priorYearsUsed > 1 ? "es" : ""}`
+    : "Projeção linear (sem histórico anterior)";
+
+  return (
+    <div className="flex items-start gap-3 rounded-md border border-border bg-muted/20 px-4 py-3">
+      <Sparkles className="mt-0.5 h-4 w-4 shrink-0 text-accent" />
+      <div className="min-w-0">
+        <p className="text-sm font-medium text-foreground">
+          Projeção {proj.currentYear}: <Money value={proj.projected} />
+        </p>
+        <p className="mt-0.5 text-xs text-muted-foreground">
+          Realizado até agora: <span className="tabular font-medium text-foreground"><Money value={proj.ytd} compact /></span>
+          {" · "}
+          Faltam ~{pct}% do ano
+          {" · "}
+          {method}
+        </p>
+      </div>
+    </div>
+  );
+}
+
 // ─── Drill-down view (single entity) ─────────────────────────────────────────
 
-function DrilldownView({ row, years }: { row: YearlyRow; years: string[] }) {
+function DrilldownView({
+  row,
+  years,
+  projection,
+}: {
+  row: YearlyRow;
+  years: string[];
+  projection: YearProjection | null;
+}) {
   return (
     <div className="space-y-6">
+      {/* Projection banner */}
+      {projection && <ProjectionBanner proj={projection} />}
+
       {/* KPI cards — one per year */}
-      <div className={cn("grid gap-3", years.length <= 3 ? "grid-cols-3" : years.length === 4 ? "grid-cols-4" : "grid-cols-5")}>
+      <div className={cn(
+        "grid gap-3",
+        years.length <= 2 ? "grid-cols-2"
+          : years.length === 3 ? "grid-cols-3"
+          : years.length === 4 ? "grid-cols-4"
+          : "grid-cols-5"
+      )}>
         {years.map((yr, idx) => {
-          const revenue = row.byYear[yr] ?? 0;
+          const isCurrentYear = projection && yr === projection.currentYear;
+          const revenue = isCurrentYear ? projection.ytd : (row.byYear[yr] ?? 0);
           const prev = idx > 0 ? (row.byYear[years[idx - 1]!] ?? 0) : null;
           const growth = prev !== null && prev > 0 ? (revenue - prev) / prev : null;
+
           return (
-            <Card key={yr} className="relative overflow-hidden">
+            <Card key={yr} className={cn("relative overflow-hidden", isCurrentYear && "border-accent/50")}>
               <CardContent className="pt-4 pb-4">
-                <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">{yr}</p>
+                <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                  {yr}{isCurrentYear ? " · YTD" : ""}
+                </p>
                 <p className="mt-1 text-lg font-semibold tabular text-foreground">
                   <Money value={revenue} compact />
                 </p>
-                {growth !== null && (
+                {isCurrentYear && (() => {
+                  const projGrowth = prev !== null && prev > 0
+                    ? (projection.projected - prev) / prev
+                    : null;
+                  return (
+                    <>
+                      {projGrowth !== null && (
+                        <p className="mt-0.5 text-xs">
+                          <GrowthBadge growth={projGrowth} />
+                          <span className="ml-1 text-muted-foreground">proj. vs {years[idx - 1]}</span>
+                        </p>
+                      )}
+                      <p className="mt-0.5 text-xs text-accent font-medium">
+                        Proj.: <Money value={projection.projected} compact />
+                      </p>
+                    </>
+                  );
+                })()}
+                {!isCurrentYear && growth !== null && (
                   <p className="mt-0.5 text-xs">
                     <GrowthBadge growth={growth} />
                     <span className="ml-1 text-muted-foreground">vs {years[idx - 1]}</span>
@@ -160,10 +233,17 @@ function DrilldownView({ row, years }: { row: YearlyRow; years: string[] }) {
       {/* Large single-entity chart */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-sm font-medium">{row.label} · evolução anual</CardTitle>
+          <CardTitle className="text-sm font-medium">
+            {row.label} · evolução anual
+            {projection && (
+              <span className="ml-2 text-[11px] font-normal text-muted-foreground">
+                (barra com ★ = realizado + projeção estimada)
+              </span>
+            )}
+          </CardTitle>
         </CardHeader>
         <CardContent className="pb-4">
-          <YearDrilldownChart years={years} byYear={row.byYear} />
+          <YearDrilldownChart years={years} byYear={row.byYear} projection={projection} />
         </CardContent>
       </Card>
 
@@ -177,21 +257,36 @@ function DrilldownView({ row, years }: { row: YearlyRow; years: string[] }) {
             <thead>
               <tr className="border-b border-border bg-muted/30">
                 <th className="px-4 py-2.5 text-left text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Ano</th>
-                <th className="px-4 py-2.5 text-right text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Receita</th>
+                <th className="px-4 py-2.5 text-right text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Realizado</th>
+                {projection && (
+                  <th className="px-4 py-2.5 text-right text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Projeção</th>
+                )}
                 <th className="px-4 py-2.5 text-right text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Var. anual</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
               {years.map((yr, idx) => {
-                const revenue = row.byYear[yr] ?? 0;
+                const isCurrentYear = projection && yr === projection.currentYear;
+                const revenue = isCurrentYear ? projection.ytd : (row.byYear[yr] ?? 0);
                 const prev = idx > 0 ? (row.byYear[years[idx - 1]!] ?? 0) : null;
                 const growth = prev !== null && prev > 0 ? (revenue - prev) / prev : null;
+
                 return (
-                  <tr key={yr} className="hover:bg-muted/20 transition-colors">
-                    <td className="px-4 py-3 font-medium text-foreground">{yr}</td>
+                  <tr key={yr} className={cn("hover:bg-muted/20 transition-colors", isCurrentYear && "bg-accent/5")}>
+                    <td className="px-4 py-3 font-medium text-foreground">
+                      {yr}{isCurrentYear ? <span className="ml-1 text-[10px] text-accent">YTD</span> : ""}
+                    </td>
                     <td className="px-4 py-3 text-right tabular text-foreground">
                       <Money value={revenue} />
                     </td>
+                    {projection && (
+                      <td className="px-4 py-3 text-right tabular text-muted-foreground">
+                        {isCurrentYear
+                          ? <span className="text-accent font-medium"><Money value={projection.projected} /></span>
+                          : "—"
+                        }
+                      </td>
+                    )}
                     <td className="px-4 py-3 text-right">
                       <GrowthBadge growth={growth} />
                     </td>
@@ -266,6 +361,36 @@ function OverviewView({ result }: { result: YearlyResult }) {
   );
 }
 
+// ─── Build monthly revenue map for an entity ──────────────────────────────────
+
+function buildMonthlyRevMap(
+  orders: ReturnType<typeof useDataset>["orders"],
+  tab: DimTab,
+  selectedKey: string
+): Record<string, number> {
+  const rev: Record<string, number> = {};
+  const add = (ym: string, v: number) => { rev[ym] = (rev[ym] ?? 0) + v; };
+
+  if (tab === "vendedores") {
+    for (const o of orders) if (o.sellerId === selectedKey) add(o.date.slice(0, 7), o.totalBRL);
+  } else if (tab === "canais") {
+    for (const o of orders) if (o.channel === selectedKey) add(o.date.slice(0, 7), o.totalBRL);
+  } else if (tab === "clientes") {
+    for (const o of orders) if (o.clientId === selectedKey) add(o.date.slice(0, 7), o.totalBRL);
+  } else if (tab === "subgrupos") {
+    for (const o of orders) {
+      const r = o.items.reduce((s, it) => it.subgroupName === selectedKey ? s + it.totalBRL : s, 0);
+      if (r > 0) add(o.date.slice(0, 7), r);
+    }
+  } else if (tab === "produtos") {
+    for (const o of orders) {
+      const r = o.items.reduce((s, it) => it.productId === selectedKey ? s + it.totalBRL : s, 0);
+      if (r > 0) add(o.date.slice(0, 7), r);
+    }
+  }
+  return rev;
+}
+
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function ComparativoPage() {
@@ -273,7 +398,6 @@ export default function ComparativoPage() {
   const [tab, setTab] = React.useState<DimTab>("vendedores");
   const [selectedKey, setSelectedKey] = React.useState<string | null>(null);
 
-  // Reset selection when tab changes
   React.useEffect(() => { setSelectedKey(null); }, [tab]);
 
   const result = React.useMemo((): YearlyResult | null => {
@@ -287,6 +411,12 @@ export default function ComparativoPage() {
       case "produtos":   return yearlyByItem(orders, (_sid, _sn, pid, pname) => ({ key: pid, label: pname }));
     }
   }, [ds.hasData, ds.orders, tab]);
+
+  const projection = React.useMemo((): YearProjection | null => {
+    if (!selectedKey || !ds.hasData) return null;
+    const monthlyRev = buildMonthlyRevMap(ds.orders, tab, selectedKey);
+    return computeProjection(monthlyRev);
+  }, [ds.hasData, ds.orders, tab, selectedKey]);
 
   if (!ds.hasData) {
     return (
@@ -327,7 +457,6 @@ export default function ComparativoPage() {
 
       {/* Controls row */}
       <div className="flex flex-wrap items-center gap-3">
-        {/* Dimension tabs */}
         <div className="flex gap-1 rounded-md border border-border bg-muted/30 p-1">
           {TABS.map((t) => (
             <button
@@ -345,7 +474,6 @@ export default function ComparativoPage() {
           ))}
         </div>
 
-        {/* Entity picker */}
         <EntityPicker
           placeholder={pickerLabel[tab]}
           options={pickerOptions}
@@ -354,10 +482,9 @@ export default function ComparativoPage() {
         />
       </div>
 
-      {/* Content */}
       {result && result.rows.length > 0 ? (
         selectedRow
-          ? <DrilldownView row={selectedRow} years={result.years} />
+          ? <DrilldownView row={selectedRow} years={result.years} projection={projection} />
           : <OverviewView result={result} />
       ) : (
         <p className="text-sm text-muted-foreground">Sem dados para a dimensão selecionada.</p>

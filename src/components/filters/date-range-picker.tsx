@@ -11,14 +11,17 @@ import { cn } from "@/lib/utils";
 import { useTranslation } from "@/lib/hooks/use-translation";
 import { DictionaryKey } from "@/lib/i18n/dictionaries";
 
-const PRESETS: { value: DatePreset; labelKey: DictionaryKey }[] = [
-  { value: "hoje",      labelKey: "filters.date.preset.today" },
-  { value: "ontem",     labelKey: "filters.date.preset.yesterday" },
-  { value: "7d",        labelKey: "filters.date.preset.7d" },
-  { value: "30d",       labelKey: "filters.date.preset.30d" },
-  { value: "mes-atual", labelKey: "filters.date.preset.month" },
-  { value: "ano-atual", labelKey: "filters.date.preset.year" },
-  { value: "12m",       labelKey: "filters.date.preset.12m" },
+const PRESETS: { value: DatePreset; labelKey: DictionaryKey; hideDate?: boolean }[] = [
+  { value: "hoje",          labelKey: "filters.date.preset.today" },
+  { value: "ontem",         labelKey: "filters.date.preset.yesterday" },
+  { value: "7d",            labelKey: "filters.date.preset.7d" },
+  { value: "30d",           labelKey: "filters.date.preset.30d" },
+  { value: "mes-atual",     labelKey: "filters.date.preset.month" },
+  { value: "mes-anterior",  labelKey: "filters.date.preset.prev_month" },
+  { value: "ano-atual",     labelKey: "filters.date.preset.year" },
+  { value: "ano-anterior",  labelKey: "filters.date.preset.prev_year" },
+  { value: "12m",           labelKey: "filters.date.preset.12m" },
+  { value: "todos",         labelKey: "filters.date.preset.all", hideDate: true },
 ];
 
 export function DateRangePicker() {
@@ -85,9 +88,11 @@ export function DateRangePicker() {
         <button className="inline-flex h-8 items-center gap-2 rounded-md border border-border bg-surface px-2.5 text-xs font-medium hover:bg-muted/40 transition-colors">
           <CalendarIcon className="h-3.5 w-3.5 text-muted-foreground" />
           <span className="text-foreground">{presetLabel}</span>
-          <span className="text-muted-foreground tabular">
-            · {formatDate(range.from, "day")} → {formatDate(range.to, "day")}
-          </span>
+          {preset !== "todos" && (
+            <span className="text-muted-foreground tabular">
+              · {formatDate(range.from, "day")} → {formatDate(range.to, "day")}
+            </span>
+          )}
         </button>
       </PopoverTrigger>
 
@@ -109,9 +114,11 @@ export function DateRangePicker() {
               )}
             >
               <span>{t(p.labelKey)}</span>
-              <span className="text-[10px] text-muted-foreground tabular">
-                {formatDate(presetRange(p.value).from, "day")}
-              </span>
+              {!p.hideDate && (
+                <span className="text-[10px] text-muted-foreground tabular">
+                  {formatDate(presetRange(p.value).from, "day")}
+                </span>
+              )}
             </button>
           ))}
         </div>

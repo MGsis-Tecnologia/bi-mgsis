@@ -2,11 +2,13 @@ import type { DatePreset, DateRange } from "@/lib/types";
 import {
   endOfDay,
   endOfMonth,
+  endOfYear,
   startOfDay,
   startOfMonth,
   startOfYear,
   subDays,
   subMonths,
+  subYears,
 } from "date-fns";
 
 export function presetRange(preset: DatePreset): DateRange {
@@ -24,10 +26,20 @@ export function presetRange(preset: DatePreset): DateRange {
       return { from: startOfDay(subDays(now, 29)), to: endOfDay(now) };
     case "mes-atual":
       return { from: startOfMonth(now), to: endOfDay(now) };
+    case "mes-anterior": {
+      const pm = subMonths(now, 1);
+      return { from: startOfMonth(pm), to: endOfMonth(pm) };
+    }
     case "ano-atual":
       return { from: startOfYear(now), to: endOfDay(now) };
+    case "ano-anterior": {
+      const py = subYears(now, 1);
+      return { from: startOfYear(py), to: endOfYear(py) };
+    }
     case "12m":
       return { from: startOfMonth(subMonths(now, 11)), to: endOfDay(now) };
+    case "todos":
+      return { from: new Date("2000-01-01T00:00:00"), to: new Date("2099-12-31T23:59:59") };
     default:
       return { from: startOfMonth(subMonths(now, 11)), to: endOfDay(now) };
   }

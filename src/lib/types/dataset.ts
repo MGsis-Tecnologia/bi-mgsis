@@ -76,14 +76,16 @@ export interface StoredDataset {
 // One row per open title (receber_documento). The file is a snapshot of the
 // open portfolio — every row is a pending receivable.
 export interface ReceivableItem {
-  documentId: string;     // receber_documento
+  documentId: string;     // receber_documento (synthetic "row-N" when absent)
   clientId: string;       // pessoa_cliente_id
   clientName: string;     // pessoa_nome
   clientCity?: string;    // pessoa_cidade (optional column)
   issueDate: string;      // data_emissao — ISO YYYY-MM-DD ("" if absent/invalid)
   dueDate: string;        // data_vencimento — ISO YYYY-MM-DD
+  receivedDate: string;   // data_recebimento — ISO YYYY-MM-DD, "" when pending
+  isPaid: boolean;        // true when receivedDate is present
   entryType: string;      // tipolanzamiento — classification only
-  amountOrig: number;     // valor_documento in original currency
+  amountOrig: number;     // valor_documento: received amount when isPaid, pending amount otherwise
   sellerId: string;       // vendedor_id
   sellerName: string;     // vendedor_nome
   currencyId: string;     // moeda_id — "1" | "2" | "3"
@@ -92,6 +94,28 @@ export interface ReceivableItem {
 
 export interface StoredReceivables {
   items: ReceivableItem[];
+  importedAt: string;     // ISO
+  filename: string;
+  rowCount: number;
+}
+
+// ─── Contas a pagar (accounts payable) ───────────────────────────────────────
+export interface PayableItem {
+  documentId: string;     // pagar_documento (synthetic "row-N" when absent)
+  supplierId: string;     // pessoa_fornecedor_id
+  supplierName: string;   // pessoa_nome
+  issueDate: string;      // data_emissao — ISO YYYY-MM-DD ("" if absent/invalid)
+  dueDate: string;        // data_vencimento — ISO YYYY-MM-DD
+  paidDate: string;       // data_pagamento — ISO YYYY-MM-DD, "" when pending
+  isPaid: boolean;        // true when paidDate is present
+  entryType: string;      // tipolanzamiento
+  amountOrig: number;     // valor_documento: paid amount when isPaid, pending otherwise
+  currencyId: string;     // moeda_id
+  currencyCode: string;   // moeda_sigla
+}
+
+export interface StoredPayables {
+  items: PayableItem[];
   importedAt: string;     // ISO
   filename: string;
   rowCount: number;

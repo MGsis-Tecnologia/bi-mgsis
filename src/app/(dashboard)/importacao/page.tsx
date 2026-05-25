@@ -1,12 +1,12 @@
 "use client";
 
 import * as React from "react";
-import { CheckCircle2, CircleDollarSign, ShoppingCart, Trash2, Upload, XCircle } from "lucide-react";
+import { CheckCircle2, CircleDollarSign, CreditCard, ShoppingCart, Trash2, Upload, XCircle } from "lucide-react";
 import { PageHeader } from "@/components/layout/page-header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { parseFile, type DatasetKind } from "@/lib/parsers/csv-parser";
-import { useDatasetStore, IDB_KEY, RECEIVABLES_IDB_KEY } from "@/lib/store/dataset";
+import { useDatasetStore, IDB_KEY, RECEIVABLES_IDB_KEY, PAYABLES_IDB_KEY } from "@/lib/store/dataset";
 import { idbSet, idbDel } from "@/lib/store/idb";
 import { useTranslation } from "@/lib/hooks/use-translation";
 import { formatNumber, formatDate } from "@/lib/utils/format";
@@ -27,19 +27,28 @@ const IDLE: ParseState = {
   status: "idle", kind: null, errors: [], warnings: [], skipped: 0, rowCount: 0, filename: "",
 };
 
+const KIND_LABEL: Record<string, string> = {
+  sales: "Vendas",
+  receivable: "Contas a Receber",
+  payable: "Contas a Pagar",
+};
+
 export default function ImportacaoPage() {
   const { t } = useTranslation();
   const [drag, setDrag] = React.useState(false);
   const [state, setState] = React.useState<ParseState>(IDLE);
   const inputRef = React.useRef<HTMLInputElement>(null);
-  const { dataset, receivables, setDataset, setReceivables, clearDataset, clearReceivables } =
-    useDatasetStore();
+  const {
+    dataset, receivables, payables,
+    setDataset, setReceivables, setPayables,
+    clearDataset, clearReceivables, clearPayables,
+  } = useDatasetStore();
 
   async function handleFile(file: File) {
     setState({ ...IDLE, status: "parsing", filename: file.name });
     const result = await parseFile(file);
 
-    if (result.errors.length > 0 || (!result.dataset && !result.receivables)) {
+    if (result.errors.length > 0 || (!result.dataset && !result.receivables && !result.payables)) {
       setState({
         status: "error", kind: result.kind, errors: result.errors,
         warnings: result.warnings, skipped: result.skipped, rowCount: 0, filename: file.name,
@@ -47,7 +56,14 @@ export default function ImportacaoPage() {
       return;
     }
 
-    if (result.kind === "receivable" && result.receivables) {
+    if (result.kind === "payable" && result.payables) {
+      await idbSet(PAYABLES_IDB_KEY, result.payables);
+      setPayables(result.payables);
+      setState({
+        status: "success", kind: "payable", errors: [], warnings: result.warnings,
+        skipped: result.skipped, rowCount: result.payables.rowCount, filename: file.name,
+      });
+    } else if (result.kind === "receivable" && result.receivables) {
       await idbSet(RECEIVABLES_IDB_KEY, result.receivables);
       setReceivables(result.receivables);
       setState({
@@ -76,6 +92,8 @@ export default function ImportacaoPage() {
     e.target.value = "";
   }
 
+  const hasDatasets = !!(dataset || receivables || payables);
+
   return (
     <div className="space-y-8">
       <PageHeader
@@ -103,7 +121,7 @@ export default function ImportacaoPage() {
               <p className="text-sm font-medium text-foreground">{t("importacao.upload.title")}</p>
               <p className="mt-1 text-xs text-muted-foreground">{t("importacao.upload.desc")}</p>
               <p className="mt-1 text-[11px] text-muted-foreground">
-                Vendas e Contas a Receber — o tipo é identificado automaticamente pelas colunas.
+                Vendas, Contas a Receber e Contas a Pagar — o tipo é identificado automaticamente pelas colunas.
               </p>
             </div>
             {state.status === "parsing" && (
@@ -120,18 +138,16 @@ export default function ImportacaoPage() {
           <CheckCircle2 className="h-4 w-4 text-positive mt-0.5 shrink-0" />
           <div className="space-y-1">
             <div className="text-sm font-medium text-foreground flex flex-wrap items-center gap-2">
-              <span>{formatNumber(state.rowCount)} {state.kind === "receivable" ? "título(s)" : "linha(s)"} de</span>
+              <span>{formatNumber(state.rowCount)} {state.kind === "sales" ? "linha(s)" : "título(s)"} de</span>
               <span className="font-mono text-xs">{state.filename}</span>
-              <Badge variant="ghost">
-                {state.kind === "receivable" ? "Contas a Receber" : "Vendas"}
-              </Badge>
+              <Badge variant="ghost">{state.kind ? KIND_LABEL[state.kind] : ""}</Badge>
             </div>
             {state.skipped > 0 && (
               <p className="text-xs text-muted-foreground">
                 {state.skipped} linha(s) ignorada(s)
-                {state.kind === "receivable"
-                  ? " (campos chave vazios, vencimento ou valor inválido)."
-                  : " (pedido_tipo ≠ VENDAS ou campos inválidos)."}
+                {state.kind === "sales"
+                  ? " (pedido_tipo ≠ VENDAS ou campos inválidos)."
+                  : " (campos chave vazios, vencimento ou valor inválido)."}
               </p>
             )}
             {state.warnings.map((w, i) => (
@@ -156,7 +172,7 @@ export default function ImportacaoPage() {
       )}
 
       {/* Current datasets */}
-      {(dataset || receivables) && (
+      {hasDatasets && (
         <Card>
           <CardHeader><CardTitle>Dados importados</CardTitle></CardHeader>
           <CardContent className="space-y-3">
@@ -186,6 +202,19 @@ export default function ImportacaoPage() {
                 }}
               />
             )}
+            {payables && (
+              <DatasetRow
+                icon={<CreditCard className="h-4 w-4 text-accent" />}
+                title="Contas a Pagar"
+                filename={payables.filename}
+                rowLabel={`${formatNumber(payables.rowCount)} títulos`}
+                importedAt={payables.importedAt}
+                onRemove={() => {
+                  idbDel(PAYABLES_IDB_KEY); clearPayables();
+                  setState((s) => (s.kind === "payable" ? IDLE : s));
+                }}
+              />
+            )}
           </CardContent>
         </Card>
       )}
@@ -196,13 +225,18 @@ export default function ImportacaoPage() {
         <CardContent className="space-y-6">
           <SchemaTable
             heading="Leiaute · Vendas"
-            note="Datas: DD/MM/AAAA · Decimais: vírgula (padrão BR) · moeda_id: 1=R$ 2=US$ 3=G$ · importa linhas com pedido_tipo = VENDAS."
+            note="Datas: DD/MM/AAAA · Decimais: vírgula (padrão BR) · moeda_id: 1=R$ 2=US$ 3=G$ · importa linhas com pedido_tipo = VENDA."
             cols={SALES_SCHEMA}
           />
           <SchemaTable
             heading="Leiaute · Contas a Receber"
-            note="Cada linha é um título em aberto. Atraso calculado por data_vencimento vs. hoje. pessoa_cidade é opcional."
+            note="Cada linha é um título. data_recebimento preenchida = título recebido; vazia = pendente. pessoa_cidade é opcional."
             cols={RECEIVABLE_SCHEMA}
+          />
+          <SchemaTable
+            heading="Leiaute · Contas a Pagar"
+            note="Cada linha é uma obrigação de pagamento. data_pagamento preenchida = pago; vazia = pendente."
+            cols={PAYABLE_SCHEMA}
           />
         </CardContent>
       </Card>
@@ -298,20 +332,34 @@ const SALES_SCHEMA = [
   { name: "vendedor_nome",       type: "Texto",   example: "João Silva" },
   { name: "moeda_id",            type: "1|2|3",   example: "1" },
   { name: "moeda_sigla",         type: "Texto",   example: "R$" },
-  { name: "pedido_tipo",         type: "Texto",   example: "VENDAS" },
+  { name: "pedido_tipo",         type: "Texto",   example: "VENDA" },
 ];
 
 const RECEIVABLE_SCHEMA = [
-  { name: "moeda_id",          type: "1|2|3",          example: "1" },
-  { name: "moeda_sigla",       type: "Texto",          example: "R$" },
-  { name: "pessoa_cliente_id", type: "Chave",          example: "CLI-001" },
-  { name: "pessoa_nome",       type: "Texto",          example: "Empresa ABC Ltda" },
-  { name: "data_emissao",      type: "Data",           example: "25/12/2024" },
-  { name: "data_vencimento",   type: "Data",           example: "25/01/2025" },
-  { name: "receber_documento", type: "Chave",          example: "DUP-00123" },
-  { name: "tipolanzamiento",   type: "Texto",          example: "Duplicata" },
-  { name: "valor_documento",   type: "Decimal",        example: "1250,00" },
-  { name: "vendedor_id",       type: "Chave",          example: "VND-003" },
-  { name: "vendedor_nome",     type: "Texto",          example: "João Silva" },
-  { name: "pessoa_cidade",     type: "Texto (opcional)", example: "São Paulo" },
+  { name: "moeda_id",            type: "1|2|3",          example: "1" },
+  { name: "moeda_sigla",         type: "Texto",          example: "R$" },
+  { name: "pessoa_cliente_id",   type: "Chave",          example: "CLI-001" },
+  { name: "pessoa_nome",         type: "Texto",          example: "Empresa ABC Ltda" },
+  { name: "data_emissao",        type: "Data",           example: "25/12/2024" },
+  { name: "data_vencimento",     type: "Data",           example: "25/01/2025" },
+  { name: "receber_documento",   type: "Texto (opcional)", example: "DUP-00123" },
+  { name: "tipolanzamiento",     type: "Texto",          example: "Duplicata" },
+  { name: "valor_documento",     type: "Decimal",        example: "1250,00" },
+  { name: "data_recebimento",    type: "Data (opcional)", example: "20/01/2025" },
+  { name: "vendedor_id",         type: "Chave",          example: "VND-003" },
+  { name: "vendedor_nome",       type: "Texto",          example: "João Silva" },
+  { name: "pessoa_cidade",       type: "Texto (opcional)", example: "São Paulo" },
+];
+
+const PAYABLE_SCHEMA = [
+  { name: "moeda_id",              type: "1|2|3",          example: "1" },
+  { name: "moeda_sigla",           type: "Texto",          example: "R$" },
+  { name: "pessoa_fornecedor_id",  type: "Chave",          example: "FOR-001" },
+  { name: "pessoa_nome",           type: "Texto",          example: "Fornecedor XYZ Ltda" },
+  { name: "data_emissao",          type: "Data (opcional)", example: "01/12/2024" },
+  { name: "data_vencimento",       type: "Data",           example: "31/12/2024" },
+  { name: "pagar_documento",       type: "Texto (opcional)", example: "NF-00456" },
+  { name: "tipolanzamiento",       type: "Texto",          example: "Nota Fiscal" },
+  { name: "valor_documento",       type: "Decimal",        example: "3500,00" },
+  { name: "data_pagamento",        type: "Data (opcional)", example: "28/12/2024" },
 ];

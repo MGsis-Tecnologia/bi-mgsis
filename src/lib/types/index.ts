@@ -92,6 +92,9 @@ export type DatePreset =
   | "7d"
   | "30d"
   | "mes-atual"
+  | "mes-anterior"
   | "ano-atual"
+  | "ano-anterior"
   | "12m"
+  | "todos"
   | "custom";
