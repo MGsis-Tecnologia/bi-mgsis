@@ -165,7 +165,7 @@ function processSalesRows(
 
     // Filter: only VENDAS
     const tipo = String(row["pedido_tipo"] ?? "").trim().toUpperCase();
-    if (tipo !== "VENDAS") { skipped++; continue; }
+    if (tipo !== "VENDA") { skipped++; continue; }
 
     // Required string fields
     const orderId   = String(row["pedido_documento"] ?? "").trim();
