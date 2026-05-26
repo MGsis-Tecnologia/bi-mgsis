@@ -1,6 +1,5 @@
 "use client";
 
-import * as React from "react";
 import { Filter, X } from "lucide-react";
 import { useFilters } from "@/lib/store/filters";
 import { useDataset } from "@/lib/hooks/use-dataset";
@@ -27,11 +26,6 @@ export function GlobalFilters() {
   const channelOptions = [
     { value: "all", label: t("filters.global.all_masc") },
     ...ds.channels.map((c) => ({ value: c, label: c })),
-  ];
-
-  const subgroupOptions = [
-    { value: "all", label: t("filters.global.all_fem") },
-    ...ds.subgroups.map((s) => ({ value: s.id, label: s.name })),
   ];
 
   return (
@@ -70,12 +64,21 @@ export function GlobalFilters() {
             options={channelOptions}
           />
 
-          <FilterGroup
-            label={t("filters.global.category")}
-            value={subgroupId}
-            onChange={setSubgroup}
-            options={subgroupOptions}
-          />
+          <div>
+            <div className="pb-1.5 text-[10px] font-medium uppercase tracking-[0.18em] text-muted-foreground">
+              {t("filters.global.category")}
+            </div>
+            <select
+              value={subgroupId}
+              onChange={(e) => setSubgroup(e.target.value)}
+              className="h-9 w-full rounded-md border border-border bg-surface px-3 text-sm"
+            >
+              <option value="all">{t("filters.global.all_fem")}</option>
+              {ds.subgroups.map((s) => (
+                <option key={s.id} value={s.id}>{s.name}</option>
+              ))}
+            </select>
+          </div>
 
           <div>
             <div className="pb-1.5 text-[10px] font-medium uppercase tracking-[0.18em] text-muted-foreground">

@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { Boxes, CheckCircle2, CircleDollarSign, CreditCard, ShoppingCart, Trash2, Upload, XCircle } from "lucide-react";
+import { Boxes, CheckCircle2, CircleDollarSign, Clock, CreditCard, Loader2, ShoppingCart, Trash2, Upload, XCircle } from "lucide-react";
 import { PageHeader } from "@/components/layout/page-header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -11,21 +11,19 @@ import { idbSet, idbDel } from "@/lib/store/idb";
 import { useTranslation } from "@/lib/hooks/use-translation";
 import { formatNumber, formatDate } from "@/lib/utils/format";
 
-type Status = "idle" | "parsing" | "success" | "error";
+type ItemStatus = "waiting" | "parsing" | "success" | "error";
 
-interface ParseState {
-  status: Status;
+interface QueueItem {
+  id: string;
+  filename: string;
+  file: File;
+  status: ItemStatus;
   kind: DatasetKind | null;
   errors: string[];
   warnings: string[];
   skipped: number;
   rowCount: number;
-  filename: string;
 }
-
-const IDLE: ParseState = {
-  status: "idle", kind: null, errors: [], warnings: [], skipped: 0, rowCount: 0, filename: "",
-};
 
 const KIND_LABEL: Record<string, string> = {
   sales: "Vendas",
@@ -37,69 +35,108 @@ const KIND_LABEL: Record<string, string> = {
 export default function ImportacaoPage() {
   const { t } = useTranslation();
   const [drag, setDrag] = React.useState(false);
-  const [state, setState] = React.useState<ParseState>(IDLE);
+  const [queue, setQueue] = React.useState<QueueItem[]>([]);
+  const queueRef = React.useRef<QueueItem[]>([]);
+  const processingRef = React.useRef(false);
   const inputRef = React.useRef<HTMLInputElement>(null);
+
   const {
     dataset, receivables, payables, inventory,
     setDataset, setReceivables, setPayables, setInventory,
     clearDataset, clearReceivables, clearPayables, clearInventory,
   } = useDatasetStore();
 
-  async function handleFile(file: File) {
-    setState({ ...IDLE, status: "parsing", filename: file.name });
-    const result = await parseFile(file);
+  function updateItem(id: string, patch: Partial<QueueItem>) {
+    queueRef.current = queueRef.current.map(i => i.id === id ? { ...i, ...patch } : i);
+    setQueue([...queueRef.current]);
+  }
 
-    if (result.errors.length > 0 || (!result.dataset && !result.receivables && !result.payables && !result.inventory)) {
-      setState({
-        status: "error", kind: result.kind, errors: result.errors,
-        warnings: result.warnings, skipped: result.skipped, rowCount: 0, filename: file.name,
-      });
-      return;
+  async function processQueue() {
+    if (processingRef.current) return;
+    processingRef.current = true;
+
+    while (true) {
+      const nextItem = queueRef.current.find(i => i.status === "waiting");
+      if (!nextItem) break;
+
+      updateItem(nextItem.id, { status: "parsing" });
+
+      const result = await parseFile(nextItem.file);
+
+      if (result.errors.length > 0 || (!result.dataset && !result.receivables && !result.payables && !result.inventory)) {
+        updateItem(nextItem.id, {
+          status: "error", kind: result.kind,
+          errors: result.errors, warnings: result.warnings, skipped: result.skipped,
+        });
+        continue;
+      }
+
+      if (result.kind === "inventory" && result.inventory) {
+        await idbSet(INVENTORY_IDB_KEY, result.inventory);
+        setInventory(result.inventory);
+        updateItem(nextItem.id, {
+          status: "success", kind: "inventory",
+          rowCount: result.inventory.rowCount, warnings: result.warnings, skipped: result.skipped,
+        });
+      } else if (result.kind === "payable" && result.payables) {
+        await idbSet(PAYABLES_IDB_KEY, result.payables);
+        setPayables(result.payables);
+        updateItem(nextItem.id, {
+          status: "success", kind: "payable",
+          rowCount: result.payables.rowCount, warnings: result.warnings, skipped: result.skipped,
+        });
+      } else if (result.kind === "receivable" && result.receivables) {
+        await idbSet(RECEIVABLES_IDB_KEY, result.receivables);
+        setReceivables(result.receivables);
+        updateItem(nextItem.id, {
+          status: "success", kind: "receivable",
+          rowCount: result.receivables.rowCount, warnings: result.warnings, skipped: result.skipped,
+        });
+      } else if (result.dataset) {
+        await idbSet(IDB_KEY, result.dataset);
+        setDataset(result.dataset);
+        updateItem(nextItem.id, {
+          status: "success", kind: "sales",
+          rowCount: result.dataset.rowCount, warnings: result.warnings, skipped: result.skipped,
+        });
+      }
     }
 
-    if (result.kind === "inventory" && result.inventory) {
-      await idbSet(INVENTORY_IDB_KEY, result.inventory);
-      setInventory(result.inventory);
-      setState({
-        status: "success", kind: "inventory", errors: [], warnings: result.warnings,
-        skipped: result.skipped, rowCount: result.inventory.rowCount, filename: file.name,
-      });
-    } else if (result.kind === "payable" && result.payables) {
-      await idbSet(PAYABLES_IDB_KEY, result.payables);
-      setPayables(result.payables);
-      setState({
-        status: "success", kind: "payable", errors: [], warnings: result.warnings,
-        skipped: result.skipped, rowCount: result.payables.rowCount, filename: file.name,
-      });
-    } else if (result.kind === "receivable" && result.receivables) {
-      await idbSet(RECEIVABLES_IDB_KEY, result.receivables);
-      setReceivables(result.receivables);
-      setState({
-        status: "success", kind: "receivable", errors: [], warnings: result.warnings,
-        skipped: result.skipped, rowCount: result.receivables.rowCount, filename: file.name,
-      });
-    } else if (result.dataset) {
-      await idbSet(IDB_KEY, result.dataset);
-      setDataset(result.dataset);
-      setState({
-        status: "success", kind: "sales", errors: [], warnings: result.warnings,
-        skipped: result.skipped, rowCount: result.dataset.rowCount, filename: file.name,
-      });
-    }
+    processingRef.current = false;
+  }
+
+  function enqueueFiles(files: File[]) {
+    const valid = files.filter(f => /\.(csv|xlsx|xls)$/i.test(f.name));
+    if (!valid.length) return;
+    const newItems: QueueItem[] = valid.map(f => ({
+      id: crypto.randomUUID(),
+      filename: f.name,
+      file: f,
+      status: "waiting",
+      kind: null,
+      errors: [],
+      warnings: [],
+      skipped: 0,
+      rowCount: 0,
+    }));
+    queueRef.current = [...queueRef.current, ...newItems];
+    setQueue([...queueRef.current]);
+    processQueue();
   }
 
   function onDrop(e: React.DragEvent) {
-    e.preventDefault(); setDrag(false);
-    const file = e.dataTransfer.files[0];
-    if (file) handleFile(file);
+    e.preventDefault();
+    setDrag(false);
+    enqueueFiles(Array.from(e.dataTransfer.files));
   }
 
   function onInputChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    if (file) handleFile(file);
+    enqueueFiles(Array.from(e.target.files ?? []));
     e.target.value = "";
   }
 
+  const isRunning = queue.some(i => i.status === "waiting" || i.status === "parsing");
+  const hasQueue = queue.length > 0;
   const hasDatasets = !!(dataset || receivables || payables || inventory);
 
   return (
@@ -123,7 +160,7 @@ export default function ImportacaoPage() {
             }`}
           >
             <div className="flex h-12 w-12 items-center justify-center rounded-full bg-muted">
-              <Upload className={`h-5 w-5 ${state.status === "parsing" ? "animate-pulse text-accent" : "text-muted-foreground"}`} />
+              <Upload className={`h-5 w-5 ${isRunning ? "animate-pulse text-accent" : "text-muted-foreground"}`} />
             </div>
             <div className="text-center">
               <p className="text-sm font-medium text-foreground">{t("importacao.upload.title")}</p>
@@ -131,54 +168,42 @@ export default function ImportacaoPage() {
               <p className="mt-1 text-[11px] text-muted-foreground">
                 Vendas, Contas a Receber, Contas a Pagar e Estoque — o tipo é identificado automaticamente pelas colunas.
               </p>
+              <p className="mt-1 text-[11px] text-muted-foreground">
+                Selecione vários arquivos de uma vez para importar em fila.
+              </p>
             </div>
-            {state.status === "parsing" && (
-              <p className="text-xs text-accent animate-pulse">Processando {state.filename}…</p>
-            )}
           </div>
-          <input ref={inputRef} type="file" accept=".csv,.xlsx,.xls" className="hidden" onChange={onInputChange} />
+          <input ref={inputRef} type="file" accept=".csv,.xlsx,.xls" multiple className="hidden" onChange={onInputChange} />
         </CardContent>
       </Card>
 
-      {/* Result feedback */}
-      {state.status === "success" && (
-        <div className="flex items-start gap-3 rounded-lg border border-positive/30 bg-positive/5 p-4">
-          <CheckCircle2 className="h-4 w-4 text-positive mt-0.5 shrink-0" />
-          <div className="space-y-1">
-            <div className="text-sm font-medium text-foreground flex flex-wrap items-center gap-2">
-              <span>{formatNumber(state.rowCount)} {state.kind === "sales" ? "linha(s)" : state.kind === "inventory" ? "SKU(s)" : "título(s)"} de</span>
-              <span className="font-mono text-xs">{state.filename}</span>
-              <Badge variant="ghost">{state.kind ? KIND_LABEL[state.kind] : ""}</Badge>
-            </div>
-            {state.skipped > 0 && (
-              <p className="text-xs text-muted-foreground">
-                {state.skipped} linha(s) ignorada(s)
-                {state.kind === "sales"
-                  ? " (pedido_tipo ≠ VENDAS ou campos inválidos)."
-                  : state.kind === "inventory"
-                  ? " (produto_id vazio ou inválido)."
-                  : " (campos chave vazios, vencimento ou valor inválido)."}
-              </p>
+      {/* Import queue */}
+      {hasQueue && (
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between py-4">
+            <CardTitle className="text-sm">
+              Fila de importação
+              {isRunning && (
+                <span className="ml-2 text-xs font-normal text-muted-foreground">
+                  {queue.filter(i => i.status === "success").length}/{queue.length} concluídos
+                </span>
+              )}
+            </CardTitle>
+            {!isRunning && (
+              <button
+                onClick={() => { queueRef.current = []; setQueue([]); }}
+                className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+              >
+                Limpar
+              </button>
             )}
-            {state.warnings.map((w, i) => (
-              <p key={i} className="text-xs text-warning">{w}</p>
+          </CardHeader>
+          <CardContent className="space-y-2 pt-0">
+            {queue.map(item => (
+              <QueueRow key={item.id} item={item} />
             ))}
-          </div>
-        </div>
-      )}
-
-      {state.status === "error" && (
-        <div className="flex items-start gap-3 rounded-lg border border-negative/30 bg-negative/5 p-4">
-          <XCircle className="h-4 w-4 text-negative mt-0.5 shrink-0" />
-          <div className="space-y-1">
-            {state.errors.map((e, i) => (
-              <p key={i} className="text-sm text-foreground">{e}</p>
-            ))}
-            {state.warnings.map((w, i) => (
-              <p key={i} className="text-xs text-muted-foreground">{w}</p>
-            ))}
-          </div>
-        </div>
+          </CardContent>
+        </Card>
       )}
 
       {/* Current datasets */}
@@ -193,10 +218,7 @@ export default function ImportacaoPage() {
                 filename={dataset.filename}
                 rowLabel={`${formatNumber(dataset.rowCount)} linhas`}
                 importedAt={dataset.importedAt}
-                onRemove={() => {
-                  idbDel(IDB_KEY); clearDataset();
-                  setState((s) => (s.kind === "sales" ? IDLE : s));
-                }}
+                onRemove={() => { idbDel(IDB_KEY); clearDataset(); }}
               />
             )}
             {receivables && (
@@ -206,10 +228,7 @@ export default function ImportacaoPage() {
                 filename={receivables.filename}
                 rowLabel={`${formatNumber(receivables.rowCount)} títulos`}
                 importedAt={receivables.importedAt}
-                onRemove={() => {
-                  idbDel(RECEIVABLES_IDB_KEY); clearReceivables();
-                  setState((s) => (s.kind === "receivable" ? IDLE : s));
-                }}
+                onRemove={() => { idbDel(RECEIVABLES_IDB_KEY); clearReceivables(); }}
               />
             )}
             {payables && (
@@ -219,10 +238,7 @@ export default function ImportacaoPage() {
                 filename={payables.filename}
                 rowLabel={`${formatNumber(payables.rowCount)} títulos`}
                 importedAt={payables.importedAt}
-                onRemove={() => {
-                  idbDel(PAYABLES_IDB_KEY); clearPayables();
-                  setState((s) => (s.kind === "payable" ? IDLE : s));
-                }}
+                onRemove={() => { idbDel(PAYABLES_IDB_KEY); clearPayables(); }}
               />
             )}
             {inventory && (
@@ -232,10 +248,7 @@ export default function ImportacaoPage() {
                 filename={inventory.filename}
                 rowLabel={`${formatNumber(inventory.rowCount)} SKUs`}
                 importedAt={inventory.importedAt}
-                onRemove={() => {
-                  idbDel(INVENTORY_IDB_KEY); clearInventory();
-                  setState((s) => (s.kind === "inventory" ? IDLE : s));
-                }}
+                onRemove={() => { idbDel(INVENTORY_IDB_KEY); clearInventory(); }}
               />
             )}
           </CardContent>
@@ -268,6 +281,47 @@ export default function ImportacaoPage() {
           />
         </CardContent>
       </Card>
+    </div>
+  );
+}
+
+function QueueRow({ item }: { item: QueueItem }) {
+  return (
+    <div className="flex items-start gap-3 rounded-md border border-border p-3">
+      <div className="mt-0.5 shrink-0">
+        {item.status === "waiting" && <Clock className="h-4 w-4 text-muted-foreground" />}
+        {item.status === "parsing" && <Loader2 className="h-4 w-4 text-accent animate-spin" />}
+        {item.status === "success" && <CheckCircle2 className="h-4 w-4 text-positive" />}
+        {item.status === "error" && <XCircle className="h-4 w-4 text-negative" />}
+      </div>
+      <div className="min-w-0 flex-1 space-y-1">
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-xs font-mono text-foreground truncate">{item.filename}</span>
+          {item.status === "waiting" && (
+            <span className="text-[11px] text-muted-foreground">Na fila…</span>
+          )}
+          {item.status === "parsing" && (
+            <span className="text-[11px] text-accent animate-pulse">Processando…</span>
+          )}
+          {item.status === "success" && item.kind && (
+            <>
+              <Badge variant="ghost">{KIND_LABEL[item.kind]}</Badge>
+              <span className="text-[11px] text-muted-foreground">
+                {formatNumber(item.rowCount)} {item.kind === "sales" ? "linha(s)" : item.kind === "inventory" ? "SKU(s)" : "título(s)"}
+              </span>
+              {item.skipped > 0 && (
+                <span className="text-[11px] text-muted-foreground">{item.skipped} ignorada(s)</span>
+              )}
+            </>
+          )}
+          {item.status === "error" && (
+            <span className="text-[11px] text-negative">{item.errors[0] ?? "Erro ao processar"}</span>
+          )}
+        </div>
+        {item.warnings.map((w, i) => (
+          <p key={i} className="text-[11px] text-warning">{w}</p>
+        ))}
+      </div>
     </div>
   );
 }

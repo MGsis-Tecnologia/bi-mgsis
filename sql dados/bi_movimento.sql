@@ -1,4 +1,4 @@
-create or replace view bi_mgsis as 
+create or replace view bi_movimento as 
 
 SELECT to_char(p.pedido_data_fatura, 'DD/MM/YYYY'::text) AS pedido_data,
     p.pedido_id AS pedido_documento,

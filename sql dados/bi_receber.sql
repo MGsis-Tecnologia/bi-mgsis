@@ -18,7 +18,7 @@
              LEFT JOIN cidade ON endereco.cidade_id = cidade.cidade_id
           WHERE endereco.endereco_padrao = true AND endereco.pessoa_id = r.pessoa_cliente_id
          OFFSET 0
-         LIMIT 1) AS pedido_cidade,
+         LIMIT 1) AS pessoa_cidade,
     r.receber_data_recebimento AS data_recebimento
    FROM receber r
      LEFT JOIN pessoa c ON c.pessoa_id = r.pessoa_cliente_id

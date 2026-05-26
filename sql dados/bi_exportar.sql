@@ -8,7 +8,9 @@ BEGIN
         WHERE schemaname = 'public'
     LOOP
         EXECUTE format(
-            'COPY (SELECT * FROM %I.%I) TO %L CSV HEADER',
+             'COPY (SELECT * FROM %I.%I)
+             TO %L
+             WITH (FORMAT CSV, HEADER, DELIMITER '';'')',
             r.schemaname,
             r.viewname,
             '/dados/drive_f/bi/' || r.viewname || '.csv'
