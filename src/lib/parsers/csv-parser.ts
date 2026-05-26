@@ -479,6 +479,7 @@ function processInventoryRows(
 
     const stock = parseNumber(row["estoque_item"] as string);
     const costTotalUSD = parseNumber(row["valor_estoque"] as string);
+    const minStock = "estoque_minimo" in row ? parseNumber(row["estoque_minimo"] as string) : 0;
 
     if (map.has(productId)) duplicates++;
 
@@ -488,6 +489,7 @@ function processInventoryRows(
       manufacturerCode: String(row["produto_fabricante"] ?? "").trim(),
       stock,
       costTotalUSD,
+      minStock,
     });
   }
 

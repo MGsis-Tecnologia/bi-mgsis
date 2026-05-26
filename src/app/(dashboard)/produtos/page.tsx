@@ -11,7 +11,7 @@ import { BarChartH } from "@/components/charts/bar-chart-h";
 import { DonutChart } from "@/components/charts/donut-chart";
 import { Money } from "@/components/dashboard/money";
 import { useDataset, useFilteredOrders } from "@/lib/hooks/use-dataset";
-import { productABC, subgroupABC } from "@/lib/analytics/abc";
+import { productABC, subgroupABC, productProfitRanking, type ProductProfitEntry } from "@/lib/analytics/abc";
 import { revenueBySubgroup } from "@/lib/analytics/kpis";
 import { formatNumber, formatPercent } from "@/lib/utils/format";
 import { cn } from "@/lib/utils";
@@ -24,6 +24,7 @@ export default function ProdutosPage() {
 
   const abc = React.useMemo(() => productABC(orders, ds.products), [orders, ds.products]);
   const catABC = React.useMemo(() => subgroupABC(orders), [orders]);
+  const profitRanking = React.useMemo(() => productProfitRanking(orders), [orders]);
   const rbs = React.useMemo(() => revenueBySubgroup(orders), [orders]);
   const donut = Object.values(rbs).sort((a, b) => b.value - a.value).map((v) => ({ key: v.id, label: v.label, value: v.value }));
 
@@ -161,6 +162,94 @@ export default function ProdutosPage() {
         </CardContent>
       </Card>
 
+      {/* ── Ranking por Lucro ──────────────────────────────────────────────── */}
+      <Card id="ranking-lucro" className="scroll-mt-24">
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle>Ranking por Lucro</CardTitle>
+              <p className="mt-0.5 text-[11px] text-muted-foreground">
+                Produtos ordenados do maior ao menor lucro (receita − custo) no período.
+              </p>
+            </div>
+            <Badge variant="ghost">{profitRanking.length} produtos</Badge>
+          </div>
+        </CardHeader>
+        <CardContent className="px-0">
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-y border-border text-[10px] uppercase tracking-[0.14em] text-muted-foreground">
+                  <th className="text-left font-medium py-2 px-5">#</th>
+                  <th className="text-left font-medium py-2 px-5">Produto</th>
+                  <th className="text-left font-medium py-2 px-5">Categoria</th>
+                  <th className="text-right font-medium py-2 px-5">Unidades</th>
+                  <th className="text-right font-medium py-2 px-5">Receita</th>
+                  <th className="text-right font-medium py-2 px-5">Custo</th>
+                  <th className="text-right font-medium py-2 px-5">Lucro</th>
+                  <th className="text-right font-medium py-2 px-5">Margem</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {profitRanking.slice(0, 30).map((e, i) => (
+                  <tr key={e.productId} className="hover:bg-muted/30 transition-colors">
+                    <td className="py-2 px-5 font-mono text-xs text-muted-foreground tabular">
+                      {(i + 1).toString().padStart(2, "0")}
+                    </td>
+                    <td className="py-2 px-5 max-w-[260px] truncate">
+                      <div className="font-medium">{e.productName}</div>
+                      <div className="text-xs text-muted-foreground font-mono">{e.productId}</div>
+                    </td>
+                    <td className="py-2 px-5 text-muted-foreground">{e.subgroupName}</td>
+                    <td className="py-2 px-5 text-right tabular">{formatNumber(e.units)}</td>
+                    <td className="py-2 px-5 text-right tabular">
+                      <Money value={e.revenue} />
+                    </td>
+                    <td className="py-2 px-5 text-right tabular text-muted-foreground">
+                      <Money value={e.cost} />
+                    </td>
+                    <td className={cn("py-2 px-5 text-right tabular font-medium", e.profit >= 0 ? "text-positive" : "text-negative")}>
+                      <Money value={e.profit} />
+                    </td>
+                    <td className="py-2 px-5 text-right tabular">
+                      <MarginBadge pct={e.marginPct} />
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+              <tfoot>
+                <tr className="border-t border-border text-[11px] font-medium">
+                  <td className="py-2.5 px-5" />
+                  <td className="py-2.5 px-5 uppercase tracking-[0.1em] text-muted-foreground">
+                    Total · {profitRanking.length} produtos
+                  </td>
+                  <td className="py-2.5 px-5" />
+                  <td className="py-2.5 px-5 text-right tabular">
+                    {formatNumber(profitRanking.reduce((s, e) => s + e.units, 0))}
+                  </td>
+                  <td className="py-2.5 px-5 text-right tabular">
+                    <Money value={profitRanking.reduce((s, e) => s + e.revenue, 0)} />
+                  </td>
+                  <td className="py-2.5 px-5 text-right tabular text-muted-foreground">
+                    <Money value={profitRanking.reduce((s, e) => s + e.cost, 0)} />
+                  </td>
+                  <td className="py-2.5 px-5 text-right tabular text-positive font-medium">
+                    <Money value={profitRanking.reduce((s, e) => s + e.profit, 0)} />
+                  </td>
+                  <td className="py-2.5 px-5 text-right tabular">
+                    {(() => {
+                      const rev = profitRanking.reduce((s, e) => s + e.revenue, 0);
+                      const pft = profitRanking.reduce((s, e) => s + e.profit, 0);
+                      return <MarginBadge pct={rev > 0 ? pft / rev : 0} />;
+                    })()}
+                  </td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+        </CardContent>
+      </Card>
+
       <Card id="categorias-abc" className="scroll-mt-24">
         <CardHeader>
           <div className="flex flex-wrap items-center justify-between gap-2">
@@ -240,6 +329,19 @@ export default function ProdutosPage() {
         </CardContent>
       </Card>
     </div>
+  );
+}
+
+function MarginBadge({ pct }: { pct: number }) {
+  return (
+    <span className={cn(
+      "inline-block rounded-full px-2 py-0.5 text-[10px] font-medium",
+      pct >= 0.3 ? "bg-positive/15 text-positive"
+        : pct >= 0.1 ? "bg-amber-500/15 text-amber-600"
+        : "bg-negative/15 text-negative"
+    )}>
+      {formatPercent(pct, { decimals: 1 })}
+    </span>
   );
 }
 

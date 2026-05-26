@@ -21,6 +21,7 @@ import { useDataset, useFilteredOrders } from "@/lib/hooks/use-dataset";
 import { useDatasetStore } from "@/lib/store/dataset";
 import { useFilters } from "@/lib/store/filters";
 import {
+  belowMinimumStock,
   inventoryAnalysis,
   stockByCategory,
   statusDistribution,
@@ -63,6 +64,7 @@ export default function EstoquePage() {
   const movers = React.useMemo(() => topMovers(rows, 10), [rows]);
   const dormant = React.useMemo(() => topDormant(rows, 10), [rows]);
   const rupture = React.useMemo(() => topRuptureRisk(rows, 12), [rows]);
+  const minStockRows = React.useMemo(() => belowMinimumStock(rows), [rows]);
 
   const filteredRows = React.useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -144,8 +146,28 @@ export default function EstoquePage() {
         />
       </section>
 
+      {/* Quick navigation */}
+      <nav className="flex items-center gap-3 flex-wrap text-[12px] text-muted-foreground">
+        <span className="font-medium uppercase tracking-[0.12em] text-[10px]">Ir para:</span>
+        <a href="#sec-status" className="text-accent hover:underline underline-offset-2">Distribuição</a>
+        <span>·</span>
+        <a href="#sec-rupture" className="text-accent hover:underline underline-offset-2">Ruptura &amp; risco</a>
+        <span>·</span>
+        <a href="#sec-dormant" className="text-accent hover:underline underline-offset-2">Sem giro</a>
+        {minStockRows.length > 0 && (
+          <>
+            <span>·</span>
+            <a href="#sec-minstock" className="text-warning hover:underline underline-offset-2">
+              Estoque mínimo ({formatNumber(minStockRows.length)})
+            </a>
+          </>
+        )}
+        <span>·</span>
+        <a href="#sec-detail" className="text-accent hover:underline underline-offset-2">Detalhamento</a>
+      </nav>
+
       {/* Status mix + categories */}
-      <section className="grid grid-cols-1 lg:grid-cols-3 gap-3">
+      <section id="sec-status" className="grid grid-cols-1 lg:grid-cols-3 gap-3">
         <Card className="lg:col-span-1">
           <CardHeader>
             <CardTitle>Distribuição por status</CardTitle>
@@ -207,7 +229,7 @@ export default function EstoquePage() {
       </section>
 
       {/* Rupture / risk + movers */}
-      <section className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+      <section id="sec-rupture" className="grid grid-cols-1 lg:grid-cols-2 gap-3">
         <Card>
           <CardHeader>
             <div className="flex items-center justify-between">
@@ -250,7 +272,7 @@ export default function EstoquePage() {
       </section>
 
       {/* Dormant capital */}
-      <Card>
+      <Card id="sec-dormant">
         <CardHeader>
           <div className="flex items-center justify-between">
             <CardTitle className="flex items-center gap-2">
@@ -270,8 +292,83 @@ export default function EstoquePage() {
         </CardContent>
       </Card>
 
+      {/* Minimum stock alerts — only rendered when at least one product has minStock > 0 */}
+      {minStockRows.length > 0 && (
+        <Card id="sec-minstock">
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="flex items-center gap-2">
+                  <AlertTriangle className="h-4 w-4 text-warning" />
+                  Abaixo do estoque mínimo
+                </CardTitle>
+                <p className="mt-0.5 text-[11px] text-muted-foreground">
+                  Produtos com estoque mínimo definido e quantidade atual igual ou abaixo do ponto de reposição.
+                </p>
+              </div>
+              <Badge variant="warning" className="gap-1">
+                {formatNumber(minStockRows.length)} item(ns)
+              </Badge>
+            </div>
+          </CardHeader>
+          <CardContent className="px-0">
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-y border-border text-[10px] uppercase tracking-[0.14em] text-muted-foreground">
+                    <th className="text-left font-medium py-2 px-5">SKU</th>
+                    <th className="text-left font-medium py-2 px-5">Descrição</th>
+                    <th className="text-left font-medium py-2 px-5">Fabricante</th>
+                    <th className="text-right font-medium py-2 px-5">Estoque atual</th>
+                    <th className="text-right font-medium py-2 px-5">Estoque mínimo</th>
+                    <th className="text-right font-medium py-2 px-5">Gap</th>
+                    <th className="text-left font-medium py-2 px-5">Status</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border">
+                  {minStockRows.map((r) => {
+                    const gap = r.minStock - r.stock;
+                    return (
+                      <tr key={r.productId} className="hover:bg-muted/30 transition-colors">
+                        <td className="py-2 px-5 font-mono text-xs text-muted-foreground tabular">
+                          {r.productId}
+                        </td>
+                        <td className="py-2 px-5 max-w-[280px] truncate font-medium">
+                          {r.description || "—"}
+                        </td>
+                        <td className="py-2 px-5 font-mono text-xs text-muted-foreground">
+                          {r.manufacturerCode || "—"}
+                        </td>
+                        <td className={cn(
+                          "py-2 px-5 text-right tabular font-medium",
+                          r.stock === 0 ? "text-negative" : "text-warning"
+                        )}>
+                          {formatNumber(r.stock)}
+                        </td>
+                        <td className="py-2 px-5 text-right tabular text-muted-foreground">
+                          {formatNumber(r.minStock)}
+                        </td>
+                        <td className="py-2 px-5 text-right tabular">
+                          <span className="inline-flex items-center gap-1 text-warning font-medium">
+                            <AlertTriangle className="h-3 w-3" />
+                            {formatNumber(gap)}
+                          </span>
+                        </td>
+                        <td className="py-2 px-5">
+                          <StatusBadge status={r.status} />
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Detailed table */}
-      <Card>
+      <Card id="sec-detail">
         <CardHeader>
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
@@ -307,26 +404,27 @@ export default function EstoquePage() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-y border-border text-[10px] uppercase tracking-[0.14em] text-muted-foreground">
-                  <th className="text-left font-medium py-2 px-5">SKU</th>
-                  <th className="text-left font-medium py-2 px-5">Descrição</th>
-                  <th className="text-left font-medium py-2 px-5">Fabricante</th>
-                  <th className="text-left font-medium py-2 px-5">Categoria</th>
-                  <th className="text-right font-medium py-2 px-5">Estoque</th>
-                  <th className="text-right font-medium py-2 px-5">Custo total · US$</th>
-                  <th className="text-right font-medium py-2 px-5">Saída · período</th>
-                  <th className="text-right font-medium py-2 px-5">Receita · período</th>
-                  <th className="text-right font-medium py-2 px-5">Cobertura</th>
-                  <th className="text-right font-medium py-2 px-5">Última saída</th>
-                  <th className="text-left font-medium py-2 px-5">Status</th>
+                  <th className="text-left font-medium py-2 px-3">SKU</th>
+                  <th className="text-left font-medium py-2 px-3">Descrição</th>
+                  <th className="text-left font-medium py-2 px-3">Fabricante</th>
+                  <th className="text-left font-medium py-2 px-3">Categoria</th>
+                  <th className="text-right font-medium py-2 px-3">Estoque</th>
+                  <th className="text-right font-medium py-2 px-3">Mínimo</th>
+                  <th className="text-right font-medium py-2 px-3">Custo US$</th>
+                  <th className="text-right font-medium py-2 px-3">Saídas</th>
+                  <th className="text-right font-medium py-2 px-3">Receita</th>
+                  <th className="text-right font-medium py-2 px-3">Cobertura</th>
+                  <th className="text-right font-medium py-2 px-3">Últ. saída</th>
+                  <th className="text-left font-medium py-2 px-3">Status</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
                 {filteredRows.slice(0, 200).map((r) => (
                   <tr key={r.productId} className="hover:bg-muted/30 transition-colors">
-                    <td className="py-2 px-5 font-mono text-xs text-muted-foreground tabular">
+                    <td className="py-2 px-3 font-mono text-xs text-muted-foreground tabular">
                       {r.productId}
                     </td>
-                    <td className="py-2 px-5 max-w-[280px] truncate">
+                    <td className="py-2 px-3 max-w-[200px] truncate">
                       <div className={cn("font-medium", !r.hasInventory && "text-warning")}>
                         {r.description || "—"}
                       </div>
@@ -336,28 +434,35 @@ export default function EstoquePage() {
                         </div>
                       )}
                     </td>
-                    <td className="py-2 px-5 font-mono text-xs text-muted-foreground">
+                    <td className="py-2 px-3 font-mono text-xs text-muted-foreground">
                       {r.manufacturerCode || "—"}
                     </td>
-                    <td className="py-2 px-5 text-muted-foreground truncate max-w-[160px]">
+                    <td className="py-2 px-3 text-muted-foreground truncate max-w-[120px]">
                       {r.subgroupName || "—"}
                     </td>
-                    <td className="py-2 px-5 text-right tabular">
+                    <td className="py-2 px-3 text-right tabular">
                       {formatNumber(r.stock)}
                     </td>
-                    <td className="py-2 px-5 text-right tabular font-medium">
+                    <td className="py-2 px-3 text-right tabular text-muted-foreground">
+                      {r.minStock > 0 ? (
+                        <span className={cn(r.stock <= r.minStock && "text-warning font-medium")}>
+                          {formatNumber(r.minStock)}
+                        </span>
+                      ) : "—"}
+                    </td>
+                    <td className="py-2 px-3 text-right tabular font-medium">
                       {formatCurrency(r.costTotalUSD, "2", { compact: r.costTotalUSD >= 10000 })}
                     </td>
-                    <td className="py-2 px-5 text-right tabular">
+                    <td className="py-2 px-3 text-right tabular">
                       {r.unitsSold > 0 ? formatNumber(r.unitsSold) : "—"}
                     </td>
-                    <td className="py-2 px-5 text-right tabular text-muted-foreground">
+                    <td className="py-2 px-3 text-right tabular text-muted-foreground">
                       {r.revenueSold > 0 ? <Money value={r.revenueSold} compact /> : "—"}
                     </td>
-                    <td className="py-2 px-5 text-right tabular">
+                    <td className="py-2 px-3 text-right tabular">
                       <CoverageCell row={r} />
                     </td>
-                    <td className="py-2 px-5 text-right tabular text-muted-foreground text-xs">
+                    <td className="py-2 px-3 text-right tabular text-muted-foreground text-xs">
                       {r.lastSaleDate ? (
                         <>
                           <div>{r.lastSaleDate}</div>
@@ -369,7 +474,7 @@ export default function EstoquePage() {
                         "—"
                       )}
                     </td>
-                    <td className="py-2 px-5">
+                    <td className="py-2 px-3">
                       <StatusBadge status={r.status} />
                     </td>
                   </tr>

@@ -26,6 +26,7 @@ export interface InventoryRow {
   subgroupId: string;
   subgroupName: string;
   stock: number;
+  minStock: number;             // estoque_minimo — reorder point (0 = not set)
   costTotalUSD: number;         // total value of on-hand stock in US$
   unitCostUSD: number;          // costTotalUSD / stock when stock > 0
   unitsSold: number;            // sum of quantity in period
@@ -164,6 +165,7 @@ export function inventoryAnalysis(
       subgroupId,
       subgroupName,
       stock: item.stock,
+      minStock: item.minStock,
       costTotalUSD: item.costTotalUSD,
       unitCostUSD,
       unitsSold,
@@ -193,6 +195,7 @@ export function inventoryAnalysis(
       subgroupId: m.subgroupId,
       subgroupName: m.subgroupName,
       stock: 0,
+      minStock: 0,
       costTotalUSD: 0,
       unitCostUSD: 0,
       unitsSold: m.unitsSold,
@@ -316,6 +319,14 @@ export function topDormant(rows: InventoryRow[], limit = 10): InventoryRow[] {
     .filter((r) => r.stock > 0 && r.unitsSold === 0)
     .sort((a, b) => b.costTotalUSD - a.costTotalUSD)
     .slice(0, limit);
+}
+
+// Products below their minimum stock level (minStock > 0 only).
+// Sorted by gap (minStock - stock) descending — biggest shortfall first.
+export function belowMinimumStock(rows: InventoryRow[]): InventoryRow[] {
+  return [...rows]
+    .filter((r) => r.minStock > 0 && r.stock <= r.minStock)
+    .sort((a, b) => (b.minStock - b.stock) - (a.minStock - a.stock));
 }
 
 // Items most at risk of rupture: rupture first (sorted by revenue lost), then

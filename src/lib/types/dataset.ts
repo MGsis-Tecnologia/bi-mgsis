@@ -109,6 +109,7 @@ export interface InventoryItem {
   manufacturerCode: string;   // produto_fabricante — manufacturer/supplier reference
   stock: number;              // estoque_item — quantity on hand
   costTotalUSD: number;       // valor_estoque — total stock cost in US$
+  minStock: number;           // estoque_minimo — reorder point (0 = not set, ignored)
 }
 
 export interface StoredInventory {

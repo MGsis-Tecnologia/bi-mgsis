@@ -55,6 +55,41 @@ export function customerMetrics(orders: ImportedOrder[], clients: ImportedClient
   });
 }
 
+// ─── Ranking por Lucro (receita − custo) por cliente ─────────────────────────
+
+export interface CustomerProfitEntry {
+  clientId: string;
+  clientName: string;
+  orders: number;
+  revenue: number;
+  cost: number;
+  profit: number;
+  marginPct: number;
+  avgTicket: number;
+}
+
+export function customerProfitRanking(orders: ImportedOrder[]): CustomerProfitEntry[] {
+  const map = new Map<string, CustomerProfitEntry>();
+  for (const o of orders) {
+    let e = map.get(o.clientId);
+    if (!e) {
+      e = { clientId: o.clientId, clientName: o.clientName, orders: 0, revenue: 0, cost: 0, profit: 0, marginPct: 0, avgTicket: 0 };
+      map.set(o.clientId, e);
+    }
+    e.orders++;
+    e.revenue += o.totalBRL;
+    e.cost    += o.costBRL;
+  }
+  return [...map.values()]
+    .map((e) => ({
+      ...e,
+      profit:    e.revenue - e.cost,
+      marginPct: e.revenue > 0 ? (e.revenue - e.cost) / e.revenue : 0,
+      avgTicket: e.orders > 0 ? e.revenue / e.orders : 0,
+    }))
+    .sort((a, b) => b.profit - a.profit);
+}
+
 export function segmentBreakdown(metrics: CustomerMetric[]): Record<string, number> {
   const out: Record<string, number> = {};
   for (const m of metrics) out[m.segment] = (out[m.segment] ?? 0) + 1;

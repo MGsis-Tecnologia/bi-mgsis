@@ -26,7 +26,7 @@ interface FiltersState {
 export const useFilters = create<FiltersState>()(
   persist(
     (set, get) => ({
-      preset: "12m",
+      preset: "mes-atual",
       customRange: null,
       currency: "ALL",
       channel: "all",
@@ -40,7 +40,7 @@ export const useFilters = create<FiltersState>()(
       setSeller: (sellerId) => set({ sellerId }),
       setSubgroup: (subgroupId) => set({ subgroupId }),
       resetFilters: () =>
-        set({ preset: "12m", customRange: null, channel: "all", sellerId: "all", subgroupId: "all" }),
+        set({ preset: "mes-atual", customRange: null, channel: "all", sellerId: "all", subgroupId: "all" }),
       getRange: () => {
         const { preset, customRange } = get();
         if (preset === "custom" && customRange) {
@@ -50,10 +50,10 @@ export const useFilters = create<FiltersState>()(
       },
     }),
     {
-      name: "mgsis-filters",
+      name: "mgsis-filters-v2",
+      // preset e customRange NÃO são persistidos — a data sempre reinicia
+      // com "mes-atual" ao abrir o app, evitando carregar 12 meses de dados.
       partialize: (s) => ({
-        preset: s.preset,
-        customRange: s.customRange,
         currency: s.currency,
         channel: s.channel,
         sellerId: s.sellerId,

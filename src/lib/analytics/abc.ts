@@ -82,6 +82,45 @@ export function subgroupABC(orders: ImportedOrder[]): SubgroupABCEntry[] {
   });
 }
 
+// ─── Ranking por lucro (receita − custo) ─────────────────────────────────────
+
+export interface ProductProfitEntry {
+  productId: string;
+  productName: string;
+  subgroupId: string;
+  subgroupName: string;
+  units: number;
+  revenue: number;
+  cost: number;
+  profit: number;
+  marginPct: number;   // profit / revenue (0–1)
+}
+
+export function productProfitRanking(orders: ImportedOrder[]): ProductProfitEntry[] {
+  const map = new Map<string, ProductProfitEntry>();
+  for (const o of orders) {
+    for (const it of o.items) {
+      let e = map.get(it.productId);
+      if (!e) {
+        e = {
+          productId: it.productId,
+          productName: it.productName,
+          subgroupId: it.subgroupId,
+          subgroupName: it.subgroupName,
+          units: 0, revenue: 0, cost: 0, profit: 0, marginPct: 0,
+        };
+        map.set(it.productId, e);
+      }
+      e.units   += it.quantity;
+      e.revenue += it.totalBRL;
+      e.cost    += it.costBRL;
+    }
+  }
+  return [...map.values()]
+    .map((e) => ({ ...e, profit: e.revenue - e.cost, marginPct: e.revenue > 0 ? (e.revenue - e.cost) / e.revenue : 0 }))
+    .sort((a, b) => b.profit - a.profit);
+}
+
 export function customerABC(orders: ImportedOrder[], clients: ImportedClient[]): ABCEntry<ImportedClient>[] {
   const byClient = new Map<string, { revenue: number; units: number }>();
   for (const o of orders) {

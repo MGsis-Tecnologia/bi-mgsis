@@ -11,9 +11,9 @@ import { BarChartH } from "@/components/charts/bar-chart-h";
 import { DonutChart } from "@/components/charts/donut-chart";
 import { Money } from "@/components/dashboard/money";
 import { useDataset, useFilteredOrders } from "@/lib/hooks/use-dataset";
-import { customerMetrics, segmentBreakdown } from "@/lib/analytics/customers";
+import { customerMetrics, segmentBreakdown, customerProfitRanking } from "@/lib/analytics/customers";
 import { customerABC } from "@/lib/analytics/abc";
-import { formatNumber } from "@/lib/utils/format";
+import { formatNumber, formatPercent } from "@/lib/utils/format";
 import { cn } from "@/lib/utils";
 import { useTranslation } from "@/lib/hooks/use-translation";
 
@@ -55,6 +55,7 @@ export default function ClientesPage() {
   const churnRisk = metrics.filter((m) => m.segment === "em-risco").length;
 
   const topByLTV = [...activeCustomers].sort((a, b) => b.ltv - a.ltv).slice(0, 10);
+  const profitRanking = React.useMemo(() => customerProfitRanking(orders), [orders]);
 
   if (!ds.hasData) {
     return (
@@ -178,6 +179,107 @@ export default function ClientesPage() {
                   );
                 })}
               </tbody>
+            </table>
+          </div>
+        </CardContent>
+      </Card>
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle>Clientes mais lucrativos</CardTitle>
+              <p className="mt-0.5 text-[11px] text-muted-foreground">
+                Ordenado por lucro total (receita − custo) no período.
+              </p>
+            </div>
+            <Badge variant="ghost">{profitRanking.length} clientes</Badge>
+          </div>
+        </CardHeader>
+        <CardContent className="px-0">
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-y border-border text-[10px] uppercase tracking-[0.14em] text-muted-foreground">
+                  <th className="text-left font-medium py-2 px-5">#</th>
+                  <th className="text-left font-medium py-2 px-5">Cliente</th>
+                  <th className="text-right font-medium py-2 px-5">Pedidos</th>
+                  <th className="text-right font-medium py-2 px-5">Receita</th>
+                  <th className="text-right font-medium py-2 px-5">Custo</th>
+                  <th className="text-right font-medium py-2 px-5">Lucro</th>
+                  <th className="text-right font-medium py-2 px-5">Margem</th>
+                  <th className="text-right font-medium py-2 px-5">Ticket médio</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {profitRanking.slice(0, 25).map((e, i) => (
+                  <tr key={e.clientId} className="hover:bg-muted/30 transition-colors">
+                    <td className="py-2.5 px-5 font-mono text-xs text-muted-foreground tabular">
+                      {(i + 1).toString().padStart(2, "0")}
+                    </td>
+                    <td className="py-2.5 px-5">
+                      <div className="font-medium truncate max-w-[220px]">{e.clientName}</div>
+                      <div className="text-xs text-muted-foreground font-mono">{e.clientId}</div>
+                    </td>
+                    <td className="py-2.5 px-5 text-right tabular text-muted-foreground">{e.orders}</td>
+                    <td className="py-2.5 px-5 text-right tabular"><Money value={e.revenue} /></td>
+                    <td className="py-2.5 px-5 text-right tabular text-muted-foreground"><Money value={e.cost} /></td>
+                    <td className={cn("py-2.5 px-5 text-right tabular font-medium", e.profit >= 0 ? "text-positive" : "text-negative")}>
+                      <Money value={e.profit} />
+                    </td>
+                    <td className="py-2.5 px-5 text-right tabular">
+                      <span className={cn(
+                        "inline-block rounded-full px-2 py-0.5 text-[10px] font-medium",
+                        e.marginPct >= 0.3 ? "bg-positive/15 text-positive"
+                          : e.marginPct >= 0.1 ? "bg-amber-500/15 text-amber-600"
+                          : "bg-negative/15 text-negative"
+                      )}>
+                        {formatPercent(e.marginPct, { decimals: 1 })}
+                      </span>
+                    </td>
+                    <td className="py-2.5 px-5 text-right tabular text-muted-foreground">
+                      <Money value={e.avgTicket} />
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+              <tfoot>
+                <tr className="border-t border-border text-[11px] font-medium">
+                  <td className="py-2.5 px-5" />
+                  <td className="py-2.5 px-5 uppercase tracking-[0.1em] text-muted-foreground">
+                    Total · {profitRanking.length} clientes
+                  </td>
+                  <td className="py-2.5 px-5 text-right tabular text-muted-foreground">
+                    {formatNumber(profitRanking.reduce((s, e) => s + e.orders, 0))}
+                  </td>
+                  <td className="py-2.5 px-5 text-right tabular">
+                    <Money value={profitRanking.reduce((s, e) => s + e.revenue, 0)} />
+                  </td>
+                  <td className="py-2.5 px-5 text-right tabular text-muted-foreground">
+                    <Money value={profitRanking.reduce((s, e) => s + e.cost, 0)} />
+                  </td>
+                  <td className="py-2.5 px-5 text-right tabular text-positive font-medium">
+                    <Money value={profitRanking.reduce((s, e) => s + e.profit, 0)} />
+                  </td>
+                  <td className="py-2.5 px-5 text-right tabular">
+                    {(() => {
+                      const rev = profitRanking.reduce((s, e) => s + e.revenue, 0);
+                      const pft = profitRanking.reduce((s, e) => s + e.profit, 0);
+                      const pct = rev > 0 ? pft / rev : 0;
+                      return (
+                        <span className={cn(
+                          "inline-block rounded-full px-2 py-0.5 text-[10px] font-medium",
+                          pct >= 0.3 ? "bg-positive/15 text-positive"
+                            : pct >= 0.1 ? "bg-amber-500/15 text-amber-600"
+                            : "bg-negative/15 text-negative"
+                        )}>
+                          {formatPercent(pct, { decimals: 1 })}
+                        </span>
+                      );
+                    })()}
+                  </td>
+                  <td className="py-2.5 px-5" />
+                </tr>
+              </tfoot>
             </table>
           </div>
         </CardContent>
