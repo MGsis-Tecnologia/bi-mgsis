@@ -141,6 +141,29 @@ export interface StoredPayables {
   rowCount: number;
 }
 
+// ─── Caixa / movimentação bancária (cashflow) ─────────────────────────────────
+// One row per movement. Negative valorDocumento = saída (expense), positive = entrada (income).
+export interface CaixaItem {
+  date: string;                  // caixa_data_emissao — ISO YYYY-MM-DD
+  centroCustoId: string;         // centro_custo_id
+  centroCustoDescricao: string;  // centro_custo_descricao
+  planoContaId: string;          // plano_conta_id
+  planoContaCodigo: string;      // plano_conta_codigo
+  planoContaDescricao: string;   // plano_conta_descricao
+  caixaId: string;               // caixa_id
+  caixaDescricao: string;        // caixa_descricao
+  valorDocumento: number;        // caixa_valor_documento (negative = saída)
+  moedaId: string;               // moeda_id
+  moedaSigla: string;            // moeda_sigla
+}
+
+export interface StoredCaixa {
+  items: CaixaItem[];
+  importedAt: string;    // ISO
+  filename: string;
+  rowCount: number;
+}
+
 // "1"=R$  "2"=US$  "3"=G$  "ALL"=Todas Moedas (converte para R$)
 export type AppCurrencyId = "1" | "2" | "3" | "ALL";
 

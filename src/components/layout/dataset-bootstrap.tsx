@@ -8,9 +8,11 @@ import {
   RECEIVABLES_IDB_KEY,
   PAYABLES_IDB_KEY,
   INVENTORY_IDB_KEY,
+  CAIXA_IDB_KEY,
 } from "@/lib/store/dataset";
 import { idbGet } from "@/lib/store/idb";
 import type {
+  StoredCaixa,
   StoredDataset,
   StoredInventory,
   StoredPayables,
@@ -29,13 +31,15 @@ export function DatasetBootstrap() {
       idbGet<StoredReceivables>(RECEIVABLES_IDB_KEY),
       idbGet<StoredPayables>(PAYABLES_IDB_KEY),
       idbGet<StoredInventory>(INVENTORY_IDB_KEY),
+      idbGet<StoredCaixa>(CAIXA_IDB_KEY),
     ])
-      .then(([data, receivables, payables, inventory]) => {
+      .then(([data, receivables, payables, inventory, caixa]) => {
         const store = useDatasetStore.getState();
         if (data) store.setDataset(data);
         if (receivables) store.setReceivables(receivables);
         if (payables) store.setPayables(payables);
         if (inventory) store.setInventory(inventory);
+        if (caixa) store.setCaixa(caixa);
         store._setLoaded();
       })
       .catch(() => {

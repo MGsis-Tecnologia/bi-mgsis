@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import type {
+  StoredCaixa,
   StoredDataset,
   StoredInventory,
   StoredPayables,
@@ -15,6 +16,7 @@ interface DatasetState {
   receivables: StoredReceivables | null;
   payables: StoredPayables | null;
   inventory: StoredInventory | null;
+  caixa: StoredCaixa | null;
   isLoaded: boolean;
   setDataset: (d: StoredDataset) => void;
   clearDataset: () => void;
@@ -24,6 +26,8 @@ interface DatasetState {
   clearPayables: () => void;
   setInventory: (i: StoredInventory) => void;
   clearInventory: () => void;
+  setCaixa: (c: StoredCaixa) => void;
+  clearCaixa: () => void;
   _setLoaded: () => void;
 }
 
@@ -32,6 +36,7 @@ export const useDatasetStore = create<DatasetState>()((set) => ({
   receivables: null,
   payables: null,
   inventory: null,
+  caixa: null,
   isLoaded: false,
   setDataset:       (dataset)     => set({ dataset }),
   clearDataset:     ()            => set({ dataset: null }),
@@ -41,6 +46,8 @@ export const useDatasetStore = create<DatasetState>()((set) => ({
   clearPayables:    ()            => set({ payables: null }),
   setInventory:     (inventory)   => set({ inventory }),
   clearInventory:   ()            => set({ inventory: null }),
+  setCaixa:         (caixa)       => set({ caixa }),
+  clearCaixa:       ()            => set({ caixa: null }),
   _setLoaded:       ()            => set({ isLoaded: true }),
 }));
 
@@ -48,3 +55,4 @@ export const IDB_KEY = "mgsis-dataset";
 export const RECEIVABLES_IDB_KEY = "mgsis-receivables";
 export const PAYABLES_IDB_KEY = "mgsis-payables";
 export const INVENTORY_IDB_KEY = "mgsis-inventory";
+export const CAIXA_IDB_KEY = "mgsis-caixa";

@@ -1,10 +1,12 @@
 import Papa from "papaparse";
 import * as XLSX from "xlsx";
 import type {
+  CaixaItem,
   InventoryItem,
   OrderLineItem,
   PayableItem,
   ReceivableItem,
+  StoredCaixa,
   StoredDataset,
   StoredInventory,
   StoredPayables,
@@ -66,7 +68,20 @@ const INVENTORY_REQUIRED_COLS = [
   "valor_estoque",
 ] as const;
 
-export type DatasetKind = "sales" | "receivable" | "payable" | "inventory";
+// Required column names for the CAIXA layout (cashflow / bank movements)
+const CAIXA_REQUIRED_COLS = [
+  "caixa_data_emissao",
+  "plano_conta_id",
+  "plano_conta_codigo",
+  "plano_conta_descricao",
+  "caixa_id",
+  "caixa_descricao",
+  "caixa_valor_documento",
+  "moeda_id",
+  "moeda_sigla",
+] as const;
+
+export type DatasetKind = "sales" | "receivable" | "payable" | "inventory" | "caixa";
 
 export interface ParseResult {
   kind: DatasetKind | null;
@@ -74,13 +89,14 @@ export interface ParseResult {
   receivables: StoredReceivables | null;  // populated when kind === "receivable"
   payables: StoredPayables | null;        // populated when kind === "payable"
   inventory: StoredInventory | null;      // populated when kind === "inventory"
+  caixa: StoredCaixa | null;             // populated when kind === "caixa"
   errors: string[];
   warnings: string[];
   skipped: number;
 }
 
 function errorResult(errors: string[], warnings: string[] = [], skipped = 0): ParseResult {
-  return { kind: null, dataset: null, receivables: null, payables: null, inventory: null, errors, warnings, skipped };
+  return { kind: null, dataset: null, receivables: null, payables: null, inventory: null, caixa: null, errors, warnings, skipped };
 }
 
 // Parse date string → ISO YYYY-MM-DD (string, never a Date object — survives JSON serialization)
@@ -125,9 +141,13 @@ function parseNumber(raw: string | number): number {
   return parseFloat(s.replace(/,/g, "")) || 0;
 }
 
-// Normalize column header: lowercase, trim, collapse spaces/underscores
+// Normalize column header: strip BOM, lowercase, trim, collapse spaces/underscores
 function normalizeHeader(h: string): string {
-  return String(h).toLowerCase().trim().replace(/\s+/g, "_");
+  return String(h)
+    .replace(/^﻿/, "")   // strip UTF-8 BOM that Windows CSV exports prepend
+    .toLowerCase()
+    .trim()
+    .replace(/\s+/g, "_");
 }
 
 // Map raw row object to a typed record using normalized headers
@@ -153,6 +173,9 @@ function processRows(rawRows: Record<string, unknown>[], filename: string): Pars
     colMap[normalizeHeader(h)] = h;
   }
 
+  // Debug: log detected columns so browser DevTools shows what arrived
+  console.debug("[csv-parser] colunas detectadas:", Object.keys(colMap));
+
   // Layout detection — discriminate by key columns
   if ("pessoa_fornecedor_id" in colMap) {
     return processPayableRows(rawRows, colMap, filename);
@@ -166,9 +189,14 @@ function processRows(rawRows: Record<string, unknown>[], filename: string): Pars
   if ("estoque_item" in colMap || ("produto_id" in colMap && "valor_estoque" in colMap)) {
     return processInventoryRows(rawRows, colMap, filename);
   }
+  if ("caixa_valor_documento" in colMap || ("caixa_id" in colMap && "plano_conta_id" in colMap)) {
+    console.debug("[csv-parser] leiaute detectado: caixa");
+    return processCaixaRows(rawRows, colMap, filename);
+  }
 
+  console.warn("[csv-parser] leiaute NÃO reconhecido. Colunas:", Object.keys(colMap));
   return errorResult([
-    "Leiaute não reconhecido. O arquivo deve conter colunas de Vendas (pedido_documento), Contas a Receber (pessoa_cliente_id), Contas a Pagar (pessoa_fornecedor_id) ou Estoque (estoque_item).",
+    "Leiaute não reconhecido. O arquivo deve conter colunas de Vendas (pedido_documento), Contas a Receber (pessoa_cliente_id), Contas a Pagar (pessoa_fornecedor_id), Estoque (estoque_item) ou Caixa (caixa_valor_documento).",
   ]);
 }
 
@@ -256,6 +284,7 @@ function processSalesRows(
     receivables: null,
     payables: null,
     inventory: null,
+    caixa: null,
     errors: [],
     warnings: warnings.slice(0, 20),
     skipped,
@@ -356,6 +385,7 @@ function processReceivableRows(
     },
     payables: null,
     inventory: null,
+    caixa: null,
     errors: [],
     warnings: warnings.slice(0, 20),
     skipped,
@@ -440,6 +470,7 @@ function processPayableRows(
       rowCount: items.length,
     },
     inventory: null,
+    caixa: null,
     errors: [],
     warnings: warnings.slice(0, 20),
     skipped,
@@ -508,6 +539,87 @@ function processInventoryRows(
     receivables: null,
     payables: null,
     inventory: {
+      items,
+      importedAt: new Date().toISOString(),
+      filename,
+      rowCount: items.length,
+    },
+    caixa: null,
+    errors: [],
+    warnings: warnings.slice(0, 20),
+    skipped,
+  };
+}
+
+// ─── CAIXA (movimentação bancária / fluxo de caixa) ──────────────────────────
+
+function processCaixaRows(
+  rawRows: Record<string, unknown>[],
+  colMap: Record<string, string>,
+  filename: string
+): ParseResult {
+  const missing = CAIXA_REQUIRED_COLS.filter((c) => !(c in colMap));
+  if (missing.length > 0) {
+    console.warn("[csv-parser] caixa — colunas ausentes:", missing);
+    console.debug("[csv-parser] caixa — colunas presentes:", Object.keys(colMap));
+    return errorResult([`Colunas obrigatórias ausentes (Caixa): ${missing.join(", ")}`]);
+  }
+
+  const items: CaixaItem[] = [];
+  const warnings: string[] = [];
+  let skipped = 0;
+  let rowNum = 1;
+
+  for (const rawRow of rawRows) {
+    rowNum++;
+    const row = mapRow(rawRow, colMap);
+
+    const caixaId = String(row["caixa_id"] ?? "").trim();
+    if (!caixaId) {
+      warnings.push(`Linha ${rowNum}: caixa_id vazio — ignorada.`);
+      skipped++;
+      continue;
+    }
+
+    const date = parseDate(String(row["caixa_data_emissao"] ?? ""));
+    if (!date) {
+      warnings.push(`Linha ${rowNum}: data inválida "${row["caixa_data_emissao"]}" — ignorada.`);
+      skipped++;
+      continue;
+    }
+
+    const valorDocumento = parseNumber(row["caixa_valor_documento"] as string);
+    if (valorDocumento === 0) {
+      skipped++;
+      continue;
+    }
+
+    items.push({
+      date,
+      centroCustoId:        String(row["centro_custo_id"] ?? "").trim(),
+      centroCustoDescricao: String(row["centro_custo_descricao"] ?? "").trim(),
+      planoContaId:         String(row["plano_conta_id"] ?? "").trim(),
+      planoContaCodigo:     String(row["plano_conta_codigo"] ?? "").trim(),
+      planoContaDescricao:  String(row["plano_conta_descricao"] ?? "").trim(),
+      caixaId,
+      caixaDescricao:       String(row["caixa_descricao"] ?? "").trim(),
+      valorDocumento,
+      moedaId:              String(row["moeda_id"] ?? "1").trim(),
+      moedaSigla:           String(row["moeda_sigla"] ?? "R$").trim(),
+    });
+  }
+
+  if (items.length === 0) {
+    return errorResult(["Nenhuma movimentação de caixa válida encontrada."], warnings, skipped);
+  }
+
+  return {
+    kind: "caixa",
+    dataset: null,
+    receivables: null,
+    payables: null,
+    inventory: null,
+    caixa: {
       items,
       importedAt: new Date().toISOString(),
       filename,

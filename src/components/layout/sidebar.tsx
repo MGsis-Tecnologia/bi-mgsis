@@ -8,13 +8,13 @@ import {
   Activity,
   AlertTriangle,
   ArrowUpRight,
-  Banknote,
   BarChart3,
   Boxes,
   CalendarRange,
   ChevronLeft,
   ChevronRight,
   CircleDollarSign,
+  LayoutList,
   Package,
   Receipt,
   Sparkles,
@@ -64,7 +64,7 @@ const NAV: NavGroup[] = [
   {
     sectionKey: "sidebar.section.financial",
     items: [
-      { href: "/financeiro", labelKey: "sidebar.nav.revenue", icon: Banknote },
+      { href: "/financeiro/dre", labelKey: "sidebar.nav.dre", icon: LayoutList },
       { href: "/financeiro/receber", labelKey: "sidebar.nav.receivable", icon: CircleDollarSign },
       { href: "/financeiro/pagar", labelKey: "sidebar.nav.payable", icon: Wallet },
     ],

@@ -1,12 +1,12 @@
 "use client";
 
 import * as React from "react";
-import { Boxes, CheckCircle2, CircleDollarSign, Clock, CreditCard, Loader2, ShoppingCart, Trash2, Upload, XCircle } from "lucide-react";
+import { Boxes, CheckCircle2, CircleDollarSign, Clock, CreditCard, Landmark, Loader2, ShoppingCart, Trash2, Upload, XCircle } from "lucide-react";
 import { PageHeader } from "@/components/layout/page-header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { parseFile, type DatasetKind } from "@/lib/parsers/csv-parser";
-import { useDatasetStore, IDB_KEY, RECEIVABLES_IDB_KEY, PAYABLES_IDB_KEY, INVENTORY_IDB_KEY } from "@/lib/store/dataset";
+import { useDatasetStore, IDB_KEY, RECEIVABLES_IDB_KEY, PAYABLES_IDB_KEY, INVENTORY_IDB_KEY, CAIXA_IDB_KEY } from "@/lib/store/dataset";
 import { idbSet, idbDel } from "@/lib/store/idb";
 import { useTranslation } from "@/lib/hooks/use-translation";
 import { formatNumber, formatDate } from "@/lib/utils/format";
@@ -30,6 +30,7 @@ const KIND_LABEL: Record<string, string> = {
   receivable: "Contas a Receber",
   payable: "Contas a Pagar",
   inventory: "Estoque",
+  caixa: "Caixa / Banco",
 };
 
 export default function ImportacaoPage() {
@@ -41,9 +42,9 @@ export default function ImportacaoPage() {
   const inputRef = React.useRef<HTMLInputElement>(null);
 
   const {
-    dataset, receivables, payables, inventory,
-    setDataset, setReceivables, setPayables, setInventory,
-    clearDataset, clearReceivables, clearPayables, clearInventory,
+    dataset, receivables, payables, inventory, caixa,
+    setDataset, setReceivables, setPayables, setInventory, setCaixa,
+    clearDataset, clearReceivables, clearPayables, clearInventory, clearCaixa,
   } = useDatasetStore();
 
   function updateItem(id: string, patch: Partial<QueueItem>) {
@@ -63,7 +64,7 @@ export default function ImportacaoPage() {
 
       const result = await parseFile(nextItem.file);
 
-      if (result.errors.length > 0 || (!result.dataset && !result.receivables && !result.payables && !result.inventory)) {
+      if (result.errors.length > 0 || (!result.dataset && !result.receivables && !result.payables && !result.inventory && !result.caixa)) {
         updateItem(nextItem.id, {
           status: "error", kind: result.kind,
           errors: result.errors, warnings: result.warnings, skipped: result.skipped,
@@ -71,7 +72,14 @@ export default function ImportacaoPage() {
         continue;
       }
 
-      if (result.kind === "inventory" && result.inventory) {
+      if (result.kind === "caixa" && result.caixa) {
+        await idbSet(CAIXA_IDB_KEY, result.caixa);
+        setCaixa(result.caixa);
+        updateItem(nextItem.id, {
+          status: "success", kind: "caixa",
+          rowCount: result.caixa.rowCount, warnings: result.warnings, skipped: result.skipped,
+        });
+      } else if (result.kind === "inventory" && result.inventory) {
         await idbSet(INVENTORY_IDB_KEY, result.inventory);
         setInventory(result.inventory);
         updateItem(nextItem.id, {
@@ -137,7 +145,7 @@ export default function ImportacaoPage() {
 
   const isRunning = queue.some(i => i.status === "waiting" || i.status === "parsing");
   const hasQueue = queue.length > 0;
-  const hasDatasets = !!(dataset || receivables || payables || inventory);
+  const hasDatasets = !!(dataset || receivables || payables || inventory || caixa);
 
   return (
     <div className="space-y-8">
@@ -166,7 +174,7 @@ export default function ImportacaoPage() {
               <p className="text-sm font-medium text-foreground">{t("importacao.upload.title")}</p>
               <p className="mt-1 text-xs text-muted-foreground">{t("importacao.upload.desc")}</p>
               <p className="mt-1 text-[11px] text-muted-foreground">
-                Vendas, Contas a Receber, Contas a Pagar e Estoque — o tipo é identificado automaticamente pelas colunas.
+                Vendas, Contas a Receber, Contas a Pagar, Estoque e Caixa/Banco — o tipo é identificado automaticamente pelas colunas.
               </p>
               <p className="mt-1 text-[11px] text-muted-foreground">
                 Selecione vários arquivos de uma vez para importar em fila.
@@ -251,6 +259,16 @@ export default function ImportacaoPage() {
                 onRemove={() => { idbDel(INVENTORY_IDB_KEY); clearInventory(); }}
               />
             )}
+            {caixa && (
+              <DatasetRow
+                icon={<Landmark className="h-4 w-4 text-accent" />}
+                title="Caixa / Banco"
+                filename={caixa.filename}
+                rowLabel={`${formatNumber(caixa.rowCount)} movimentações`}
+                importedAt={caixa.importedAt}
+                onRemove={() => { idbDel(CAIXA_IDB_KEY); clearCaixa(); }}
+              />
+            )}
           </CardContent>
         </Card>
       )}
@@ -278,6 +296,11 @@ export default function ImportacaoPage() {
             heading="Leiaute · Estoque"
             note="Snapshot do inventário (uma linha por SKU). produto_id liga ao item de venda. valor_estoque é o custo total do estoque em US$."
             cols={INVENTORY_SCHEMA}
+          />
+          <SchemaTable
+            heading="Leiaute · Caixa / Banco"
+            note="Cada linha é uma movimentação. caixa_valor_documento negativo = saída (despesa); positivo = entrada (ingresso). Suporta hierarquia de plano de contas pelo campo plano_conta_codigo (ex: 1.1.01)."
+            cols={CAIXA_SCHEMA}
           />
         </CardContent>
       </Card>
@@ -307,7 +330,7 @@ function QueueRow({ item }: { item: QueueItem }) {
             <>
               <Badge variant="ghost">{KIND_LABEL[item.kind]}</Badge>
               <span className="text-[11px] text-muted-foreground">
-                {formatNumber(item.rowCount)} {item.kind === "sales" ? "linha(s)" : item.kind === "inventory" ? "SKU(s)" : "título(s)"}
+                {formatNumber(item.rowCount)} {item.kind === "sales" ? "linha(s)" : item.kind === "inventory" ? "SKU(s)" : item.kind === "caixa" ? "movimentação(ões)" : "título(s)"}
               </span>
               {item.skipped > 0 && (
                 <span className="text-[11px] text-muted-foreground">{item.skipped} ignorada(s)</span>
@@ -452,4 +475,18 @@ const INVENTORY_SCHEMA = [
   { name: "produto_fabricante",    type: "Texto",   example: "DL-1500X-BLK" },
   { name: "estoque_item",          type: "Número",  example: "37" },
   { name: "valor_estoque",         type: "Decimal · US$", example: "1850,00" },
+];
+
+const CAIXA_SCHEMA = [
+  { name: "caixa_data_emissao",      type: "Data",            example: "25/12/2024" },
+  { name: "centro_custo_id",         type: "Chave (opcional)", example: "CC-01" },
+  { name: "centro_custo_descricao",  type: "Texto (opcional)", example: "Administrativo" },
+  { name: "plano_conta_id",          type: "Chave",            example: "42" },
+  { name: "plano_conta_codigo",      type: "Texto",            example: "3.1.02" },
+  { name: "plano_conta_descricao",   type: "Texto",            example: "Aluguel" },
+  { name: "caixa_id",               type: "Chave",            example: "CX-01" },
+  { name: "caixa_descricao",        type: "Texto",            example: "Conta Corrente BB" },
+  { name: "caixa_valor_documento",  type: "Decimal",          example: "-1500,00 / 5000,00" },
+  { name: "moeda_id",               type: "1|2|3",            example: "1" },
+  { name: "moeda_sigla",            type: "Texto",            example: "R$" },
 ];
