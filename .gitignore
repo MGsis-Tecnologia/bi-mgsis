@@ -13,3 +13,6 @@ next-env.d.ts
 *.tsbuildinfo
 *.pem
 *.key
+
+# Servidor: snapshots persistidos pelas API routes (importação local compartilhada)
+data/

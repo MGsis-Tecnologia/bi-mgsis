@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { parseFile, type DatasetKind } from "@/lib/parsers/csv-parser";
 import { useDatasetStore, IDB_KEY, RECEIVABLES_IDB_KEY, PAYABLES_IDB_KEY, INVENTORY_IDB_KEY, CAIXA_IDB_KEY } from "@/lib/store/dataset";
 import { idbSet, idbDel } from "@/lib/store/idb";
+import { serverDelete, serverPut } from "@/lib/server/dataset-client";
 import { useTranslation } from "@/lib/hooks/use-translation";
 import { formatNumber, formatDate } from "@/lib/utils/format";
 
@@ -72,40 +73,63 @@ export default function ImportacaoPage() {
         continue;
       }
 
+      // Optional advisory when the server persistence fails — IDB remains
+      // authoritative for the local browser.
+      const serverWarning: string[] = [];
+      async function pushToServer<T>(kind: DatasetKind, value: T) {
+        try {
+          await serverPut(kind, value);
+        } catch (err) {
+          serverWarning.push(
+            `Falha ao salvar no servidor: ${(err as Error).message}. Dados ficaram só no navegador.`
+          );
+        }
+      }
+
       if (result.kind === "caixa" && result.caixa) {
         await idbSet(CAIXA_IDB_KEY, result.caixa);
+        await pushToServer("caixa", result.caixa);
         setCaixa(result.caixa);
         updateItem(nextItem.id, {
           status: "success", kind: "caixa",
-          rowCount: result.caixa.rowCount, warnings: result.warnings, skipped: result.skipped,
+          rowCount: result.caixa.rowCount,
+          warnings: [...result.warnings, ...serverWarning], skipped: result.skipped,
         });
       } else if (result.kind === "inventory" && result.inventory) {
         await idbSet(INVENTORY_IDB_KEY, result.inventory);
+        await pushToServer("inventory", result.inventory);
         setInventory(result.inventory);
         updateItem(nextItem.id, {
           status: "success", kind: "inventory",
-          rowCount: result.inventory.rowCount, warnings: result.warnings, skipped: result.skipped,
+          rowCount: result.inventory.rowCount,
+          warnings: [...result.warnings, ...serverWarning], skipped: result.skipped,
         });
       } else if (result.kind === "payable" && result.payables) {
         await idbSet(PAYABLES_IDB_KEY, result.payables);
+        await pushToServer("payable", result.payables);
         setPayables(result.payables);
         updateItem(nextItem.id, {
           status: "success", kind: "payable",
-          rowCount: result.payables.rowCount, warnings: result.warnings, skipped: result.skipped,
+          rowCount: result.payables.rowCount,
+          warnings: [...result.warnings, ...serverWarning], skipped: result.skipped,
         });
       } else if (result.kind === "receivable" && result.receivables) {
         await idbSet(RECEIVABLES_IDB_KEY, result.receivables);
+        await pushToServer("receivable", result.receivables);
         setReceivables(result.receivables);
         updateItem(nextItem.id, {
           status: "success", kind: "receivable",
-          rowCount: result.receivables.rowCount, warnings: result.warnings, skipped: result.skipped,
+          rowCount: result.receivables.rowCount,
+          warnings: [...result.warnings, ...serverWarning], skipped: result.skipped,
         });
       } else if (result.dataset) {
         await idbSet(IDB_KEY, result.dataset);
+        await pushToServer("sales", result.dataset);
         setDataset(result.dataset);
         updateItem(nextItem.id, {
           status: "success", kind: "sales",
-          rowCount: result.dataset.rowCount, warnings: result.warnings, skipped: result.skipped,
+          rowCount: result.dataset.rowCount,
+          warnings: [...result.warnings, ...serverWarning], skipped: result.skipped,
         });
       }
     }
@@ -226,7 +250,7 @@ export default function ImportacaoPage() {
                 filename={dataset.filename}
                 rowLabel={`${formatNumber(dataset.rowCount)} linhas`}
                 importedAt={dataset.importedAt}
-                onRemove={() => { idbDel(IDB_KEY); clearDataset(); }}
+                onRemove={() => { idbDel(IDB_KEY); serverDelete("sales"); clearDataset(); }}
               />
             )}
             {receivables && (
@@ -236,7 +260,7 @@ export default function ImportacaoPage() {
                 filename={receivables.filename}
                 rowLabel={`${formatNumber(receivables.rowCount)} títulos`}
                 importedAt={receivables.importedAt}
-                onRemove={() => { idbDel(RECEIVABLES_IDB_KEY); clearReceivables(); }}
+                onRemove={() => { idbDel(RECEIVABLES_IDB_KEY); serverDelete("receivable"); clearReceivables(); }}
               />
             )}
             {payables && (
@@ -246,7 +270,7 @@ export default function ImportacaoPage() {
                 filename={payables.filename}
                 rowLabel={`${formatNumber(payables.rowCount)} títulos`}
                 importedAt={payables.importedAt}
-                onRemove={() => { idbDel(PAYABLES_IDB_KEY); clearPayables(); }}
+                onRemove={() => { idbDel(PAYABLES_IDB_KEY); serverDelete("payable"); clearPayables(); }}
               />
             )}
             {inventory && (
@@ -256,7 +280,7 @@ export default function ImportacaoPage() {
                 filename={inventory.filename}
                 rowLabel={`${formatNumber(inventory.rowCount)} SKUs`}
                 importedAt={inventory.importedAt}
-                onRemove={() => { idbDel(INVENTORY_IDB_KEY); clearInventory(); }}
+                onRemove={() => { idbDel(INVENTORY_IDB_KEY); serverDelete("inventory"); clearInventory(); }}
               />
             )}
             {caixa && (
@@ -266,7 +290,7 @@ export default function ImportacaoPage() {
                 filename={caixa.filename}
                 rowLabel={`${formatNumber(caixa.rowCount)} movimentações`}
                 importedAt={caixa.importedAt}
-                onRemove={() => { idbDel(CAIXA_IDB_KEY); clearCaixa(); }}
+                onRemove={() => { idbDel(CAIXA_IDB_KEY); serverDelete("caixa"); clearCaixa(); }}
               />
             )}
           </CardContent>
