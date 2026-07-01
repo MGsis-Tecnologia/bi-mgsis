@@ -136,8 +136,11 @@ async function runMigration(prisma: PrismaClient): Promise<void> {
 }
 
 export async function getPrisma(): Promise<PrismaClient> {
-  const url = await getDatabaseUrl();
-  if (!url) throw new Error("Banco de dados não configurado. Acesse /setup.");
+  const url = getDatabaseUrl();
+  if (!url)
+    throw new Error(
+      "Banco de dados não configurado. Defina a variável de ambiente DATABASE_URL."
+    );
 
   if (global.__prismaUrl !== url) {
     // URL mudou (ou primeira inicialização) → reconectar
