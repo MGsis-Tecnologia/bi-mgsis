@@ -1,18 +1,49 @@
+# ─── Dependências ─────────────────────────────────────────────
 node_modules/
+.pnp
+.pnp.*
+
+# ─── Build / output ───────────────────────────────────────────
 .next/
 out/
+build/
+dist/
+.turbo/
+*.tsbuildinfo
+next-env.d.ts
+
+# ─── Variáveis de ambiente (nunca commitar segredos) ──────────
 .env
 .env*.local
-.DS_Store
+
+# ─── Prisma ───────────────────────────────────────────────────
+# Client gerado (recriado via `prisma generate` / postinstall)
+/prisma/generated/
+
+# ─── Dados persistidos localmente ─────────────────────────────
+# Snapshots gravados pelas API routes (importação local compartilhada)
+# e config do banco salva pelo wizard /setup (data/db-config.json)
+data/
+
+# ─── Logs ─────────────────────────────────────────────────────
 *.log
-.vscode/
-.idea/
-coverage/
-.turbo/
-next-env.d.ts
-*.tsbuildinfo
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# ─── Deploy ───────────────────────────────────────────────────
+.vercel
+
+# ─── Segredos / certificados ──────────────────────────────────
 *.pem
 *.key
 
-# Servidor: snapshots persistidos pelas API routes (importação local compartilhada)
-data/
+# ─── Editores / SO ────────────────────────────────────────────
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# ─── Testes ───────────────────────────────────────────────────
+coverage/

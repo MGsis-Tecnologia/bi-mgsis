@@ -112,6 +112,27 @@ declare global {
   var __prismaUrl: string | undefined;
   // eslint-disable-next-line no-var
   var __prismaMigrated: boolean | undefined;
+  // eslint-disable-next-line no-var
+  var __prismaMigrating: Promise<void> | undefined;
+}
+
+// Chave arbitrária (mas fixa) para o advisory lock do Postgres.
+const MIGRATION_LOCK_KEY = 727272;
+
+async function runMigration(prisma: PrismaClient): Promise<void> {
+  const statements = MIGRATION_SQL.split(";")
+    .map((s) => s.trim())
+    .filter((s) => s.length > 0);
+
+  // Advisory lock serializa a criação de tabelas entre conexões/processos
+  // concorrentes (evita corrida do CREATE TABLE IF NOT EXISTS → erro 23505).
+  // O driver usa prepared statements, que não aceitam múltiplos comandos numa
+  // única query (erro 42601); por isso cada statement roda separadamente,
+  // tudo dentro de uma transação para o lock valer até o commit.
+  await prisma.$transaction([
+    prisma.$executeRawUnsafe(`SELECT pg_advisory_xact_lock(${MIGRATION_LOCK_KEY})`),
+    ...statements.map((stmt) => prisma.$executeRawUnsafe(stmt)),
+  ]);
 }
 
 export async function getPrisma(): Promise<PrismaClient> {
@@ -132,9 +153,18 @@ export async function getPrisma(): Promise<PrismaClient> {
 
   const prisma = global.__prismaInstance!;
 
-  // Criar tabelas na primeira conexão com uma URL nova
+  // Criar tabelas na primeira conexão com uma URL nova. Requisições
+  // concorrentes compartilham a mesma promise para não rodar a migração
+  // em paralelo dentro do processo.
   if (!global.__prismaMigrated) {
-    await prisma.$executeRawUnsafe(MIGRATION_SQL);
+    if (!global.__prismaMigrating) {
+      global.__prismaMigrating = runMigration(prisma).catch((err) => {
+        // Libera para nova tentativa em caso de falha
+        global.__prismaMigrating = undefined;
+        throw err;
+      });
+    }
+    await global.__prismaMigrating;
     global.__prismaMigrated = true;
   }
 
@@ -148,6 +178,7 @@ export async function resetPrismaClient(): Promise<void> {
   global.__prismaInstance = undefined;
   global.__prismaUrl = undefined;
   global.__prismaMigrated = false;
+  global.__prismaMigrating = undefined;
 }
 
 export async function testConnection(url: string): Promise<void> {
