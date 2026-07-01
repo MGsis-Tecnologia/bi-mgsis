@@ -1,0 +1,119 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model DatasetMeta {
+  kind       String @id
+  filename   String
+  rowCount   Int    @map("row_count")
+  importedAt String @map("imported_at")
+
+  @@map("dataset_meta")
+}
+
+model SaleItem {
+  id           Int    @id @default(autoincrement())
+  date         String
+  orderId      String @map("order_id")
+  channel      String
+  clientId     String @map("client_id")
+  clientName   String @map("client_name")
+  clientCity   String @default("") @map("client_city")
+  productId    String @map("product_id")
+  productName  String @map("product_name")
+  quantity     Float
+  totalOrig    Float  @map("total_orig")
+  costOrig     Float  @map("cost_orig")
+  subgroupId   String @map("subgroup_id")
+  subgroupName String @map("subgroup_name")
+  sellerId     String @map("seller_id")
+  sellerName   String @map("seller_name")
+  currencyId   String @map("currency_id")
+  currencyCode String @map("currency_code")
+
+  @@index([date])
+  @@index([clientId])
+  @@index([productId])
+  @@index([sellerId])
+  @@map("sale_items")
+}
+
+model ReceivableItem {
+  id           Int     @id @default(autoincrement())
+  documentId   String  @map("document_id")
+  clientId     String  @map("client_id")
+  clientName   String  @map("client_name")
+  clientCity   String  @default("") @map("client_city")
+  issueDate    String  @map("issue_date")
+  dueDate      String  @map("due_date")
+  receivedDate String  @map("received_date")
+  isPaid       Boolean @map("is_paid")
+  entryType    String  @map("entry_type")
+  amountOrig   Float   @map("amount_orig")
+  sellerId     String  @map("seller_id")
+  sellerName   String  @map("seller_name")
+  currencyId   String  @map("currency_id")
+  currencyCode String  @map("currency_code")
+
+  @@index([dueDate])
+  @@index([clientId])
+  @@index([isPaid])
+  @@map("receivable_items")
+}
+
+model PayableItem {
+  id           Int     @id @default(autoincrement())
+  documentId   String  @map("document_id")
+  supplierId   String  @map("supplier_id")
+  supplierName String  @map("supplier_name")
+  issueDate    String  @map("issue_date")
+  dueDate      String  @map("due_date")
+  paidDate     String  @map("paid_date")
+  isPaid       Boolean @map("is_paid")
+  entryType    String  @map("entry_type")
+  amountOrig   Float   @map("amount_orig")
+  currencyId   String  @map("currency_id")
+  currencyCode String  @map("currency_code")
+
+  @@index([dueDate])
+  @@index([supplierId])
+  @@index([isPaid])
+  @@map("payable_items")
+}
+
+model InventoryItem {
+  id               Int    @id @default(autoincrement())
+  productId        String @map("product_id")
+  description      String
+  manufacturerCode String @map("manufacturer_code")
+  stock            Float
+  costTotalUSD     Float  @map("cost_total_usd")
+  minStock         Float  @map("min_stock")
+
+  @@index([productId])
+  @@map("inventory_items")
+}
+
+model CaixaItem {
+  id                   Int    @id @default(autoincrement())
+  date                 String
+  centroCustoId        String @map("centro_custo_id")
+  centroCustoDescricao String @map("centro_custo_descricao")
+  planoContaId         String @map("plano_conta_id")
+  planoContaCodigo     String @map("plano_conta_codigo")
+  planoContaDescricao  String @map("plano_conta_descricao")
+  caixaId              String @map("caixa_id")
+  caixaDescricao       String @map("caixa_descricao")
+  valorDocumento       Float  @map("valor_documento")
+  moedaId              String @map("moeda_id")
+  moedaSigla           String @map("moeda_sigla")
+
+  @@index([date])
+  @@index([planoContaCodigo])
+  @@map("caixa_items")
+}

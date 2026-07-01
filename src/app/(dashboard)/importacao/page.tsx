@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { parseFile, type DatasetKind } from "@/lib/parsers/csv-parser";
 import { useDatasetStore, IDB_KEY, RECEIVABLES_IDB_KEY, PAYABLES_IDB_KEY, INVENTORY_IDB_KEY, CAIXA_IDB_KEY } from "@/lib/store/dataset";
 import { idbSet, idbDel } from "@/lib/store/idb";
-import { serverDelete, serverPut } from "@/lib/server/dataset-client";
+import { serverDelete, serverImport } from "@/lib/server/dataset-client";
 import { useTranslation } from "@/lib/hooks/use-translation";
 import { formatNumber, formatDate } from "@/lib/utils/format";
 
@@ -76,9 +76,13 @@ export default function ImportacaoPage() {
       // Optional advisory when the server persistence fails — IDB remains
       // authoritative for the local browser.
       const serverWarning: string[] = [];
-      async function pushToServer<T>(kind: DatasetKind, value: T) {
+      async function pushToServer(
+        kind: DatasetKind,
+        items: unknown[],
+        meta: { filename: string; rowCount: number; importedAt: string }
+      ) {
         try {
-          await serverPut(kind, value);
+          await serverImport(kind, items, meta);
         } catch (err) {
           serverWarning.push(
             `Falha ao salvar no servidor: ${(err as Error).message}. Dados ficaram só no navegador.`
@@ -88,7 +92,7 @@ export default function ImportacaoPage() {
 
       if (result.kind === "caixa" && result.caixa) {
         await idbSet(CAIXA_IDB_KEY, result.caixa);
-        await pushToServer("caixa", result.caixa);
+        await pushToServer("caixa", result.caixa.items, { filename: result.caixa.filename, rowCount: result.caixa.rowCount, importedAt: result.caixa.importedAt });
         setCaixa(result.caixa);
         updateItem(nextItem.id, {
           status: "success", kind: "caixa",
@@ -97,7 +101,7 @@ export default function ImportacaoPage() {
         });
       } else if (result.kind === "inventory" && result.inventory) {
         await idbSet(INVENTORY_IDB_KEY, result.inventory);
-        await pushToServer("inventory", result.inventory);
+        await pushToServer("inventory", result.inventory.items, { filename: result.inventory.filename, rowCount: result.inventory.rowCount, importedAt: result.inventory.importedAt });
         setInventory(result.inventory);
         updateItem(nextItem.id, {
           status: "success", kind: "inventory",
@@ -106,7 +110,7 @@ export default function ImportacaoPage() {
         });
       } else if (result.kind === "payable" && result.payables) {
         await idbSet(PAYABLES_IDB_KEY, result.payables);
-        await pushToServer("payable", result.payables);
+        await pushToServer("payable", result.payables.items, { filename: result.payables.filename, rowCount: result.payables.rowCount, importedAt: result.payables.importedAt });
         setPayables(result.payables);
         updateItem(nextItem.id, {
           status: "success", kind: "payable",
@@ -115,7 +119,7 @@ export default function ImportacaoPage() {
         });
       } else if (result.kind === "receivable" && result.receivables) {
         await idbSet(RECEIVABLES_IDB_KEY, result.receivables);
-        await pushToServer("receivable", result.receivables);
+        await pushToServer("receivable", result.receivables.items, { filename: result.receivables.filename, rowCount: result.receivables.rowCount, importedAt: result.receivables.importedAt });
         setReceivables(result.receivables);
         updateItem(nextItem.id, {
           status: "success", kind: "receivable",
@@ -124,7 +128,7 @@ export default function ImportacaoPage() {
         });
       } else if (result.dataset) {
         await idbSet(IDB_KEY, result.dataset);
-        await pushToServer("sales", result.dataset);
+        await pushToServer("sales", result.dataset.items, { filename: result.dataset.filename, rowCount: result.dataset.rowCount, importedAt: result.dataset.importedAt });
         setDataset(result.dataset);
         updateItem(nextItem.id, {
           status: "success", kind: "sales",

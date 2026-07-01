@@ -1,15 +1,11 @@
-import { promises as fs } from "node:fs";
-import path from "node:path";
-
-// Local server-side persistence for imported datasets.
-//
-// Until the project migrates to a real API, the data must be shared across
-// any browser that hits the running server. We write one JSON file per
-// dataset kind under ./data/ on the host filesystem.
-//
-// Concurrency: writes are atomic per file (tmp + rename). Read/write races
-// against the same kind are tolerated because the file is small enough to
-// rewrite as a whole — last write wins.
+import { getPrisma } from "./db";
+import type {
+  OrderLineItem,
+  ReceivableItem,
+  PayableItem,
+  InventoryItem,
+  CaixaItem,
+} from "@/lib/types/dataset";
 
 export type DatasetKind = "sales" | "receivable" | "payable" | "inventory" | "caixa";
 
@@ -19,43 +15,11 @@ export function isValidKind(s: string): s is DatasetKind {
   return VALID_KINDS.has(s as DatasetKind);
 }
 
-// Resolved at first use — keeps the path next to the running Node process.
-const DATA_DIR = path.join(process.cwd(), "data");
-
-function fileFor(kind: DatasetKind): string {
-  return path.join(DATA_DIR, `${kind}.json`);
-}
-
-async function ensureDir(): Promise<void> {
-  await fs.mkdir(DATA_DIR, { recursive: true });
-}
-
-export async function readDataset(kind: DatasetKind): Promise<unknown | null> {
-  try {
-    const raw = await fs.readFile(fileFor(kind), "utf8");
-    return JSON.parse(raw);
-  } catch (err) {
-    if ((err as NodeJS.ErrnoException).code === "ENOENT") return null;
-    throw err;
-  }
-}
-
-export async function writeDataset(kind: DatasetKind, value: unknown): Promise<void> {
-  await ensureDir();
-  const target = fileFor(kind);
-  const tmp = `${target}.tmp-${process.pid}-${Date.now()}`;
-  await fs.writeFile(tmp, JSON.stringify(value), "utf8");
-  // rename is atomic on POSIX; on Windows it overwrites the destination on
-  // recent Node versions (fs.rename uses MoveFileEx with replace).
-  await fs.rename(tmp, target);
-}
-
-export async function deleteDataset(kind: DatasetKind): Promise<void> {
-  try {
-    await fs.unlink(fileFor(kind));
-  } catch (err) {
-    if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err;
-  }
+export interface DatasetMeta {
+  kind: DatasetKind;
+  filename: string;
+  rowCount: number;
+  importedAt: string;
 }
 
 export interface DatasetSummary {
@@ -64,30 +28,123 @@ export interface DatasetSummary {
   filename?: string;
   rowCount?: number;
   importedAt?: string;
-  sizeBytes?: number;
 }
 
-export async function summarize(kind: DatasetKind): Promise<DatasetSummary> {
-  try {
-    const stat = await fs.stat(fileFor(kind));
-    const data = (await readDataset(kind)) as
-      | { filename?: string; rowCount?: number; importedAt?: string }
-      | null;
-    if (!data) return { kind, present: false };
-    return {
-      kind,
-      present: true,
-      filename: data.filename,
-      rowCount: data.rowCount,
-      importedAt: data.importedAt,
-      sizeBytes: stat.size,
-    };
-  } catch (err) {
-    if ((err as NodeJS.ErrnoException).code === "ENOENT") {
-      return { kind, present: false };
-    }
-    throw err;
+// ---------------------------------------------------------------------------
+// Metadata
+// ---------------------------------------------------------------------------
+
+export async function getMeta(kind: DatasetKind): Promise<DatasetMeta | null> {
+  const db = await getPrisma();
+  const row = await db.datasetMeta.findUnique({ where: { kind } });
+  if (!row) return null;
+  return { kind: row.kind as DatasetKind, filename: row.filename, rowCount: row.rowCount, importedAt: row.importedAt };
+}
+
+export async function upsertMeta(meta: DatasetMeta): Promise<void> {
+  const db = await getPrisma();
+  await db.datasetMeta.upsert({
+    where: { kind: meta.kind },
+    create: { kind: meta.kind, filename: meta.filename, rowCount: meta.rowCount, importedAt: meta.importedAt },
+    update: { filename: meta.filename, rowCount: meta.rowCount, importedAt: meta.importedAt },
+  });
+}
+
+export async function deleteMeta(kind: DatasetKind): Promise<void> {
+  const db = await getPrisma();
+  await db.datasetMeta.deleteMany({ where: { kind } });
+}
+
+// ---------------------------------------------------------------------------
+// Row operations — clear
+// ---------------------------------------------------------------------------
+
+export async function clearRows(kind: DatasetKind): Promise<void> {
+  const db = await getPrisma();
+  switch (kind) {
+    case "sales":      await db.saleItem.deleteMany(); break;
+    case "receivable": await db.receivableItem.deleteMany(); break;
+    case "payable":    await db.payableItem.deleteMany(); break;
+    case "inventory":  await db.inventoryItem.deleteMany(); break;
+    case "caixa":      await db.caixaItem.deleteMany(); break;
   }
+}
+
+export async function deleteDataset(kind: DatasetKind): Promise<void> {
+  await clearRows(kind);
+  await deleteMeta(kind);
+}
+
+// ---------------------------------------------------------------------------
+// Row operations — batch insert (max ~3 000 rows per call)
+// ---------------------------------------------------------------------------
+
+export async function insertRows(kind: DatasetKind, rows: unknown[]): Promise<number> {
+  if (!rows.length) return 0;
+  const db = await getPrisma();
+
+  switch (kind) {
+    case "sales": {
+      const r = await db.saleItem.createMany({ data: rows as OrderLineItem[] });
+      return r.count;
+    }
+    case "receivable": {
+      const r = await db.receivableItem.createMany({ data: rows as ReceivableItem[] });
+      return r.count;
+    }
+    case "payable": {
+      const r = await db.payableItem.createMany({ data: rows as PayableItem[] });
+      return r.count;
+    }
+    case "inventory": {
+      const r = await db.inventoryItem.createMany({ data: rows as InventoryItem[] });
+      return r.count;
+    }
+    case "caixa": {
+      const r = await db.caixaItem.createMany({ data: rows as CaixaItem[] });
+      return r.count;
+    }
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Row operations — paginated read
+// ---------------------------------------------------------------------------
+
+export async function getRows(kind: DatasetKind, skip: number, take: number): Promise<unknown[]> {
+  const db = await getPrisma();
+  switch (kind) {
+    case "sales":
+      return (await db.saleItem.findMany({ skip, take, orderBy: { id: "asc" } })).map(
+        ({ id: _id, ...rest }) => rest
+      );
+    case "receivable":
+      return (await db.receivableItem.findMany({ skip, take, orderBy: { id: "asc" } })).map(
+        ({ id: _id, ...rest }) => rest
+      );
+    case "payable":
+      return (await db.payableItem.findMany({ skip, take, orderBy: { id: "asc" } })).map(
+        ({ id: _id, ...rest }) => rest
+      );
+    case "inventory":
+      return (await db.inventoryItem.findMany({ skip, take, orderBy: { id: "asc" } })).map(
+        ({ id: _id, ...rest }) => rest
+      );
+    case "caixa":
+      return (await db.caixaItem.findMany({ skip, take, orderBy: { id: "asc" } })).map(
+        ({ id: _id, ...rest }) => rest
+      );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Summary helpers (used by existing /api/datasets route)
+// ---------------------------------------------------------------------------
+
+export async function summarize(kind: DatasetKind): Promise<DatasetSummary> {
+  const meta = await getMeta(kind);
+  if (!meta) return { kind, present: false };
+  return { kind, present: true, filename: meta.filename, rowCount: meta.rowCount, importedAt: meta.importedAt };
 }
 
 export async function summarizeAll(): Promise<DatasetSummary[]> {

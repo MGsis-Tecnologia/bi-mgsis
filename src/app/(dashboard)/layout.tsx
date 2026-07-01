@@ -1,11 +1,23 @@
+import { redirect } from "next/navigation";
+import { getDatabaseUrl } from "@/lib/server/db-config";
+import { testConnection } from "@/lib/server/db";
 import { Sidebar } from "@/components/layout/sidebar";
 import { Topbar } from "@/components/layout/topbar";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { DatasetBootstrap } from "@/components/layout/dataset-bootstrap";
 
-export default function DashboardLayout({
+export default async function DashboardLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
+  const url = await getDatabaseUrl();
+  if (!url) redirect("/setup");
+
+  try {
+    await testConnection(url);
+  } catch {
+    redirect("/setup");
+  }
+
   return (
     <TooltipProvider delayDuration={200}>
       <DatasetBootstrap />

@@ -1,51 +1,54 @@
 import { NextRequest, NextResponse } from "next/server";
-import {
-  deleteDataset,
-  isValidKind,
-  readDataset,
-  writeDataset,
-} from "@/lib/server/dataset-storage";
+import { isValidKind, getMeta, upsertMeta, deleteDataset } from "@/lib/server/dataset-storage";
+import type { DatasetKind } from "@/lib/server/dataset-storage";
 
-// Node runtime — we read/write the filesystem. Edge would fail here.
 export const runtime = "nodejs";
-// Server-side persistence is mutable on every request; never cache the responses.
 export const dynamic = "force-dynamic";
 
 interface Ctx {
   params: Promise<{ kind: string }>;
 }
 
+// GET /api/datasets/[kind] — retorna só metadata (sem rows)
 export async function GET(_req: NextRequest, ctx: Ctx) {
   const { kind } = await ctx.params;
   if (!isValidKind(kind)) return NextResponse.json({ error: "invalid kind" }, { status: 400 });
 
-  const data = await readDataset(kind);
-  if (!data) return NextResponse.json({ kind, present: false }, { status: 200 });
-  return NextResponse.json({ kind, present: true, data }, { status: 200 });
+  const meta = await getMeta(kind);
+  if (!meta) return NextResponse.json({ kind, present: false });
+  return NextResponse.json({ kind, present: true, meta });
 }
 
-export async function PUT(req: NextRequest, ctx: Ctx) {
+// PATCH /api/datasets/[kind] — atualiza metadata após envio dos lotes
+export async function PATCH(req: NextRequest, ctx: Ctx) {
   const { kind } = await ctx.params;
   if (!isValidKind(kind)) return NextResponse.json({ error: "invalid kind" }, { status: 400 });
 
-  let payload: unknown;
+  let payload: { filename?: string; rowCount?: number; importedAt?: string };
   try {
     payload = await req.json();
   } catch {
     return NextResponse.json({ error: "invalid json body" }, { status: 400 });
   }
 
-  if (!payload || typeof payload !== "object") {
-    return NextResponse.json({ error: "expected object body" }, { status: 400 });
+  if (!payload.filename || payload.rowCount === undefined || !payload.importedAt) {
+    return NextResponse.json({ error: "filename, rowCount e importedAt são obrigatórios" }, { status: 400 });
   }
 
-  await writeDataset(kind, payload);
-  return NextResponse.json({ kind, present: true }, { status: 200 });
+  await upsertMeta({
+    kind: kind as DatasetKind,
+    filename: payload.filename,
+    rowCount: payload.rowCount,
+    importedAt: payload.importedAt,
+  });
+
+  return NextResponse.json({ kind, present: true });
 }
 
+// DELETE /api/datasets/[kind] — remove linhas e metadata
 export async function DELETE(_req: NextRequest, ctx: Ctx) {
   const { kind } = await ctx.params;
   if (!isValidKind(kind)) return NextResponse.json({ error: "invalid kind" }, { status: 400 });
   await deleteDataset(kind);
-  return NextResponse.json({ kind, present: false }, { status: 200 });
+  return NextResponse.json({ kind, present: false });
 }
