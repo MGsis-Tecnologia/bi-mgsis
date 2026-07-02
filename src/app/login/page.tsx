@@ -10,14 +10,28 @@ export default function LoginPage() {
   const { t } = useTranslation();
   const [showPassword, setShowPassword] = React.useState(false);
   const [isLoading, setIsLoading] = React.useState(false);
+  const [email, setEmail] = React.useState("");
+  const [password, setPassword] = React.useState("");
+  const [error, setError] = React.useState("");
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError("");
     setIsLoading(true);
-    // Simulate login
-    setTimeout(() => {
-      window.location.href = "/dashboard";
-    }, 1000);
+    try {
+      const res = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
+      });
+      const data = (await res.json()) as { ok?: boolean; error?: string };
+      if (!res.ok || !data.ok) { setError(data.error ?? "Erro ao entrar"); return; }
+      window.location.replace("/dashboard");
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -117,9 +131,12 @@ export default function LoginPage() {
               </label>
               <input
                 type="email"
-                defaultValue="mgsis@mgsis.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="seu@email.com"
+                required
+                disabled={isLoading}
                 className="w-full px-4 py-3 border border-slate-200 rounded-lg bg-white text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-                readOnly
               />
             </div>
 
@@ -137,9 +154,12 @@ export default function LoginPage() {
               <div className="relative">
                 <input
                   type={showPassword ? "text" : "password"}
-                  defaultValue="••••••••"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="••••••••"
+                  required
+                  disabled={isLoading}
                   className="w-full px-4 py-3 border border-slate-200 rounded-lg bg-white text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all pr-10"
-                  readOnly
                 />
                 <button
                   type="button"
@@ -167,6 +187,13 @@ export default function LoginPage() {
                 {t("login.form.remember")}
               </label>
             </div>
+
+            {/* Error */}
+            {error && (
+              <p className="rounded-lg border border-red-200 bg-red-50 px-4 py-2.5 text-sm text-red-700">
+                {error}
+              </p>
+            )}
 
             {/* Submit Button */}
             <button

@@ -11,16 +11,20 @@ import { BrandMark } from "./brand-mark";
 import { ClientMounted } from "@/components/providers/client-mounted";
 import { useTranslation } from "@/lib/hooks/use-translation";
 
-export function Topbar() {
+interface TopbarProps {
+  user?: { name: string; initials: string };
+}
+
+export function Topbar({ user }: TopbarProps) {
   const { t } = useTranslation();
   const [showLogoutMenu, setShowLogoutMenu] = React.useState(false);
 
-  const handleLogout = () => {
-    // Clear any session data if needed
-    localStorage.removeItem("session");
-    sessionStorage.removeItem("session");
-    // Redirect to login
-    window.location.href = "/login";
+  const handleLogout = async () => {
+    try {
+      await fetch("/api/auth/logout", { method: "POST" });
+    } finally {
+      window.location.replace("/login");
+    }
   };
 
   return (
@@ -60,9 +64,9 @@ export function Topbar() {
                 className="ml-1 flex items-center gap-2.5 rounded-md border border-border bg-surface px-1.5 py-1 pl-1 hover:bg-muted/40 transition-colors"
               >
                 <div className="grid h-6 w-6 place-items-center rounded-[5px] bg-foreground text-background text-[10px] font-medium">
-                  RM
+                  {user?.initials ?? "??"}
                 </div>
-                <span className="hidden md:inline text-xs font-medium pr-2">Rogério M.</span>
+                <span className="hidden md:inline text-xs font-medium pr-2">{user?.name ?? ""}</span>
               </button>
 
               {/* Logout Menu */}

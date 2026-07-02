@@ -4,6 +4,15 @@ import { getDatabaseUrl } from "./db-config";
 // SQL executado na primeira conexão para criar as tabelas se ainda não existirem.
 // Usar CREATE TABLE IF NOT EXISTS garante idempotência.
 const MIGRATION_SQL = `
+CREATE TABLE IF NOT EXISTS users (
+  id            SERIAL PRIMARY KEY,
+  email         TEXT NOT NULL UNIQUE,
+  password_hash TEXT NOT NULL DEFAULT '',
+  name          TEXT NOT NULL DEFAULT '',
+  role          TEXT NOT NULL DEFAULT 'admin',
+  created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
 CREATE TABLE IF NOT EXISTS dataset_meta (
   kind        TEXT PRIMARY KEY,
   filename    TEXT NOT NULL DEFAULT '',
