@@ -32,7 +32,9 @@ RUN npm run build
 # ─── Estágio 3: runtime ───────────────────────────────────────
 FROM node:20-alpine AS runner
 WORKDIR /app
-RUN apk add --no-cache openssl
+# openssl: engine do Prisma. curl: usado pelo healthcheck do Coolify, que roda
+# de dentro do container (a imagem alpine não traz curl por padrão).
+RUN apk add --no-cache openssl curl
 ENV NODE_ENV=production
 # HOSTNAME=0.0.0.0 garante que o server standalone do Next escute em todas as
 # interfaces (senão pode ficar preso em localhost e o Coolify não alcança).
