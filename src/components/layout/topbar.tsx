@@ -4,6 +4,7 @@ import * as React from "react";
 import { Bell, Search, LogOut } from "lucide-react";
 import { DateRangePicker } from "@/components/filters/date-range-picker";
 import { CurrencySwitcher } from "@/components/filters/currency-switcher";
+import { EmpresaSwitcher } from "@/components/filters/empresa-switcher";
 import { LanguageSwitcher } from "@/components/filters/language-switcher";
 import { GlobalFilters } from "@/components/filters/global-filters";
 import { ThemeToggle } from "./theme-toggle";
@@ -50,6 +51,7 @@ export function Topbar({ user }: TopbarProps) {
           <ClientMounted fallback={<div className="h-8 w-64 animate-pulse bg-muted/40 rounded-md" />}>
             <DateRangePicker />
             <GlobalFilters />
+            <EmpresaSwitcher />
             <CurrencySwitcher />
             <LanguageSwitcher />
             <div className="hidden md:block h-5 w-px bg-border mx-1" />

@@ -10,12 +10,14 @@ interface FiltersState {
   preset: DatePreset;
   customRange: { from: string; to: string } | null;
   currency: AppCurrencyId;      // "1"|"2"|"3" = filter by that currency; "ALL" = all + convert to R$
+  empresaId: string | "all";    // "all" = Todas as empresas; caso contrário o empresa_id exato
   channel: string | "all";      // "Atacado" | "Varejo" | "all"
   sellerId: string | "all";
   subgroupId: string | "all";   // replaces categoryId
   setPreset: (p: DatePreset) => void;
   setCustomRange: (r: { from: Date; to: Date }) => void;
   setCurrency: (c: AppCurrencyId) => void;
+  setEmpresa: (id: string | "all") => void;
   setChannel: (c: string | "all") => void;
   setSeller: (id: string | "all") => void;
   setSubgroup: (id: string | "all") => void;
@@ -29,6 +31,7 @@ export const useFilters = create<FiltersState>()(
       preset: "mes-atual",
       customRange: null,
       currency: "ALL",
+      empresaId: "all",
       channel: "all",
       sellerId: "all",
       subgroupId: "all",
@@ -36,6 +39,7 @@ export const useFilters = create<FiltersState>()(
       setCustomRange: ({ from, to }) =>
         set({ preset: "custom", customRange: { from: from.toISOString(), to: to.toISOString() } }),
       setCurrency: (currency) => set({ currency }),
+      setEmpresa: (empresaId) => set({ empresaId }),
       setChannel: (channel) => set({ channel }),
       setSeller: (sellerId) => set({ sellerId }),
       setSubgroup: (subgroupId) => set({ subgroupId }),
@@ -55,6 +59,7 @@ export const useFilters = create<FiltersState>()(
       // com "mes-atual" ao abrir o app, evitando carregar 12 meses de dados.
       partialize: (s) => ({
         currency: s.currency,
+        empresaId: s.empresaId,
         channel: s.channel,
         sellerId: s.sellerId,
         subgroupId: s.subgroupId,

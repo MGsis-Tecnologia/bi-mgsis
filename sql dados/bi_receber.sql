@@ -19,7 +19,8 @@
           WHERE endereco.endereco_padrao = true AND endereco.pessoa_id = r.pessoa_cliente_id
          OFFSET 0
          LIMIT 1) AS pessoa_cidade,
-    r.receber_data_recebimento AS data_recebimento
+    r.receber_data_recebimento AS data_recebimento,
+    r.empresa_id as empresa_id
    FROM receber r
      LEFT JOIN pessoa c ON c.pessoa_id = r.pessoa_cliente_id
      LEFT JOIN pessoa v ON v.pessoa_id = r.pessoa_vendedor_id

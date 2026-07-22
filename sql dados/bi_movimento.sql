@@ -22,7 +22,8 @@ SELECT to_char(p.pedido_data_fatura, 'DD/MM/YYYY'::text) AS pedido_data,
              LEFT JOIN cidade ON endereco.cidade_id = cidade.cidade_id
           WHERE endereco.endereco_padrao = true AND endereco.pessoa_id = p.cliente_id
          OFFSET 0
-         LIMIT 1) AS pedido_cidade
+         LIMIT 1) AS pedido_cidade,
+    p.empresa_id as empresa_id     
    FROM item_pedido i
      LEFT JOIN pedido p ON p.pedido_id = i.pedido_id
      LEFT JOIN pessoa c ON c.pessoa_id = p.cliente_id

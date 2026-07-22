@@ -21,6 +21,7 @@ export interface ReceivablesView {
 export function useReceivables(): ReceivablesView {
   const items = useDatasetStore((s) => s.receivables?.items ?? EMPTY_ITEMS);
   const currency = useFilters((s) => s.currency);
+  const empresaId = useFilters((s) => s.empresaId);
   const rates = useExchangeRates((s) => s.rates);
 
   return React.useMemo(() => {
@@ -31,6 +32,8 @@ export function useReceivables(): ReceivablesView {
     const reference = todayMs();
     const rows: ReceivableRow[] = [];
     for (const item of items) {
+      // Empresa filter: skip titles that don't match when a specific empresa is selected
+      if (empresaId !== "all" && item.empresaId !== empresaId) continue;
       // Currency filter: skip titles that don't match when a specific currency is selected
       if (currency !== "ALL" && item.currencyId !== currency) continue;
       // ALL mode converts each title to R$ by its currency rate
@@ -53,7 +56,7 @@ export function useReceivables(): ReceivablesView {
       entryTypes: [...typeSet].sort(),
       hasData: true,
     };
-  }, [items, currency, rates]);
+  }, [items, currency, empresaId, rates]);
 }
 
 // ─── Apply the global filters: period (by due date) + seller ──────────────────

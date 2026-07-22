@@ -38,12 +38,17 @@ CREATE TABLE IF NOT EXISTS sale_items (
   seller_id     TEXT NOT NULL DEFAULT '',
   seller_name   TEXT NOT NULL DEFAULT '',
   currency_id   TEXT NOT NULL DEFAULT '1',
-  currency_code TEXT NOT NULL DEFAULT 'R$'
+  currency_code TEXT NOT NULL DEFAULT 'R$',
+  empresa_id    TEXT NOT NULL DEFAULT ''
 );
+-- Aditivo p/ bancos já existentes (o CREATE TABLE IF NOT EXISTS acima não altera
+-- tabelas pré-existentes). Precede o índice de empresa_id abaixo.
+ALTER TABLE sale_items ADD COLUMN IF NOT EXISTS empresa_id TEXT NOT NULL DEFAULT '';
 CREATE INDEX IF NOT EXISTS idx_sale_items_date       ON sale_items(date);
 CREATE INDEX IF NOT EXISTS idx_sale_items_client_id  ON sale_items(client_id);
 CREATE INDEX IF NOT EXISTS idx_sale_items_product_id ON sale_items(product_id);
 CREATE INDEX IF NOT EXISTS idx_sale_items_seller_id  ON sale_items(seller_id);
+CREATE INDEX IF NOT EXISTS idx_sale_items_empresa_id ON sale_items(empresa_id);
 
 CREATE TABLE IF NOT EXISTS receivable_items (
   id            SERIAL PRIMARY KEY,
@@ -60,11 +65,14 @@ CREATE TABLE IF NOT EXISTS receivable_items (
   seller_id     TEXT NOT NULL DEFAULT '',
   seller_name   TEXT NOT NULL DEFAULT '',
   currency_id   TEXT NOT NULL DEFAULT '1',
-  currency_code TEXT NOT NULL DEFAULT 'R$'
+  currency_code TEXT NOT NULL DEFAULT 'R$',
+  empresa_id    TEXT NOT NULL DEFAULT ''
 );
+ALTER TABLE receivable_items ADD COLUMN IF NOT EXISTS empresa_id TEXT NOT NULL DEFAULT '';
 CREATE INDEX IF NOT EXISTS idx_receivable_due_date  ON receivable_items(due_date);
 CREATE INDEX IF NOT EXISTS idx_receivable_client_id ON receivable_items(client_id);
 CREATE INDEX IF NOT EXISTS idx_receivable_is_paid   ON receivable_items(is_paid);
+CREATE INDEX IF NOT EXISTS idx_receivable_empresa   ON receivable_items(empresa_id);
 
 CREATE TABLE IF NOT EXISTS payable_items (
   id            SERIAL PRIMARY KEY,
@@ -78,11 +86,14 @@ CREATE TABLE IF NOT EXISTS payable_items (
   entry_type    TEXT NOT NULL DEFAULT '',
   amount_orig   DOUBLE PRECISION NOT NULL DEFAULT 0,
   currency_id   TEXT NOT NULL DEFAULT '1',
-  currency_code TEXT NOT NULL DEFAULT 'R$'
+  currency_code TEXT NOT NULL DEFAULT 'R$',
+  empresa_id    TEXT NOT NULL DEFAULT ''
 );
+ALTER TABLE payable_items ADD COLUMN IF NOT EXISTS empresa_id TEXT NOT NULL DEFAULT '';
 CREATE INDEX IF NOT EXISTS idx_payable_due_date   ON payable_items(due_date);
 CREATE INDEX IF NOT EXISTS idx_payable_supplier   ON payable_items(supplier_id);
 CREATE INDEX IF NOT EXISTS idx_payable_is_paid    ON payable_items(is_paid);
+CREATE INDEX IF NOT EXISTS idx_payable_empresa    ON payable_items(empresa_id);
 
 CREATE TABLE IF NOT EXISTS inventory_items (
   id                SERIAL PRIMARY KEY,
@@ -91,9 +102,16 @@ CREATE TABLE IF NOT EXISTS inventory_items (
   manufacturer_code TEXT NOT NULL DEFAULT '',
   stock             DOUBLE PRECISION NOT NULL DEFAULT 0,
   cost_total_usd    DOUBLE PRECISION NOT NULL DEFAULT 0,
-  min_stock         DOUBLE PRECISION NOT NULL DEFAULT 0
+  min_stock         DOUBLE PRECISION NOT NULL DEFAULT 0,
+  currency_id       TEXT NOT NULL DEFAULT '1',
+  currency_code     TEXT NOT NULL DEFAULT 'R$',
+  empresa_id        TEXT NOT NULL DEFAULT ''
 );
+ALTER TABLE inventory_items ADD COLUMN IF NOT EXISTS empresa_id    TEXT NOT NULL DEFAULT '';
+ALTER TABLE inventory_items ADD COLUMN IF NOT EXISTS currency_id   TEXT NOT NULL DEFAULT '1';
+ALTER TABLE inventory_items ADD COLUMN IF NOT EXISTS currency_code TEXT NOT NULL DEFAULT 'R$';
 CREATE INDEX IF NOT EXISTS idx_inventory_product_id ON inventory_items(product_id);
+CREATE INDEX IF NOT EXISTS idx_inventory_empresa    ON inventory_items(empresa_id);
 
 CREATE TABLE IF NOT EXISTS caixa_items (
   id                    SERIAL PRIMARY KEY,
@@ -107,10 +125,13 @@ CREATE TABLE IF NOT EXISTS caixa_items (
   caixa_descricao       TEXT NOT NULL DEFAULT '',
   valor_documento       DOUBLE PRECISION NOT NULL DEFAULT 0,
   moeda_id              TEXT NOT NULL DEFAULT '1',
-  moeda_sigla           TEXT NOT NULL DEFAULT 'R$'
+  moeda_sigla           TEXT NOT NULL DEFAULT 'R$',
+  empresa_id            TEXT NOT NULL DEFAULT ''
 );
-CREATE INDEX IF NOT EXISTS idx_caixa_date   ON caixa_items(date);
-CREATE INDEX IF NOT EXISTS idx_caixa_plano  ON caixa_items(plano_conta_codigo);
+ALTER TABLE caixa_items ADD COLUMN IF NOT EXISTS empresa_id TEXT NOT NULL DEFAULT '';
+CREATE INDEX IF NOT EXISTS idx_caixa_date    ON caixa_items(date);
+CREATE INDEX IF NOT EXISTS idx_caixa_plano   ON caixa_items(plano_conta_codigo);
+CREATE INDEX IF NOT EXISTS idx_caixa_empresa ON caixa_items(empresa_id);
 `;
 
 // Singleton global para sobreviver ao hot-reload do Next.js em desenvolvimento.

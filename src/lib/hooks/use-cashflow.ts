@@ -16,6 +16,7 @@ export interface CaixaView {
 export function useCaixa(): CaixaView {
   const items = useDatasetStore((s) => s.caixa?.items ?? EMPTY_ITEMS);
   const currency = useFilters((s) => s.currency);
+  const empresaId = useFilters((s) => s.empresaId);
   const rates = useExchangeRates((s) => s.rates);
 
   return React.useMemo(() => {
@@ -23,6 +24,7 @@ export function useCaixa(): CaixaView {
 
     const filtered: CaixaItem[] = [];
     for (const item of items) {
+      if (empresaId !== "all" && item.empresaId !== empresaId) continue;
       if (currency !== "ALL" && item.moedaId !== currency) continue;
       if (currency === "ALL" && item.moedaId !== "1") {
         const rate = rates[item.moedaId] ?? 1;
@@ -33,7 +35,7 @@ export function useCaixa(): CaixaView {
     }
 
     return { items: filtered, hasData: true };
-  }, [items, currency, rates]);
+  }, [items, currency, empresaId, rates]);
 }
 
 // Filter by date range (caixa_data_emissao)

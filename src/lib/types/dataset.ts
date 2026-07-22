@@ -17,6 +17,7 @@ export interface OrderLineItem {
   sellerName: string;
   currencyId: string;     // "1" | "2" | "3"
   currencyCode: string;   // "R$" | "US$" | "G$"
+  empresaId: string;      // empresa_id — matriz/filial que originou o dado ("" quando ausente)
 }
 
 // Order aggregated from multiple items (one per pedido_documento)
@@ -31,6 +32,7 @@ export interface ImportedOrder {
   sellerName: string;
   currencyId: string;
   currencyCode: string;
+  empresaId: string;      // empresa_id
   totalBRL: number;       // display value — original currency OR converted to R$ for ALL mode
   costBRL: number;
   profitBRL: number;
@@ -90,6 +92,7 @@ export interface ReceivableItem {
   sellerName: string;     // vendedor_nome
   currencyId: string;     // moeda_id — "1" | "2" | "3"
   currencyCode: string;   // moeda_sigla — "R$" | "US$" | "G$"
+  empresaId: string;      // empresa_id ("" quando ausente)
 }
 
 export interface StoredReceivables {
@@ -108,8 +111,11 @@ export interface InventoryItem {
   description: string;        // produto_descricao
   manufacturerCode: string;   // produto_fabricante — manufacturer/supplier reference
   stock: number;              // estoque_item — quantity on hand
-  costTotalUSD: number;       // valor_estoque — total stock cost in US$
+  costTotalUSD: number;       // valor_estoque — custo total do estoque na moeda de currencyId
   minStock: number;           // estoque_minimo — reorder point (0 = not set, ignored)
+  currencyId: string;         // moeda_id — "1"=R$ "2"=US$ "3"=G$ (default "1")
+  currencyCode: string;       // moeda_sigla — "R$" | "US$" | "G$"
+  empresaId: string;          // empresa_id ("" quando ausente)
 }
 
 export interface StoredInventory {
@@ -132,6 +138,7 @@ export interface PayableItem {
   amountOrig: number;     // valor_documento: paid amount when isPaid, pending otherwise
   currencyId: string;     // moeda_id
   currencyCode: string;   // moeda_sigla
+  empresaId: string;      // empresa_id ("" quando ausente)
 }
 
 export interface StoredPayables {
@@ -155,6 +162,7 @@ export interface CaixaItem {
   valorDocumento: number;        // caixa_valor_documento (negative = saída)
   moedaId: string;               // moeda_id
   moedaSigla: string;            // moeda_sigla
+  empresaId: string;             // empresa_id ("" quando ausente)
 }
 
 export interface StoredCaixa {
@@ -162,6 +170,17 @@ export interface StoredCaixa {
   importedAt: string;    // ISO
   filename: string;
   rowCount: number;
+}
+
+// ─── Empresa (matriz / filiais) ──────────────────────────────────────────────
+// O filtro de empresa é global. "all" = Todas as empresas; caso contrário é o
+// empresa_id exato vindo dos dados importados. As empresas disponíveis são
+// derivadas dinamicamente dos datasets (ver use-empresas.ts).
+export type EmpresaFilter = "all" | string;
+
+// Rótulo exibido para um empresa_id — os dados só trazem o id numérico.
+export function empresaLabel(id: string): string {
+  return id ? `Empresa ${id}` : "Sem empresa";
 }
 
 // "1"=R$  "2"=US$  "3"=G$  "ALL"=Todas Moedas (converte para R$)

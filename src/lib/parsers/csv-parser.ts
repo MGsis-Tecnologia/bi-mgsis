@@ -266,6 +266,7 @@ function processSalesRows(
       sellerName:   String(row["vendedor_nome"] ?? "").trim(),
       currencyId,
       currencyCode,
+      empresaId:    String(row["empresa_id"] ?? "").trim(),
     });
   }
 
@@ -361,6 +362,7 @@ function processReceivableRows(
       sellerName:   String(row["vendedor_nome"] ?? "").trim(),
       currencyId:   String(row["moeda_id"] ?? "1").trim(),
       currencyCode: String(row["moeda_sigla"] ?? "R$").trim(),
+      empresaId:    String(row["empresa_id"] ?? "").trim(),
     });
   }
 
@@ -452,6 +454,7 @@ function processPayableRows(
       amountOrig,
       currencyId:   String(row["moeda_id"] ?? "1").trim(),
       currencyCode: String(row["moeda_sigla"] ?? "R$").trim(),
+      empresaId:    String(row["empresa_id"] ?? "").trim(),
     });
   }
 
@@ -511,16 +514,23 @@ function processInventoryRows(
     const stock = parseNumber(row["estoque_item"] as string);
     const costTotalUSD = parseNumber(row["valor_estoque"] as string);
     const minStock = "estoque_minimo" in row ? parseNumber(row["estoque_minimo"] as string) : 0;
+    const empresaId = String(row["empresa_id"] ?? "").trim();
 
-    if (map.has(productId)) duplicates++;
+    // O mesmo SKU pode existir em várias empresas — a chave inclui empresa_id
+    // para não colapsar estoques de matriz/filiais diferentes.
+    const key = `${empresaId}::${productId}`;
+    if (map.has(key)) duplicates++;
 
-    map.set(productId, {
+    map.set(key, {
       productId,
       description:      String(row["produto_descricao"] ?? "").trim(),
       manufacturerCode: String(row["produto_fabricante"] ?? "").trim(),
       stock,
       costTotalUSD,
       minStock,
+      currencyId:       String(row["moeda_id"] ?? "1").trim(),
+      currencyCode:     String(row["moeda_sigla"] ?? "R$").trim(),
+      empresaId,
     });
   }
 
@@ -606,6 +616,7 @@ function processCaixaRows(
       valorDocumento,
       moedaId:              String(row["moeda_id"] ?? "1").trim(),
       moedaSigla:           String(row["moeda_sigla"] ?? "R$").trim(),
+      empresaId:            String(row["empresa_id"] ?? "").trim(),
     });
   }
 

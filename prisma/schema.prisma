@@ -47,11 +47,13 @@ model SaleItem {
   sellerName   String @map("seller_name")
   currencyId   String @map("currency_id")
   currencyCode String @map("currency_code")
+  empresaId    String @default("") @map("empresa_id")
 
   @@index([date])
   @@index([clientId])
   @@index([productId])
   @@index([sellerId])
+  @@index([empresaId])
   @@map("sale_items")
 }
 
@@ -71,10 +73,12 @@ model ReceivableItem {
   sellerName   String  @map("seller_name")
   currencyId   String  @map("currency_id")
   currencyCode String  @map("currency_code")
+  empresaId    String  @default("") @map("empresa_id")
 
   @@index([dueDate])
   @@index([clientId])
   @@index([isPaid])
+  @@index([empresaId])
   @@map("receivable_items")
 }
 
@@ -91,10 +95,12 @@ model PayableItem {
   amountOrig   Float   @map("amount_orig")
   currencyId   String  @map("currency_id")
   currencyCode String  @map("currency_code")
+  empresaId    String  @default("") @map("empresa_id")
 
   @@index([dueDate])
   @@index([supplierId])
   @@index([isPaid])
+  @@index([empresaId])
   @@map("payable_items")
 }
 
@@ -106,8 +112,12 @@ model InventoryItem {
   stock            Float
   costTotalUSD     Float  @map("cost_total_usd")
   minStock         Float  @map("min_stock")
+  currencyId       String @default("1") @map("currency_id")
+  currencyCode     String @default("R$") @map("currency_code")
+  empresaId        String @default("") @map("empresa_id")
 
   @@index([productId])
+  @@index([empresaId])
   @@map("inventory_items")
 }
 
@@ -124,8 +134,10 @@ model CaixaItem {
   valorDocumento       Float  @map("valor_documento")
   moedaId              String @map("moeda_id")
   moedaSigla           String @map("moeda_sigla")
+  empresaId            String @default("") @map("empresa_id")
 
   @@index([date])
   @@index([planoContaCodigo])
+  @@index([empresaId])
   @@map("caixa_items")
 }

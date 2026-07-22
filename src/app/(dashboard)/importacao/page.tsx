@@ -307,7 +307,7 @@ export default function ImportacaoPage() {
         <CardContent className="space-y-6">
           <SchemaTable
             heading="Leiaute · Vendas"
-            note="Datas: DD/MM/AAAA · Decimais: vírgula (padrão BR) · moeda_id: 1=R$ 2=US$ 3=G$ · importa linhas com pedido_tipo = VENDA."
+            note="Datas: DD/MM/AAAA · Decimais: vírgula (padrão BR) · moeda_id: 1=R$ 2=US$ 3=G$ · importa linhas com pedido_tipo = VENDA. empresa_id identifica a matriz/filial e alimenta o filtro global de empresa (presente em todos os leiautes)."
             cols={SALES_SCHEMA}
           />
           <SchemaTable
@@ -322,7 +322,7 @@ export default function ImportacaoPage() {
           />
           <SchemaTable
             heading="Leiaute · Estoque"
-            note="Snapshot do inventário (uma linha por SKU). produto_id liga ao item de venda. valor_estoque é o custo total do estoque em US$."
+            note="Snapshot do inventário (uma linha por SKU/empresa). produto_id liga ao item de venda. valor_estoque é o custo total do estoque na moeda indicada por moeda_id (1=R$ 2=US$ 3=G$); respeita o seletor global de moeda como as demais áreas. Se moeda_id ausente, assume R$."
             cols={INVENTORY_SCHEMA}
           />
           <SchemaTable
@@ -466,6 +466,7 @@ const SALES_SCHEMA = [
   { name: "moeda_id",            type: "1|2|3",   example: "1" },
   { name: "moeda_sigla",         type: "Texto",   example: "R$" },
   { name: "pedido_tipo",         type: "Texto",   example: "VENDA" },
+  { name: "empresa_id",          type: "Chave",   example: "1 (matriz) / 2 (filial)" },
 ];
 
 const RECEIVABLE_SCHEMA = [
@@ -482,6 +483,7 @@ const RECEIVABLE_SCHEMA = [
   { name: "vendedor_id",         type: "Chave",          example: "VND-003" },
   { name: "vendedor_nome",       type: "Texto",          example: "João Silva" },
   { name: "pessoa_cidade",       type: "Texto (opcional)", example: "São Paulo" },
+  { name: "empresa_id",          type: "Chave",          example: "1 (matriz) / 2 (filial)" },
 ];
 
 const PAYABLE_SCHEMA = [
@@ -495,6 +497,7 @@ const PAYABLE_SCHEMA = [
   { name: "tipolanzamiento",       type: "Texto",          example: "Nota Fiscal" },
   { name: "valor_documento",       type: "Decimal",        example: "3500,00" },
   { name: "data_pagamento",        type: "Data (opcional)", example: "28/12/2024" },
+  { name: "empresa_id",            type: "Chave",          example: "1 (matriz) / 2 (filial)" },
 ];
 
 const INVENTORY_SCHEMA = [
@@ -502,7 +505,10 @@ const INVENTORY_SCHEMA = [
   { name: "produto_descricao",     type: "Texto",   example: "Notebook Pro 15" },
   { name: "produto_fabricante",    type: "Texto",   example: "DL-1500X-BLK" },
   { name: "estoque_item",          type: "Número",  example: "37" },
-  { name: "valor_estoque",         type: "Decimal · US$", example: "1850,00" },
+  { name: "valor_estoque",         type: "Decimal", example: "1850,00" },
+  { name: "moeda_id",              type: "1|2|3",   example: "1" },
+  { name: "moeda_sigla",           type: "Texto",   example: "R$" },
+  { name: "empresa_id",            type: "Chave",   example: "1 (matriz) / 2 (filial)" },
 ];
 
 const CAIXA_SCHEMA = [
@@ -517,4 +523,5 @@ const CAIXA_SCHEMA = [
   { name: "caixa_valor_documento",  type: "Decimal",          example: "-1500,00 / 5000,00" },
   { name: "moeda_id",               type: "1|2|3",            example: "1" },
   { name: "moeda_sigla",            type: "Texto",            example: "R$" },
+  { name: "empresa_id",             type: "Chave",            example: "1 (matriz) / 2 (filial)" },
 ];

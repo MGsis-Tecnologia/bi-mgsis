@@ -8,9 +8,10 @@ plano_conta.plano_conta_codigo as plano_conta_codigo,
 plano_conta.plano_conta_descricao AS plano_conta_descricao,	
 caixa_movimento.caixa_id AS caixa_id,	
 caixa.caixa_descricao AS caixa_descricao,		
-caixa_movimento.caixa_valor_documento AS caixa_valor_documento,	
+caixa_movimento.caixa_valor_documento AS caixa_valor_documento,
 moeda.moeda_id as moeda_id,
-moeda.moeda_sigla AS moeda_sigla
+moeda.moeda_sigla AS moeda_sigla,
+caixa_movimento.empresa_id as empresa_id
 
 FROM 	
 caixa_movimento	

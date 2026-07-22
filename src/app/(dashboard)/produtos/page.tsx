@@ -11,7 +11,8 @@ import { BarChartH } from "@/components/charts/bar-chart-h";
 import { DonutChart } from "@/components/charts/donut-chart";
 import { Money } from "@/components/dashboard/money";
 import { useDataset, useFilteredOrders } from "@/lib/hooks/use-dataset";
-import { productABC, subgroupABC, productProfitRanking, type ProductProfitEntry } from "@/lib/analytics/abc";
+import { useDatasetStore } from "@/lib/store/dataset";
+import { productABC, subgroupABC, productProfitRanking } from "@/lib/analytics/abc";
 import { revenueBySubgroup } from "@/lib/analytics/kpis";
 import { formatNumber, formatPercent } from "@/lib/utils/format";
 import { cn } from "@/lib/utils";
@@ -21,6 +22,17 @@ export default function ProdutosPage() {
   const { t } = useTranslation();
   const ds = useDataset();
   const orders = useFilteredOrders();
+  const inventory = useDatasetStore((s) => s.inventory);
+
+  // Código do fabricante (produto_fabricante) só existe no dataset de Estoque —
+  // monta lookup productId → fabricante para exibir ao lado do SKU nas listagens.
+  const mfrByProduct = React.useMemo(() => {
+    const m = new Map<string, string>();
+    for (const it of inventory?.items ?? []) {
+      if (it.manufacturerCode && !m.has(it.productId)) m.set(it.productId, it.manufacturerCode);
+    }
+    return m;
+  }, [inventory?.items]);
 
   const abc = React.useMemo(() => productABC(orders, ds.products), [orders, ds.products]);
   const catABC = React.useMemo(() => subgroupABC(orders), [orders]);
@@ -75,13 +87,16 @@ export default function ProdutosPage() {
           </CardHeader>
           <CardContent>
             <BarChartH
-              rows={abc.slice(0, 12).map((e) => ({
-                key: e.item.id,
-                label: e.item.name,
-                value: e.revenue,
-                secondary: `${formatNumber(e.units)} un · ${e.curve}`,
-                tone: e.curve === "A" ? "accent" : "muted",
-              }))}
+              rows={abc.slice(0, 12).map((e) => {
+                const mfr = mfrByProduct.get(e.item.id);
+                return {
+                  key: e.item.id,
+                  label: e.item.name,
+                  value: e.revenue,
+                  secondary: `${formatNumber(e.units)} un · ${e.curve}${mfr ? ` · ${mfr}` : ""}`,
+                  tone: e.curve === "A" ? "accent" : "muted",
+                };
+              })}
               maxRows={12}
             />
           </CardContent>
@@ -138,7 +153,10 @@ export default function ProdutosPage() {
                     </td>
                     <td className="py-2 px-5 max-w-[260px] truncate">
                       <div className="font-medium">{e.item.name}</div>
-                      <div className="text-xs text-muted-foreground font-mono">{e.item.id}</div>
+                      <div className="text-xs text-muted-foreground font-mono">
+                        {e.item.id}
+                        {mfrByProduct.get(e.item.id) && <span> · {mfrByProduct.get(e.item.id)}</span>}
+                      </div>
                     </td>
                     <td className="py-2 px-5 text-muted-foreground">{e.item.subgroupName}</td>
                     <td className="py-2 px-5 text-right tabular">{formatNumber(e.units)}</td>
@@ -198,7 +216,10 @@ export default function ProdutosPage() {
                     </td>
                     <td className="py-2 px-5 max-w-[260px] truncate">
                       <div className="font-medium">{e.productName}</div>
-                      <div className="text-xs text-muted-foreground font-mono">{e.productId}</div>
+                      <div className="text-xs text-muted-foreground font-mono">
+                        {e.productId}
+                        {mfrByProduct.get(e.productId) && <span> · {mfrByProduct.get(e.productId)}</span>}
+                      </div>
                     </td>
                     <td className="py-2 px-5 text-muted-foreground">{e.subgroupName}</td>
                     <td className="py-2 px-5 text-right tabular">{formatNumber(e.units)}</td>

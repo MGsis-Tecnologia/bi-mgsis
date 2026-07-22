@@ -11,7 +11,8 @@ create or replace view bi_pagar as
             WHEN r.pagar_valor_pago > 0::numeric THEN r.pagar_valor_pago
             ELSE r.pagar_valor_documento
         END AS valor_documento,
-    r.pagar_data_pagamento AS data_pagamento
+    r.pagar_data_pagamento AS data_pagamento,
+    r.empresa_id as empresa_id
    FROM pagar r
 
 LEFT JOIN pessoa c ON c.pessoa_id = r.pessoa_fornecedor_id

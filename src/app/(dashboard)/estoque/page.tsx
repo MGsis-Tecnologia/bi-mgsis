@@ -20,6 +20,8 @@ import { Money } from "@/components/dashboard/money";
 import { useDataset, useFilteredOrders } from "@/lib/hooks/use-dataset";
 import { useDatasetStore } from "@/lib/store/dataset";
 import { useFilters } from "@/lib/store/filters";
+import { useExchangeRates } from "@/lib/store/exchange-rates";
+import type { AppCurrencyId } from "@/lib/types/dataset";
 import {
   belowMinimumStock,
   inventoryAnalysis,
@@ -43,8 +45,30 @@ export default function EstoquePage() {
   const getRange = useFilters((s) => s.getRange);
   const preset = useFilters((s) => s.preset);
   const customRange = useFilters((s) => s.customRange);
+  const empresaId = useFilters((s) => s.empresaId);
+  const currency = useFilters((s) => s.currency);
+  const rates = useExchangeRates((s) => s.rates);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const range = React.useMemo(() => getRange(), [preset, customRange, getRange]);
+
+  // Moeda de exibição do estoque: uma moeda específica exibe nela mesma; "ALL"
+  // (Todas) converte tudo para R$.
+  const displayCurrencyId: AppCurrencyId = currency === "ALL" ? "1" : currency;
+  const displayCode = displayCurrencyId === "2" ? "US$" : displayCurrencyId === "3" ? "G$" : "R$";
+
+  // Filtra o snapshot de estoque por empresa (matriz/filial) e aplica a moeda:
+  // — moeda específica → mantém só os itens naquela moeda (sem conversão);
+  // — "Todas" → converte o custo de cada item para R$ pela taxa da sua moeda.
+  // Espelha o comportamento de Caixa/Vendas/Financeiro.
+  const inventoryItems = React.useMemo(() => {
+    return (inventory?.items ?? [])
+      .filter((it) => empresaId === "all" || it.empresaId === empresaId)
+      .filter((it) => currency === "ALL" || it.currencyId === currency)
+      .map((it) => {
+        const rate = currency === "ALL" ? (rates[it.currencyId] ?? 1) : 1;
+        return rate === 1 ? it : { ...it, costTotalUSD: it.costTotalUSD * rate };
+      });
+  }, [inventory?.items, empresaId, currency, rates]);
   const periodDays = Math.max(
     1,
     Math.round((range.to.getTime() - range.from.getTime()) / 86400000) + 1
@@ -54,8 +78,8 @@ export default function EstoquePage() {
   const [query, setQuery] = React.useState("");
 
   const analysis = React.useMemo(
-    () => inventoryAnalysis(inventory?.items ?? [], orders, ds.products, { periodDays }),
-    [inventory?.items, orders, ds.products, periodDays]
+    () => inventoryAnalysis(inventoryItems, orders, ds.products, { periodDays }),
+    [inventoryItems, orders, ds.products, periodDays]
   );
   const rows = analysis.rows;
 
@@ -116,7 +140,7 @@ export default function EstoquePage() {
       >
         <Badge variant="ghost" className="gap-1">
           <Boxes className="h-3 w-3" />
-          {formatNumber(totals.skus)} SKU(s) · {formatCurrency(totals.totalValueUSD, "2", { compact: true })}
+          {formatNumber(totals.skus)} SKU(s) · {formatCurrency(totals.totalValueUSD, displayCurrencyId, { compact: true })}
         </Badge>
       </PageHeader>
 
@@ -125,7 +149,7 @@ export default function EstoquePage() {
         <KpiCard
           label="Capital em estoque"
           caption={`${formatNumber(totals.totalUnits)} unidades`}
-          value={formatCurrency(totals.totalValueUSD, "2", { compact: true })}
+          value={formatCurrency(totals.totalValueUSD, displayCurrencyId, { compact: true })}
           accent="accent"
         />
         <KpiCard
@@ -136,12 +160,12 @@ export default function EstoquePage() {
         />
         <KpiCard
           label="Em risco"
-          caption={`${formatCurrency(valueAtRisk, "2", { compact: true })} sob risco`}
+          caption={`${formatCurrency(valueAtRisk, displayCurrencyId, { compact: true })} sob risco`}
           value={formatNumber(totals.risk)}
         />
         <KpiCard
           label="Sem giro + excesso"
-          caption={`${formatCurrency(valueDormant, "2", { compact: true })} parados`}
+          caption={`${formatCurrency(valueDormant, displayCurrencyId, { compact: true })} parados`}
           value={formatNumber(totals.noMovement + totals.excess)}
         />
       </section>
@@ -180,6 +204,7 @@ export default function EstoquePage() {
                   status={s.key}
                   count={s.count}
                   valueUSD={s.valueUSD}
+                  displayCurrencyId={displayCurrencyId}
                   total={totals.skus}
                   active={statusFilter === s.key}
                   onClick={() =>
@@ -246,7 +271,7 @@ export default function EstoquePage() {
             </p>
           </CardHeader>
           <CardContent className="px-0">
-            <CompactList rows={rupture} mode="rupture" emptyMessage="Sem rupturas ou riscos no período." />
+            <CompactList rows={rupture} mode="rupture" emptyMessage="Sem rupturas ou riscos no período." displayCurrencyId={displayCurrencyId} />
           </CardContent>
         </Card>
 
@@ -266,7 +291,7 @@ export default function EstoquePage() {
             </p>
           </CardHeader>
           <CardContent className="px-0">
-            <CompactList rows={movers} mode="movers" emptyMessage="Sem movimentação no período." />
+            <CompactList rows={movers} mode="movers" emptyMessage="Sem movimentação no período." displayCurrencyId={displayCurrencyId} />
           </CardContent>
         </Card>
       </section>
@@ -280,7 +305,7 @@ export default function EstoquePage() {
               Capital parado · sem giro
             </CardTitle>
             <Badge variant="warning" className="gap-1">
-              {formatCurrency(valueDormant, "2", { compact: true })} parados
+              {formatCurrency(valueDormant, displayCurrencyId, { compact: true })} parados
             </Badge>
           </div>
           <p className="mt-1 text-[11px] text-muted-foreground">
@@ -288,7 +313,7 @@ export default function EstoquePage() {
           </p>
         </CardHeader>
         <CardContent className="px-0">
-          <CompactList rows={dormant} mode="dormant" emptyMessage="Sem itens parados no período." />
+          <CompactList rows={dormant} mode="dormant" emptyMessage="Sem itens parados no período." displayCurrencyId={displayCurrencyId} />
         </CardContent>
       </Card>
 
@@ -410,7 +435,7 @@ export default function EstoquePage() {
                   <th className="text-left font-medium py-2 px-3">Categoria</th>
                   <th className="text-right font-medium py-2 px-3">Estoque</th>
                   <th className="text-right font-medium py-2 px-3">Mínimo</th>
-                  <th className="text-right font-medium py-2 px-3">Custo US$</th>
+                  <th className="text-right font-medium py-2 px-3">Custo {displayCode}</th>
                   <th className="text-right font-medium py-2 px-3">Saídas</th>
                   <th className="text-right font-medium py-2 px-3">Receita</th>
                   <th className="text-right font-medium py-2 px-3">Cobertura</th>
@@ -451,7 +476,7 @@ export default function EstoquePage() {
                       ) : "—"}
                     </td>
                     <td className="py-2 px-3 text-right tabular font-medium">
-                      {formatCurrency(r.costTotalUSD, "2", { compact: r.costTotalUSD >= 10000 })}
+                      {formatCurrency(r.costTotalUSD, displayCurrencyId, { compact: r.costTotalUSD >= 10000 })}
                     </td>
                     <td className="py-2 px-3 text-right tabular">
                       {r.unitsSold > 0 ? formatNumber(r.unitsSold) : "—"}
@@ -529,6 +554,7 @@ function StatusBar({
   status,
   count,
   valueUSD,
+  displayCurrencyId,
   total,
   active,
   onClick,
@@ -536,6 +562,7 @@ function StatusBar({
   status: StockStatus;
   count: number;
   valueUSD: number;
+  displayCurrencyId: AppCurrencyId | string;
   total: number;
   active: boolean;
   onClick: () => void;
@@ -566,7 +593,7 @@ function StatusBar({
       </div>
       <div className="mt-1.5 flex items-center justify-between text-[10px] text-muted-foreground tabular">
         <span>{formatPercent(pct, { decimals: 1 })} dos SKUs</span>
-        <span>{formatCurrency(valueUSD, "2", { compact: true })}</span>
+        <span>{formatCurrency(valueUSD, displayCurrencyId, { compact: true })}</span>
       </div>
     </button>
   );
@@ -590,10 +617,12 @@ function CompactList({
   rows,
   mode,
   emptyMessage,
+  displayCurrencyId,
 }: {
   rows: InventoryRow[];
   mode: "rupture" | "movers" | "dormant";
   emptyMessage: string;
+  displayCurrencyId: AppCurrencyId | string;
 }) {
   if (rows.length === 0) {
     return <div className="px-5 py-8 text-center text-xs text-muted-foreground">{emptyMessage}</div>;
@@ -621,7 +650,7 @@ function CompactList({
           <div className="text-right shrink-0">
             {mode === "rupture" && <RuptureMeta row={r} />}
             {mode === "movers" && <MoversMeta row={r} />}
-            {mode === "dormant" && <DormantMeta row={r} />}
+            {mode === "dormant" && <DormantMeta row={r} displayCurrencyId={displayCurrencyId} />}
           </div>
         </li>
       ))}
@@ -667,11 +696,11 @@ function MoversMeta({ row }: { row: InventoryRow }) {
   );
 }
 
-function DormantMeta({ row }: { row: InventoryRow }) {
+function DormantMeta({ row, displayCurrencyId }: { row: InventoryRow; displayCurrencyId: AppCurrencyId | string }) {
   return (
     <div className="space-y-0.5">
       <div className="text-[12px] font-medium tabular text-foreground">
-        {formatCurrency(row.costTotalUSD, "2", { compact: true })}
+        {formatCurrency(row.costTotalUSD, displayCurrencyId, { compact: true })}
       </div>
       <div className="text-[10px] text-muted-foreground tabular">
         {formatNumber(row.stock)} un parados

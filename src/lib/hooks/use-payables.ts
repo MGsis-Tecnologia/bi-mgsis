@@ -18,6 +18,7 @@ export interface PayablesView {
 export function usePayables(): PayablesView {
   const items = useDatasetStore((s) => s.payables?.items ?? EMPTY_ITEMS);
   const currency = useFilters((s) => s.currency);
+  const empresaId = useFilters((s) => s.empresaId);
   const rates = useExchangeRates((s) => s.rates);
 
   return React.useMemo(() => {
@@ -28,6 +29,7 @@ export function usePayables(): PayablesView {
     const reference = todayMs();
     const rows: PayableRow[] = [];
     for (const item of items) {
+      if (empresaId !== "all" && item.empresaId !== empresaId) continue;
       if (currency !== "ALL" && item.currencyId !== currency) continue;
       const rate = currency === "ALL" ? (rates[item.currencyId] ?? 1) : 1;
       rows.push(buildPayableRow(item, item.amountOrig * rate, reference));
@@ -43,7 +45,7 @@ export function usePayables(): PayablesView {
       entryTypes: [...typeSet].sort(),
       hasData: true,
     };
-  }, [items, currency, rates]);
+  }, [items, currency, empresaId, rates]);
 }
 
 // Apply global filters: period (by due date).

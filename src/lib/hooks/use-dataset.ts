@@ -19,11 +19,14 @@ import type {
 function buildOrders(
   items: OrderLineItem[],
   rates: Record<string, number>,
-  currencyMode: string
+  currencyMode: string,
+  empresaMode: string
 ): ImportedOrder[] {
   const map = new Map<string, ImportedOrder>();
 
   for (const item of items) {
+    // Empresa filter: skip items that don't match when a specific empresa is selected
+    if (empresaMode !== "all" && item.empresaId !== empresaMode) continue;
     // Currency filter: skip items that don't match when a specific currency is selected
     if (currencyMode !== "ALL" && item.currencyId !== currencyMode) continue;
 
@@ -64,6 +67,7 @@ function buildOrders(
         sellerName: item.sellerName,
         currencyId: item.currencyId,
         currencyCode: item.currencyCode,
+        empresaId: item.empresaId,
         totalBRL: totalDisplay,
         costBRL: costDisplay,
         profitBRL: totalDisplay - costDisplay,
@@ -138,13 +142,14 @@ export interface DatasetView {
 export function useDataset(): DatasetView {
   const rawItems = useDatasetStore((s) => s.dataset?.items ?? EMPTY_ITEMS);
   const currency = useFilters((s) => s.currency);
+  const empresaId = useFilters((s) => s.empresaId);
   const rates = useExchangeRates((s) => s.rates);
 
   return React.useMemo(() => {
     if (rawItems.length === 0) {
       return { orders: [], products: [], clients: [], sellers: [], channels: [], subgroups: [], hasData: false };
     }
-    const orders = buildOrders(rawItems, rates, currency);
+    const orders = buildOrders(rawItems, rates, currency, empresaId);
     return {
       orders,
       products: deriveProducts(rawItems),
@@ -154,7 +159,7 @@ export function useDataset(): DatasetView {
       subgroups: deriveSubgroups(rawItems),
       hasData: true,
     };
-  }, [rawItems, rates, currency]);
+  }, [rawItems, rates, currency, empresaId]);
 }
 
 export function useFilteredOrders(): ImportedOrder[] {
