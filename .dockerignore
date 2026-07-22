@@ -1,9 +1,28 @@
-node_modules
-.next
-.git
+# Dependências e build (recriados dentro da imagem)
+**/node_modules
+**/.next
+**/out
+**/build
+**/dist
+*.tsbuildinfo
+
+# Git / metadados
+**/.git
 .gitignore
-README.md
-npm-debug.log*
-.DS_Store
+.serena/
+.claude/
+
+# Segredos — NUNCA copiar pra imagem. A URL/segredo real vêm por env do Coolify.
+.env
+.env.*
+!.env.example
+
+# Docs e artefatos que não afetam o build
 *.md
-.env*.local
+page-current.html
+sql dados/
+
+# Logs / SO
+**/*.log
+**/.DS_Store
+Thumbs.db
