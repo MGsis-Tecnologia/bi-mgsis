@@ -4,25 +4,21 @@ import { getPrisma } from "@/lib/server/db";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-// Rota de healthcheck do Docker/Coolify. Fica fora do padrão /api/* de
-// propósito (é a única exceção, igual ao fluxo de referência).
+// Healthcheck de LIVENESS: responde 200 sempre que o processo Next está de pé.
+// A conexão com o banco é reportada no corpo (databaseReachable) mas NÃO
+// derruba o healthcheck — senão o Coolify faz rollback do app inteiro só
+// porque o banco está indisponível.
 //
-// Além de reportar a saúde, dispara getPrisma() — que no primeiro boot roda o
-// CREATE TABLE IF NOT EXISTS e valida a conexão. Assim o próprio healthcheck
-// bootstrapa o schema antes da primeira requisição de usuário.
+// A criação preguiçosa das tabelas (CREATE TABLE IF NOT EXISTS) acontece aqui
+// na primeira chamada em que o banco estiver acessível.
 export async function GET() {
+  let databaseReachable = false;
   try {
     const prisma = await getPrisma();
     await prisma.$queryRaw`SELECT 1`;
-    return NextResponse.json({ status: "ok", databaseReachable: true });
-  } catch (err) {
-    return NextResponse.json(
-      {
-        status: "error",
-        databaseReachable: false,
-        error: (err as Error).message,
-      },
-      { status: 503 }
-    );
+    databaseReachable = true;
+  } catch {
+    databaseReachable = false;
   }
+  return NextResponse.json({ status: "ok", databaseReachable });
 }
