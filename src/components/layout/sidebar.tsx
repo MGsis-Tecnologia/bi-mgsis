@@ -121,9 +121,9 @@ export function Sidebar() {
   const range = React.useMemo(() => getRange(), [preset, customRange, getRange]);
   const dailyInsight = React.useMemo<Insight | null>(() => {
     if (!ds.hasData) return null;
-    const list = generateInsights(ds.orders, range);
+    const list = generateInsights(ds.orders, range, preset);
     return list[0] ?? null;
-  }, [ds.hasData, ds.orders, range]);
+  }, [ds.hasData, ds.orders, range, preset]);
 
   const insightStyle = dailyInsight ? INSIGHT_TONE_STYLES[dailyInsight.tone] : INSIGHT_TONE_STYLES.neutral;
   const InsightIcon = insightStyle.icon;

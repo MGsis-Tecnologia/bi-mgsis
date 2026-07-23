@@ -18,6 +18,7 @@ import { Money } from "@/components/dashboard/money";
 import { useDataset, useFilteredOrders } from "@/lib/hooks/use-dataset";
 import { useFilters } from "@/lib/store/filters";
 import { computeKpisWithComparison, revenueBySubgroup } from "@/lib/analytics/kpis";
+import { comparisonLabel } from "@/lib/utils/dates";
 import { dailySeries, heatmapByDayOfWeek, monthlySeries } from "@/lib/analytics/timeseries";
 import { generateInsights } from "@/lib/analytics/insights";
 import { sellerMetrics } from "@/lib/analytics/sellers";
@@ -37,10 +38,11 @@ export default function ExecutiveDashboardPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const range = React.useMemo(() => getRange(), [preset, customRange, getRange]);
 
-  const kpi = React.useMemo(() => computeKpisWithComparison(ds.orders, range), [ds.orders, range]);
+  const kpi = React.useMemo(() => computeKpisWithComparison(ds.orders, range, preset), [ds.orders, range, preset]);
   const monthly = React.useMemo(() => monthlySeries(orders, range), [orders, range]);
   const daily = React.useMemo(() => dailySeries(orders, range), [orders, range]);
-  const insights = React.useMemo(() => generateInsights(ds.orders, range), [ds.orders, range]);
+  const insights = React.useMemo(() => generateInsights(ds.orders, range, preset), [ds.orders, range, preset]);
+  const cmpLabel = React.useMemo(() => comparisonLabel(preset, range), [preset, range]);
   const heatmap = React.useMemo(() => heatmapByDayOfWeek(orders), [orders]);
 
   const rbs = React.useMemo(() => revenueBySubgroup(orders), [orders]);
@@ -97,7 +99,7 @@ export default function ExecutiveDashboardPage() {
                 label={t("dashboard.kpi.revenue.label")}
                 caption={t("dashboard.kpi.revenue.caption")}
                 value={formatCurrency(kpi.revenue, currency, { compact: true })}
-                delta={kpi.delta.revenue} accent="accent" size="lg"
+                delta={kpi.delta.revenue} deltaTooltip={cmpLabel} accent="accent" size="lg"
                 spark={<MiniSparkArea data={sparkMonthly} />}
               />
             </div>
@@ -106,7 +108,7 @@ export default function ExecutiveDashboardPage() {
                 label={t("dashboard.kpi.profit.label")}
                 caption={`${t("dashboard.kpi.profit.caption")} ${formatPercent(kpi.marginPct, { decimals: 1 })}`}
                 value={formatCurrency(kpi.profit, currency, { compact: true })}
-                delta={kpi.delta.profit}
+                delta={kpi.delta.profit} deltaTooltip={cmpLabel}
                 accent={kpi.profit >= 0 ? "positive" : "negative"} size="lg"
                 spark={<MiniSparkArea data={sparkMonthly} color="positive" />}
               />
@@ -116,7 +118,7 @@ export default function ExecutiveDashboardPage() {
                 label={t("dashboard.kpi.ticket.label")}
                 caption={t("dashboard.kpi.ticket.caption", { count: formatNumber(kpi.uniqueCustomers) })}
                 value={formatCurrency(kpi.averageTicket, currency)}
-                delta={kpi.delta.averageTicket} size="lg"
+                delta={kpi.delta.averageTicket} deltaTooltip={cmpLabel} size="lg"
               />
             </div>
             <div className="reveal reveal-4">
@@ -124,7 +126,7 @@ export default function ExecutiveDashboardPage() {
                 label={t("dashboard.kpi.orders.label")}
                 caption={t("dashboard.kpi.orders.caption", { count: formatNumber(kpi.itemsSold) })}
                 value={formatNumber(kpi.ordersCount)}
-                delta={kpi.delta.ordersCount} size="lg"
+                delta={kpi.delta.ordersCount} deltaTooltip={cmpLabel} size="lg"
               />
             </div>
           </section>

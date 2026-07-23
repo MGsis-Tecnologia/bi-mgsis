@@ -12,7 +12,7 @@ import {
 } from "recharts";
 import type { TimePoint } from "@/lib/analytics/timeseries";
 import { useFilters } from "@/lib/store/filters";
-import { formatCurrency } from "@/lib/utils/format";
+import { formatCurrency, formatNumber, formatPercent } from "@/lib/utils/format";
 import { ChartDefs } from "./chart-defs";
 import { ChartTooltip } from "./chart-tooltip";
 
@@ -21,8 +21,16 @@ interface Props {
   height?: number;
   showAxis?: boolean;
   showGrid?: boolean;
-  compareKey?: "revenue" | "profit";
+  compareKey?: "revenue" | "profit" | "orders" | "discount" | "discountPct";
 }
+
+const SERIES_NAME: Record<NonNullable<Props["compareKey"]>, string> = {
+  revenue: "Receita",
+  profit: "Lucro",
+  orders: "Clientes atendidos",
+  discount: "Desconto",
+  discountPct: "% Desconto",
+};
 
 export function RevenueAreaChart({
   data,
@@ -32,6 +40,12 @@ export function RevenueAreaChart({
   compareKey = "revenue",
 }: Props) {
   const currency = useFilters((s) => s.currency);
+  const isCount = compareKey === "orders";
+  const isPercent = compareKey === "discountPct";
+  const yFormat = (v: number) =>
+    isPercent ? formatPercent(v, { decimals: 1 })
+    : isCount ? formatNumber(v)
+    : formatCurrency(v, currency, { compact: true });
 
   return (
     <ResponsiveContainer width="100%" height={height}>
@@ -58,18 +72,19 @@ export function RevenueAreaChart({
             tickLine={false}
             axisLine={false}
             tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 10 }}
-            tickFormatter={(v) => formatCurrency(Number(v), currency, { compact: true })}
-            width={56}
+            tickFormatter={(v) => yFormat(Number(v))}
+            allowDecimals={!isCount}
+            width={isCount ? 48 : 56}
           />
         )}
         <Tooltip
           cursor={{ stroke: "hsl(var(--foreground))", strokeDasharray: "2 3", strokeOpacity: 0.4 }}
-          content={<ChartTooltip />}
+          content={<ChartTooltip formatter={isPercent ? (v) => formatPercent(v, { decimals: 1 }) : undefined} />}
         />
         <Area
           type="monotone"
           dataKey={compareKey}
-          name={compareKey === "revenue" ? "Receita" : "Lucro"}
+          name={SERIES_NAME[compareKey]}
           stroke="hsl(var(--accent))"
           strokeWidth={1.6}
           fill="url(#gradAccent)"

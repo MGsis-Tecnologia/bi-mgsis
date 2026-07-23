@@ -260,6 +260,10 @@ function processSalesRows(
       quantity:     parseNumber(row["produto_quantidade"] as string),
       totalOrig:    parseNumber(row["produto_valor_total"] as string),
       costOrig:     parseNumber(row["produto_valor_custo"] as string),
+      // Desconto por linha (opcional). Aceita variações de nome de coluna.
+      discountOrig: parseNumber(
+        (row["produto_valor_desconto"] ?? row["item_desconto"] ?? row["pedido_valor_desconto"] ?? row["valor_desconto"] ?? 0) as string
+      ),
       subgroupId:   String(row["subgrupo_id"] ?? "").trim(),
       subgroupName: String(row["subgrupo_descricao"] ?? "").trim(),
       sellerId:     String(row["vendedor_id"] ?? "").trim(),

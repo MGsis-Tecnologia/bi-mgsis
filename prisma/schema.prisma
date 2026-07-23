@@ -41,6 +41,7 @@ model SaleItem {
   quantity     Float
   totalOrig    Float  @map("total_orig")
   costOrig     Float  @map("cost_orig")
+  discountOrig Float  @default(0) @map("discount_orig")
   subgroupId   String @map("subgroup_id")
   subgroupName String @map("subgroup_name")
   sellerId     String @map("seller_id")

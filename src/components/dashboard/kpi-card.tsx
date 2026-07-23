@@ -3,6 +3,7 @@
 import * as React from "react";
 import { cn } from "@/lib/utils";
 import { Card } from "@/components/ui/card";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { DeltaPill } from "./delta-pill";
 
 interface KpiCardProps {
@@ -11,6 +12,7 @@ interface KpiCardProps {
   unit?: string;
   delta?: number;
   invertDelta?: boolean;
+  deltaTooltip?: string;
   caption?: string;
   spark?: React.ReactNode;
   accent?: "default" | "accent" | "positive" | "negative";
@@ -24,6 +26,7 @@ export function KpiCard({
   unit,
   delta,
   invertDelta,
+  deltaTooltip,
   caption,
   spark,
   accent = "default",
@@ -51,7 +54,20 @@ export function KpiCard({
             <div className="text-[11px] text-muted-foreground/80">{caption}</div>
           )}
         </div>
-        {delta !== undefined && <DeltaPill value={delta} invert={invertDelta} />}
+        {delta !== undefined && (
+          deltaTooltip ? (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <span className="cursor-help">
+                  <DeltaPill value={delta} invert={invertDelta} />
+                </span>
+              </TooltipTrigger>
+              <TooltipContent>{deltaTooltip}</TooltipContent>
+            </Tooltip>
+          ) : (
+            <DeltaPill value={delta} invert={invertDelta} />
+          )
+        )}
       </div>
 
       <div className="px-5 pb-2 flex items-baseline gap-2">

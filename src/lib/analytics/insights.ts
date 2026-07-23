@@ -1,8 +1,8 @@
 import type { ImportedOrder } from "@/lib/types/dataset";
-import type { DateRange } from "@/lib/types";
+import type { DatePreset, DateRange } from "@/lib/types";
 import { computeKpis, revenueBySubgroup } from "./kpis";
 import { monthlySeries } from "./timeseries";
-import { previousComparableRange, isInRange } from "@/lib/utils/dates";
+import { comparisonRange, isInRange } from "@/lib/utils/dates";
 import { formatPercent } from "@/lib/utils/format";
 
 export interface Insight {
@@ -13,12 +13,12 @@ export interface Insight {
   metric?: string;
 }
 
-export function generateInsights(orders: ImportedOrder[], range: DateRange): Insight[] {
+export function generateInsights(orders: ImportedOrder[], range: DateRange, preset: DatePreset): Insight[] {
   const insights: Insight[] = [];
 
   const cur = orders.filter((o) => isInRange(o.date, range));
-  const prevRange = previousComparableRange(range);
-  const prev = orders.filter((o) => isInRange(o.date, prevRange));
+  const prevRange = comparisonRange(preset, range);
+  const prev = prevRange ? orders.filter((o) => isInRange(o.date, prevRange)) : [];
   const k = computeKpis(cur);
   const kp = computeKpis(prev);
 

@@ -9,8 +9,9 @@ export interface OrderLineItem {
   productId: string;
   productName: string;
   quantity: number;
-  totalOrig: number;      // produto_valor_total in original currency
+  totalOrig: number;      // produto_valor_total in original currency (já LÍQUIDO, pós-desconto)
   costOrig: number;       // produto_valor_custo in original currency
+  discountOrig: number;   // produto_valor_desconto — desconto da linha (bruto = totalOrig + discountOrig)
   subgroupId: string;
   subgroupName: string;
   sellerId: string;
@@ -33,10 +34,12 @@ export interface ImportedOrder {
   currencyId: string;
   currencyCode: string;
   empresaId: string;      // empresa_id
-  totalBRL: number;       // display value — original currency OR converted to R$ for ALL mode
+  totalBRL: number;       // display value (LÍQUIDO) — original currency OR converted to R$ for ALL mode
   costBRL: number;
   profitBRL: number;
   marginPct: number;
+  discountBRL: number;    // desconto concedido (display) — bruto = totalBRL + discountBRL
+  discountPct: number;    // discountBRL / (totalBRL + discountBRL)
   items: ImportedLineItem[];
 }
 

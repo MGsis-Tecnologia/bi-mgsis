@@ -33,6 +33,7 @@ CREATE TABLE IF NOT EXISTS sale_items (
   quantity      DOUBLE PRECISION NOT NULL DEFAULT 0,
   total_orig    DOUBLE PRECISION NOT NULL DEFAULT 0,
   cost_orig     DOUBLE PRECISION NOT NULL DEFAULT 0,
+  discount_orig DOUBLE PRECISION NOT NULL DEFAULT 0,
   subgroup_id   TEXT NOT NULL DEFAULT '',
   subgroup_name TEXT NOT NULL DEFAULT '',
   seller_id     TEXT NOT NULL DEFAULT '',
@@ -43,7 +44,8 @@ CREATE TABLE IF NOT EXISTS sale_items (
 );
 -- Aditivo p/ bancos já existentes (o CREATE TABLE IF NOT EXISTS acima não altera
 -- tabelas pré-existentes). Precede o índice de empresa_id abaixo.
-ALTER TABLE sale_items ADD COLUMN IF NOT EXISTS empresa_id TEXT NOT NULL DEFAULT '';
+ALTER TABLE sale_items ADD COLUMN IF NOT EXISTS empresa_id    TEXT NOT NULL DEFAULT '';
+ALTER TABLE sale_items ADD COLUMN IF NOT EXISTS discount_orig DOUBLE PRECISION NOT NULL DEFAULT 0;
 CREATE INDEX IF NOT EXISTS idx_sale_items_date       ON sale_items(date);
 CREATE INDEX IF NOT EXISTS idx_sale_items_client_id  ON sale_items(client_id);
 CREATE INDEX IF NOT EXISTS idx_sale_items_product_id ON sale_items(product_id);

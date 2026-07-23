@@ -33,6 +33,7 @@ function buildOrders(
     const convRate = currencyMode === "ALL" ? (rates[item.currencyId] ?? 1) : 1;
     const totalDisplay = item.totalOrig * convRate;
     const costDisplay = item.costOrig * convRate;
+    const discountDisplay = (item.discountOrig ?? 0) * convRate;
 
     const lineItem: ImportedLineItem = {
       productId: item.productId,
@@ -48,8 +49,13 @@ function buildOrders(
     if (existing) {
       existing.totalBRL += totalDisplay;
       existing.costBRL += costDisplay;
+      existing.discountBRL += discountDisplay;
       existing.profitBRL = existing.totalBRL - existing.costBRL;
       existing.marginPct = existing.totalBRL > 0 ? existing.profitBRL / existing.totalBRL : 0;
+      existing.discountPct =
+        existing.totalBRL + existing.discountBRL > 0
+          ? existing.discountBRL / (existing.totalBRL + existing.discountBRL)
+          : 0;
       existing.items.push(lineItem);
       // Garante que clientCity está definido (usa a primeira ocorrência não-vazia)
       if (!existing.clientCity && item.clientCity) {
@@ -72,6 +78,9 @@ function buildOrders(
         costBRL: costDisplay,
         profitBRL: totalDisplay - costDisplay,
         marginPct: totalDisplay > 0 ? (totalDisplay - costDisplay) / totalDisplay : 0,
+        discountBRL: discountDisplay,
+        discountPct:
+          totalDisplay + discountDisplay > 0 ? discountDisplay / (totalDisplay + discountDisplay) : 0,
         items: [lineItem],
       });
     }

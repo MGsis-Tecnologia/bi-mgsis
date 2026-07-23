@@ -85,6 +85,7 @@ export default function VendedoresPage() {
                   <th className="text-right font-medium py-2 px-5">{t("vendedores.table.col.revenue")}</th>
                   <th className="text-right font-medium py-2 px-5">{t("vendedores.table.col.ticket")}</th>
                   <th className="text-right font-medium py-2 px-5">{t("vendedores.table.col.margin")}</th>
+                  <th className="text-right font-medium py-2 px-5">% Desc.</th>
                   <th className="text-left font-medium py-2 px-5 w-[200px]">{t("vendedores.table.col.goal")}</th>
                 </tr>
               </thead>
@@ -115,6 +116,12 @@ export default function VendedoresPage() {
                     </td>
                     <td className="py-3 px-5 text-right tabular text-muted-foreground">
                       {formatPercent(m.marginPct, { decimals: 1 })}
+                    </td>
+                    <td className={cn(
+                      "py-3 px-5 text-right tabular font-medium",
+                      m.discountPct >= 0.15 ? "text-negative" : m.discountPct >= 0.07 ? "text-warning" : "text-muted-foreground"
+                    )}>
+                      {formatPercent(m.discountPct, { decimals: 1 })}
                     </td>
                     <td className="py-3 px-5">
                       <div className="flex items-center gap-2">

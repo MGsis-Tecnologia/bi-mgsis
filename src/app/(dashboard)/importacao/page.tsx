@@ -307,7 +307,7 @@ export default function ImportacaoPage() {
         <CardContent className="space-y-6">
           <SchemaTable
             heading="Leiaute · Vendas"
-            note="Datas: DD/MM/AAAA · Decimais: vírgula (padrão BR) · moeda_id: 1=R$ 2=US$ 3=G$ · importa linhas com pedido_tipo = VENDA. empresa_id identifica a matriz/filial e alimenta o filtro global de empresa (presente em todos os leiautes)."
+            note="Datas: DD/MM/AAAA · Decimais: vírgula (padrão BR) · moeda_id: 1=R$ 2=US$ 3=G$ · importa linhas com pedido_tipo = VENDA. empresa_id identifica a matriz/filial e alimenta o filtro global de empresa (presente em todos os leiautes). item_desconto (opcional) é o desconto da linha; produto_valor_total já é líquido, então a venda bruta = total + desconto."
             cols={SALES_SCHEMA}
           />
           <SchemaTable
@@ -459,6 +459,7 @@ const SALES_SCHEMA = [
   { name: "produto_quantidade",  type: "Número",  example: "2" },
   { name: "produto_valor_total", type: "Decimal", example: "1250,00" },
   { name: "produto_valor_custo", type: "Decimal", example: "900,00" },
+  { name: "item_desconto",       type: "Decimal (opcional)", example: "150,00" },
   { name: "subgrupo_id",         type: "Chave",   example: "SG-05" },
   { name: "subgrupo_descricao",  type: "Texto",   example: "Informática" },
   { name: "vendedor_id",         type: "Chave",   example: "VND-003" },

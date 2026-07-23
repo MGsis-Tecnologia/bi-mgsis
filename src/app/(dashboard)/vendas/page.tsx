@@ -2,7 +2,6 @@
 
 import * as React from "react";
 import dynamic from "next/dynamic";
-import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { PageHeader } from "@/components/layout/page-header";
 import { KpiCard } from "@/components/dashboard/kpi-card";
 import { EmptyState } from "@/components/dashboard/empty-state";
@@ -12,8 +11,6 @@ import { Badge } from "@/components/ui/badge";
 import { RevenueAreaChart } from "@/components/charts/revenue-area-chart";
 import { Heatmap } from "@/components/charts/heatmap";
 import { BarChartH } from "@/components/charts/bar-chart-h";
-import { ChartDefs } from "@/components/charts/chart-defs";
-import { ChartTooltip } from "@/components/charts/chart-tooltip";
 import { Money } from "@/components/dashboard/money";
 import { useDataset, useFilteredOrders } from "@/lib/hooks/use-dataset";
 import { useFilters } from "@/lib/store/filters";
@@ -66,45 +63,38 @@ export default function VendasPage() {
     <div className="space-y-8">
       <PageHeader eyebrow={t("vendas.header.eyebrow")} title={t("vendas.header.title")} description={t("vendas.header.desc")} />
 
-      <section className="grid grid-cols-2 md:grid-cols-4 gap-3">
+      <section className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
         <KpiCard label={t("vendas.kpi.revenue")} value={formatCurrency(kpi.revenue, currency, { compact: true })} accent="accent" />
         <KpiCard label={t("vendas.kpi.orders")} value={formatNumber(kpi.ordersCount)} />
         <KpiCard label={t("vendas.kpi.ticket")} value={formatCurrency(kpi.averageTicket, currency)} />
         <KpiCard label={t("vendas.kpi.margin")} value={formatPercent(kpi.marginPct, { decimals: 1 })} />
+        <KpiCard label="Desconto concedido" caption={`${formatPercent(kpi.discountPct, { decimals: 1 })} da venda bruta`} value={formatCurrency(kpi.discount, currency, { compact: true })} accent="negative" />
+        <KpiCard label="% Desc. médio" caption={`${formatPercent(kpi.pctOrdersWithDiscount, { decimals: 0 })} dos pedidos com desconto`} value={formatPercent(kpi.discountPct, { decimals: 1 })} />
       </section>
 
       <Card>
-        <CardHeader>
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div>
-              <CardTitle>{t("vendas.chart.evolution.title")}</CardTitle>
-              <p className="mt-1 text-xs text-muted-foreground">{t("vendas.chart.evolution.desc")}</p>
-            </div>
-            <Tabs defaultValue="month">
+        <Tabs defaultValue="month">
+          <CardHeader>
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <CardTitle>{t("vendas.chart.evolution.title")}</CardTitle>
+                <p className="mt-1 text-xs text-muted-foreground">{t("vendas.chart.evolution.desc")}</p>
+              </div>
               <TabsList>
                 <TabsTrigger value="month">{t("dashboard.trend.tab.month")}</TabsTrigger>
                 <TabsTrigger value="day">{t("dashboard.trend.tab.day")}</TabsTrigger>
-                <TabsTrigger value="bars">{t("dashboard.trend.tab.bars")}</TabsTrigger>
+                <TabsTrigger value="clients">{t("dashboard.trend.tab.clients")}</TabsTrigger>
+                <TabsTrigger value="discount">{t("dashboard.trend.tab.discount")}</TabsTrigger>
               </TabsList>
-              <TabsContent value="month"><div className="h-72 mt-3"><RevenueAreaChart data={monthly} height={280} /></div></TabsContent>
-              <TabsContent value="day"><div className="h-72 mt-3"><RevenueAreaChart data={daily} height={280} /></div></TabsContent>
-              <TabsContent value="bars">
-                <div className="h-72 mt-3">
-                  <ResponsiveContainer width="100%" height={280}>
-                    <BarChart data={monthly} margin={{ top: 12, right: 12, left: 0, bottom: 0 }}>
-                      <ChartDefs />
-                      <CartesianGrid stroke="hsl(var(--border))" strokeDasharray="2 4" vertical={false} />
-                      <XAxis dataKey="label" tickLine={false} axisLine={false} tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 10 }} />
-                      <YAxis tickLine={false} axisLine={false} tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 10 }} tickFormatter={(v) => formatCurrency(Number(v), currency, { compact: true })} width={60} />
-                      <Tooltip cursor={{ fill: "hsl(var(--muted) / 0.4)" }} content={<ChartTooltip />} />
-                      <Bar dataKey="revenue" name="Receita" fill="hsl(var(--accent))" radius={[3, 3, 0, 0]} />
-                    </BarChart>
-                  </ResponsiveContainer>
-                </div>
-              </TabsContent>
-            </Tabs>
-          </div>
-        </CardHeader>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <TabsContent value="month" className="mt-0"><div className="h-80"><RevenueAreaChart data={monthly} height={320} /></div></TabsContent>
+            <TabsContent value="day" className="mt-0"><div className="h-80"><RevenueAreaChart data={daily} height={320} /></div></TabsContent>
+            <TabsContent value="clients" className="mt-0"><div className="h-80"><RevenueAreaChart data={monthly} height={320} compareKey="orders" /></div></TabsContent>
+            <TabsContent value="discount" className="mt-0"><div className="h-80"><RevenueAreaChart data={monthly} height={320} compareKey="discountPct" /></div></TabsContent>
+          </CardContent>
+        </Tabs>
       </Card>
 
       <section className="grid grid-cols-1 lg:grid-cols-3 gap-3">
