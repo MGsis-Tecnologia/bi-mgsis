@@ -16,7 +16,7 @@ import { useDataset, useFilteredOrders } from "@/lib/hooks/use-dataset";
 import { useFilters } from "@/lib/store/filters";
 import { computeKpis } from "@/lib/analytics/kpis";
 import { aggregateSalesByCity, getMaxSales } from "@/lib/analytics/geo-sales";
-import { dailySeries, heatmapByDayOfWeek, monthlySeries } from "@/lib/analytics/timeseries";
+import { dailySeries, heatmapByDayOfWeek, monthlySeries, yearlySeries } from "@/lib/analytics/timeseries";
 import { formatCurrency, formatNumber, formatPercent } from "@/lib/utils/format";
 import { useTranslation } from "@/lib/hooks/use-translation";
 
@@ -39,6 +39,7 @@ export default function VendasPage() {
   const kpi = React.useMemo(() => computeKpis(orders), [orders]);
   const monthly = React.useMemo(() => monthlySeries(orders, range), [orders, range]);
   const daily = React.useMemo(() => dailySeries(orders, range), [orders, range]);
+  const yearly = React.useMemo(() => yearlySeries(orders), [orders]);
   const heatmap = React.useMemo(() => heatmapByDayOfWeek(orders), [orders]);
 
   const byChannel = React.useMemo(() => {
@@ -83,6 +84,7 @@ export default function VendasPage() {
               <TabsList>
                 <TabsTrigger value="month">{t("dashboard.trend.tab.month")}</TabsTrigger>
                 <TabsTrigger value="day">{t("dashboard.trend.tab.day")}</TabsTrigger>
+                <TabsTrigger value="year">{t("dashboard.trend.tab.year")}</TabsTrigger>
                 <TabsTrigger value="clients">{t("dashboard.trend.tab.clients")}</TabsTrigger>
                 <TabsTrigger value="discount">{t("dashboard.trend.tab.discount")}</TabsTrigger>
               </TabsList>
@@ -91,6 +93,7 @@ export default function VendasPage() {
           <CardContent>
             <TabsContent value="month" className="mt-0"><div className="h-80"><RevenueAreaChart data={monthly} height={320} /></div></TabsContent>
             <TabsContent value="day" className="mt-0"><div className="h-80"><RevenueAreaChart data={daily} height={320} /></div></TabsContent>
+            <TabsContent value="year" className="mt-0"><div className="h-80"><RevenueAreaChart data={yearly} height={320} /></div></TabsContent>
             <TabsContent value="clients" className="mt-0"><div className="h-80"><RevenueAreaChart data={monthly} height={320} compareKey="orders" /></div></TabsContent>
             <TabsContent value="discount" className="mt-0"><div className="h-80"><RevenueAreaChart data={monthly} height={320} compareKey="discountPct" /></div></TabsContent>
           </CardContent>

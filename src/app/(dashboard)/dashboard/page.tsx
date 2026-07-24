@@ -19,7 +19,7 @@ import { useDataset, useFilteredOrders } from "@/lib/hooks/use-dataset";
 import { useFilters } from "@/lib/store/filters";
 import { computeKpisWithComparison, revenueBySubgroup } from "@/lib/analytics/kpis";
 import { comparisonLabel } from "@/lib/utils/dates";
-import { dailySeries, heatmapByDayOfWeek, monthlySeries } from "@/lib/analytics/timeseries";
+import { dailySeries, heatmapByDayOfWeek, monthlySeries, yearlySeries } from "@/lib/analytics/timeseries";
 import { generateInsights } from "@/lib/analytics/insights";
 import { sellerMetrics } from "@/lib/analytics/sellers";
 import { productABC } from "@/lib/analytics/abc";
@@ -41,6 +41,7 @@ export default function ExecutiveDashboardPage() {
   const kpi = React.useMemo(() => computeKpisWithComparison(ds.orders, range, preset), [ds.orders, range, preset]);
   const monthly = React.useMemo(() => monthlySeries(orders, range), [orders, range]);
   const daily = React.useMemo(() => dailySeries(orders, range), [orders, range]);
+  const yearly = React.useMemo(() => yearlySeries(orders), [orders]);
   const insights = React.useMemo(() => generateInsights(ds.orders, range, preset), [ds.orders, range, preset]);
   const cmpLabel = React.useMemo(() => comparisonLabel(preset, range), [preset, range]);
   const heatmap = React.useMemo(() => heatmapByDayOfWeek(orders), [orders]);
@@ -146,12 +147,14 @@ export default function ExecutiveDashboardPage() {
                   <TabsList>
                     <TabsTrigger value="month">{t("dashboard.trend.tab.month")}</TabsTrigger>
                     <TabsTrigger value="day">{t("dashboard.trend.tab.day")}</TabsTrigger>
+                    <TabsTrigger value="year">{t("dashboard.trend.tab.year")}</TabsTrigger>
                     <TabsTrigger value="profit">{t("dashboard.trend.tab.profit")}</TabsTrigger>
                   </TabsList>
                 </div>
                 <div className="px-2 pb-2">
                   <TabsContent value="month" className="mt-0"><RevenueAreaChart data={monthly} height={280} /></TabsContent>
                   <TabsContent value="day" className="mt-0"><RevenueAreaChart data={daily} height={280} /></TabsContent>
+                  <TabsContent value="year" className="mt-0"><RevenueAreaChart data={yearly} height={280} /></TabsContent>
                   <TabsContent value="profit" className="mt-0"><RevenueAreaChart data={monthly} height={280} compareKey="profit" /></TabsContent>
                 </div>
               </Tabs>

@@ -70,6 +70,26 @@ export function dailySeries(orders: ImportedOrder[], range: DateRange): TimePoin
   return finalizeDiscount([...map.values()]);
 }
 
+// Agregação anual — um ponto por ano presente nos pedidos (label = "2024").
+// Não usa preenchimento por range para evitar 100 anos vazios no modo "Todos".
+export function yearlySeries(orders: ImportedOrder[]): TimePoint[] {
+  const map = new Map<string, TimePoint>();
+  for (const o of orders) {
+    const k = o.date.slice(0, 4); // YYYY
+    let cur = map.get(k);
+    if (!cur) {
+      cur = { key: k, label: k, revenue: 0, orders: 0, profit: 0, cost: 0, discount: 0, discountPct: 0 };
+      map.set(k, cur);
+    }
+    cur.revenue += o.totalBRL;
+    cur.profit += o.profitBRL;
+    cur.cost += o.costBRL;
+    cur.discount += o.discountBRL;
+    cur.orders += 1;
+  }
+  return finalizeDiscount([...map.values()].sort((a, b) => a.key.localeCompare(b.key)));
+}
+
 export function heatmapByDayOfWeek(orders: ImportedOrder[]): { matrix: number[][]; max: number } {
   const matrix: number[][] = Array.from({ length: 7 }, () => Array(6).fill(0));
   let max = 0;

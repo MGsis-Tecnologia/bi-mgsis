@@ -16,6 +16,7 @@ import { EmptyState } from "@/components/dashboard/empty-state";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { BarChartH } from "@/components/charts/bar-chart-h";
+import { LabeledDonut } from "@/components/charts/labeled-donut";
 import { Money } from "@/components/dashboard/money";
 import { useDataset, useFilteredOrders } from "@/lib/hooks/use-dataset";
 import { useDatasetStore } from "@/lib/store/dataset";
@@ -24,6 +25,7 @@ import { useExchangeRates } from "@/lib/store/exchange-rates";
 import type { AppCurrencyId } from "@/lib/types/dataset";
 import {
   belowMinimumStock,
+  coverageDistribution,
   inventoryAnalysis,
   stockByCategory,
   statusDistribution,
@@ -69,10 +71,21 @@ export default function EstoquePage() {
         return rate === 1 ? it : { ...it, costTotalUSD: it.costTotalUSD * rate };
       });
   }, [inventory?.items, empresaId, currency, rates]);
-  const periodDays = Math.max(
-    1,
-    Math.round((range.to.getTime() - range.from.getTime()) / 86400000) + 1
-  );
+  // Janela de demanda p/ cobertura: dias REAIS com dados dentro do período, até
+  // hoje. Sem isso, "Todos" (intervalo sentinela 2000–2099) diluiria a demanda
+  // em ~100 anos e estouraria a cobertura de todos os itens.
+  const periodDays = React.useMemo(() => {
+    const now = Date.now();
+    const effTo = Math.min(range.to.getTime(), now);
+    let effFrom = range.from.getTime();
+    let firstTs = Infinity;
+    for (const o of orders) {
+      const t = new Date(o.date + "T00:00:00").getTime();
+      if (t < firstTs) firstTs = t;
+    }
+    if (Number.isFinite(firstTs)) effFrom = Math.max(effFrom, firstTs);
+    return Math.max(1, Math.round((effTo - effFrom) / 86400000) + 1);
+  }, [orders, range]);
 
   const [statusFilter, setStatusFilter] = React.useState<StockStatus | "all">("all");
   const [query, setQuery] = React.useState("");
@@ -89,6 +102,18 @@ export default function EstoquePage() {
   const dormant = React.useMemo(() => topDormant(rows, 10), [rows]);
   const rupture = React.useMemo(() => topRuptureRisk(rows, 12), [rows]);
   const minStockRows = React.useMemo(() => belowMinimumStock(rows), [rows]);
+
+  const coverage = React.useMemo(
+    () => coverageDistribution(rows).map((s) => ({
+      key: s.key,
+      label: s.label,
+      value: s.valueUSD,
+      count: s.count,
+      color: COVERAGE_COLORS[s.key] ?? "hsl(var(--muted-foreground))",
+    })),
+    [rows]
+  );
+  const coverageTotal = coverage.reduce((s, b) => s + b.value, 0);
 
   const filteredRows = React.useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -169,6 +194,30 @@ export default function EstoquePage() {
           value={formatNumber(totals.noMovement + totals.excess)}
         />
       </section>
+
+      {/* Cobertura de estoque — pizza por faixa de meses */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle>Cobertura de estoque</CardTitle>
+              <p className="mt-1 text-[11px] text-muted-foreground">
+                Capital em estoque por faixa de meses que o saldo atual cobre a demanda do período — valor e % de cada faixa.
+              </p>
+            </div>
+            <Badge variant="ghost">{formatNumber(totals.skus)} SKUs</Badge>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <LabeledDonut
+            data={coverage}
+            currencyId={displayCurrencyId}
+            height={280}
+            centerLabel="Capital"
+            centerValue={formatCurrency(coverageTotal, displayCurrencyId, { compact: true })}
+          />
+        </CardContent>
+      </Card>
 
       {/* Quick navigation */}
       <nav className="flex items-center gap-3 flex-wrap text-[12px] text-muted-foreground">
@@ -524,6 +573,18 @@ export default function EstoquePage() {
 }
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
+
+// Cores fixas por faixa de cobertura (crítico → excesso).
+const COVERAGE_COLORS: Record<string, string> = {
+  sem_cobertura: "hsl(330 81% 60%)",        // pink
+  fora_analise:  "hsl(45 93% 47%)",         // amarelo
+  ate_1:         "hsl(var(--chart-1))",
+  "1_2":         "hsl(var(--chart-2))",
+  "2_4":         "hsl(var(--chart-3))",
+  "4_6":         "hsl(var(--chart-4))",
+  "6_12":        "hsl(var(--chart-5))",
+  mais_12:       "hsl(var(--negative))",    // vermelho
+};
 
 const STATUS_TONES: Record<StockStatus, { dot: string; text: string; border: string; bg: string }> = {
   rupture:     { dot: "bg-negative",        text: "text-negative",         border: "border-negative/30", bg: "bg-negative/10" },

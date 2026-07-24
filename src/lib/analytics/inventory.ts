@@ -305,6 +305,54 @@ export function statusLabel(s: StockStatus): string {
   return STATUS_LABEL[s];
 }
 
+// ─── Distribuição por faixa de cobertura (meses) ──────────────────────────────
+// Classifica cada SKU pelo tempo que o estoque atual cobre a demanda do período:
+//   sem_cobertura → estoque = 0
+//   fora_analise  → tem estoque mas sem venda no período (cobertura indefinida)
+//   demais        → cobertura finita em faixas de meses
+export interface CoverageSlice {
+  key: string;
+  label: string;
+  count: number;
+  valueUSD: number;   // custo total do estoque na faixa (moeda de exibição)
+}
+
+const DAYS_PER_MONTH = 30.44;
+
+const COVERAGE_ORDER: { key: string; label: string }[] = [
+  { key: "sem_cobertura", label: "Sem cobertura" },
+  { key: "fora_analise",  label: "Fora de análise" },
+  { key: "ate_1",         label: "Até 1 mês" },
+  { key: "1_2",           label: "1 a 2 meses" },
+  { key: "2_4",           label: "2 a 4 meses" },
+  { key: "4_6",           label: "4 a 6 meses" },
+  { key: "6_12",          label: "6 a 12 meses" },
+  { key: "mais_12",       label: "Mais de 12 meses" },
+];
+
+function coverageBucketKey(r: InventoryRow): string {
+  if (r.stock <= 0) return "sem_cobertura";
+  if (r.avgDailyDemand <= 0 || !Number.isFinite(r.coverageDays)) return "fora_analise";
+  const months = r.coverageDays / DAYS_PER_MONTH;
+  if (months <= 1)  return "ate_1";
+  if (months <= 2)  return "1_2";
+  if (months <= 4)  return "2_4";
+  if (months <= 6)  return "4_6";
+  if (months <= 12) return "6_12";
+  return "mais_12";
+}
+
+export function coverageDistribution(rows: InventoryRow[]): CoverageSlice[] {
+  const acc = new Map<string, CoverageSlice>();
+  for (const o of COVERAGE_ORDER) acc.set(o.key, { key: o.key, label: o.label, count: 0, valueUSD: 0 });
+  for (const r of rows) {
+    const s = acc.get(coverageBucketKey(r))!;
+    s.count++;
+    s.valueUSD += r.costTotalUSD;
+  }
+  return COVERAGE_ORDER.map((o) => acc.get(o.key)!);
+}
+
 // Top movers by units sold in the period
 export function topMovers(rows: InventoryRow[], limit = 10): InventoryRow[] {
   return [...rows]
