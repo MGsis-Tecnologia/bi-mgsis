@@ -4,6 +4,7 @@ import type {
   CaixaItem,
   InventoryItem,
   OrderLineItem,
+  OrderType,
   PayableItem,
   ReceivableItem,
   StoredCaixa,
@@ -222,9 +223,15 @@ function processSalesRows(
     rowNum++;
     const row = mapRow(rawRow, colMap);
 
-    // Filter: only VENDAS
-    const tipo = String(row["pedido_tipo"] ?? "").trim().toUpperCase();
-    if (tipo !== "VENDA") { skipped++; continue; }
+    // Aceita VENDA e DEVOLUCAO VENDA (tolerante a acento/variação de escrita).
+    // O uso separado fica a cargo das análises — hoje todos os cálculos usam
+    // apenas VENDA (filtrado em useDataset).
+    const tipoRaw = String(row["pedido_tipo"] ?? "").trim().toUpperCase();
+    const tipo = tipoRaw.normalize("NFD").replace(/[^\x20-\x7E]/g, "");
+    const isVenda = tipo === "VENDA";
+    const isDevolucao = tipo.startsWith("DEVOLUCAO");
+    if (!isVenda && !isDevolucao) { skipped++; continue; }
+    const orderType: OrderType = isVenda ? "VENDA" : "DEVOLUCAO VENDA";
 
     // Required string fields
     const orderId   = String(row["pedido_documento"] ?? "").trim();
@@ -251,6 +258,7 @@ function processSalesRows(
     items.push({
       date,
       orderId,
+      orderType,
       channel:      String(row["pedido_canal"] ?? "").trim(),
       clientId,
       clientName:   String(row["cliente_nome"] ?? "").trim(),
@@ -275,7 +283,7 @@ function processSalesRows(
   }
 
   if (items.length === 0) {
-    return errorResult(["Nenhuma linha válida (pedido_tipo=VENDAS) encontrada."], warnings, skipped);
+    return errorResult(["Nenhuma linha válida (pedido_tipo = VENDA ou DEVOLUCAO VENDA) encontrada."], warnings, skipped);
   }
 
   return {

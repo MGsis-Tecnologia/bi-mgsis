@@ -307,7 +307,7 @@ export default function ImportacaoPage() {
         <CardContent className="space-y-6">
           <SchemaTable
             heading="Leiaute · Vendas"
-            note="Datas: DD/MM/AAAA · Decimais: vírgula (padrão BR) · moeda_id: 1=R$ 2=US$ 3=G$ · importa linhas com pedido_tipo = VENDA. empresa_id identifica a matriz/filial e alimenta o filtro global de empresa (presente em todos os leiautes). item_desconto (opcional) é o desconto da linha; produto_valor_total já é líquido, então a venda bruta = total + desconto."
+            note="Datas: DD/MM/AAAA · Decimais: vírgula (padrão BR) · moeda_id: 1=R$ 2=US$ 3=G$ · importa linhas com pedido_tipo = VENDA e DEVOLUCAO VENDA (as devoluções ficam armazenadas, mas todos os indicadores atuais consideram apenas VENDA). empresa_id identifica a matriz/filial e alimenta o filtro global de empresa (presente em todos os leiautes). item_desconto (opcional) é o desconto da linha; produto_valor_total já é líquido, então a venda bruta = total + desconto."
             cols={SALES_SCHEMA}
           />
           <SchemaTable
@@ -466,7 +466,7 @@ const SALES_SCHEMA = [
   { name: "vendedor_nome",       type: "Texto",   example: "João Silva" },
   { name: "moeda_id",            type: "1|2|3",   example: "1" },
   { name: "moeda_sigla",         type: "Texto",   example: "R$" },
-  { name: "pedido_tipo",         type: "Texto",   example: "VENDA" },
+  { name: "pedido_tipo",         type: "Texto",   example: "VENDA / DEVOLUCAO VENDA" },
   { name: "empresa_id",          type: "Chave",   example: "1 (matriz) / 2 (filial)" },
 ];
 

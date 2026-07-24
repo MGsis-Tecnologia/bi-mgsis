@@ -1,7 +1,13 @@
+// Tipo do movimento. A view bi_movimento passou a trazer VENDA e DEVOLUCAO VENDA.
+// IMPORTANTE: todos os cálculos atuais consideram apenas "VENDA" — o filtro é
+// aplicado uma única vez em useDataset (ver use-dataset.ts).
+export type OrderType = "VENDA" | "DEVOLUCAO VENDA";
+
 // Raw row parsed from CSV/Excel (one per product per order)
 export interface OrderLineItem {
   date: string;           // ISO date YYYY-MM-DD — stored as string to survive JSON serialization
   orderId: string;        // pedido_documento
+  orderType: OrderType;   // pedido_tipo
   channel: string;        // Atacado | Varejo (normalized)
   clientId: string;
   clientName: string;

@@ -131,10 +131,10 @@ export default function ProdutosPage() {
           </div>
         </CardHeader>
         <CardContent className="px-0">
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto overflow-y-auto max-h-[720px]">
             <table className="w-full text-sm">
-              <thead>
-                <tr className="border-y border-border text-[10px] uppercase tracking-[0.14em] text-muted-foreground">
+              <thead className="[&_th]:sticky [&_th]:top-0 [&_th]:z-10 [&_th]:bg-surface [&_th]:border-b [&_th]:border-border">
+                <tr className="text-[10px] uppercase tracking-[0.14em] text-muted-foreground">
                   <th className="text-left font-medium py-2 px-5">#</th>
                   <th className="text-left font-medium py-2 px-5">{t("produtos.table.col.product")}</th>
                   <th className="text-left font-medium py-2 px-5">{t("produtos.table.col.category")}</th>
@@ -194,10 +194,10 @@ export default function ProdutosPage() {
           </div>
         </CardHeader>
         <CardContent className="px-0">
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto overflow-y-auto max-h-[720px]">
             <table className="w-full text-sm">
-              <thead>
-                <tr className="border-y border-border text-[10px] uppercase tracking-[0.14em] text-muted-foreground">
+              <thead className="[&_th]:sticky [&_th]:top-0 [&_th]:z-10 [&_th]:bg-surface [&_th]:border-b [&_th]:border-border">
+                <tr className="text-[10px] uppercase tracking-[0.14em] text-muted-foreground">
                   <th className="text-left font-medium py-2 px-5">#</th>
                   <th className="text-left font-medium py-2 px-5">Produto</th>
                   <th className="text-left font-medium py-2 px-5">Categoria</th>
@@ -238,8 +238,8 @@ export default function ProdutosPage() {
                   </tr>
                 ))}
               </tbody>
-              <tfoot>
-                <tr className="border-t border-border text-[11px] font-medium">
+              <tfoot className="[&_td]:sticky [&_td]:bottom-0 [&_td]:z-10 [&_td]:bg-surface [&_td]:border-t [&_td]:border-border">
+                <tr className="text-[11px] font-medium">
                   <td className="py-2.5 px-5" />
                   <td className="py-2.5 px-5 uppercase tracking-[0.1em] text-muted-foreground">
                     Total · {profitRanking.length} produtos
@@ -289,10 +289,10 @@ export default function ProdutosPage() {
           </div>
         </CardHeader>
         <CardContent className="px-0">
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto overflow-y-auto max-h-[720px]">
             <table className="w-full text-sm">
-              <thead>
-                <tr className="border-y border-border text-[10px] uppercase tracking-[0.14em] text-muted-foreground">
+              <thead className="[&_th]:sticky [&_th]:top-0 [&_th]:z-10 [&_th]:bg-surface [&_th]:border-b [&_th]:border-border">
+                <tr className="text-[10px] uppercase tracking-[0.14em] text-muted-foreground">
                   <th className="text-left font-medium py-2 px-5">#</th>
                   <th className="text-left font-medium py-2 px-5">{t("produtos.table.col.category")}</th>
                   <th className="text-right font-medium py-2 px-5">{t("produtos.cat.col.skus")}</th>
@@ -327,8 +327,8 @@ export default function ProdutosPage() {
                   </tr>
                 ))}
               </tbody>
-              <tfoot>
-                <tr className="border-t border-border text-[11px] font-medium">
+              <tfoot className="[&_td]:sticky [&_td]:bottom-0 [&_td]:z-10 [&_td]:bg-surface [&_td]:border-t [&_td]:border-border">
+                <tr className="text-[11px] font-medium">
                   <td className="py-2.5 px-5" />
                   <td className="py-2.5 px-5 uppercase tracking-[0.1em] text-muted-foreground">
                     {t("produtos.cat.total", { count: catABC.length })}

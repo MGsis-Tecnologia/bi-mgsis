@@ -155,20 +155,69 @@ export function useDataset(): DatasetView {
   const rates = useExchangeRates((s) => s.rates);
 
   return React.useMemo(() => {
-    if (rawItems.length === 0) {
+    // PONTO ÚNICO DE FILTRO: a view bi_movimento passou a trazer VENDA e
+    // DEVOLUCAO VENDA. Todos os cálculos atuais (KPIs, ABC, vendedores, estoque,
+    // séries temporais…) consomem este hook, então filtrar aqui garante que
+    // nenhum número existente mude. As devoluções continuam importadas e
+    // disponíveis no store bruto (useDatasetStore) para análises futuras.
+    // O `?? "VENDA"` cobre dados antigos em cache, gravados antes desta coluna.
+    const saleItems = rawItems.filter((it) => (it.orderType ?? "VENDA") === "VENDA");
+
+    if (saleItems.length === 0) {
       return { orders: [], products: [], clients: [], sellers: [], channels: [], subgroups: [], hasData: false };
     }
-    const orders = buildOrders(rawItems, rates, currency, empresaId);
+    const orders = buildOrders(saleItems, rates, currency, empresaId);
     return {
       orders,
-      products: deriveProducts(rawItems),
-      clients: deriveClients(rawItems),
-      sellers: deriveSellers(rawItems),
-      channels: deriveChannels(rawItems),
-      subgroups: deriveSubgroups(rawItems),
+      products: deriveProducts(saleItems),
+      clients: deriveClients(saleItems),
+      sellers: deriveSellers(saleItems),
+      channels: deriveChannels(saleItems),
+      subgroups: deriveSubgroups(saleItems),
       hasData: true,
     };
   }, [rawItems, rates, currency, empresaId]);
+}
+
+// ─── Devoluções (pedido_tipo = DEVOLUCAO VENDA) ───────────────────────────────
+// Trilha paralela à de vendas: mesma conversão de moeda, mesmo filtro de empresa
+// e mesmos filtros globais. Fica SEPARADA de useDataset de propósito, para não
+// interferir em nenhum total de vendas.
+// Atenção: os valores vêm POSITIVOS da importação — quem exibe decide o sinal.
+export function useReturnOrders(): ImportedOrder[] {
+  const rawItems = useDatasetStore((s) => s.dataset?.items ?? EMPTY_ITEMS);
+  const currency = useFilters((s) => s.currency);
+  const empresaId = useFilters((s) => s.empresaId);
+  const rates = useExchangeRates((s) => s.rates);
+
+  return React.useMemo(() => {
+    const returnItems = rawItems.filter((it) => it.orderType === "DEVOLUCAO VENDA");
+    if (returnItems.length === 0) return [];
+    return buildOrders(returnItems, rates, currency, empresaId);
+  }, [rawItems, rates, currency, empresaId]);
+}
+
+export function useFilteredReturns(): ImportedOrder[] {
+  const returns = useReturnOrders();
+  const preset = useFilters((s) => s.preset);
+  const customRange = useFilters((s) => s.customRange);
+  const channel = useFilters((s) => s.channel);
+  const sellerId = useFilters((s) => s.sellerId);
+  const subgroupId = useFilters((s) => s.subgroupId);
+  const getRange = useFilters((s) => s.getRange);
+
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const range = React.useMemo(() => getRange(), [preset, customRange, getRange]);
+
+  return React.useMemo(() => {
+    return returns.filter((o) => {
+      if (!isInRange(o.date, range)) return false;
+      if (channel !== "all" && o.channel.toLowerCase() !== channel.toLowerCase()) return false;
+      if (sellerId !== "all" && o.sellerId !== sellerId) return false;
+      if (subgroupId !== "all" && !o.items.some((it) => it.subgroupId === subgroupId)) return false;
+      return true;
+    });
+  }, [returns, range, channel, sellerId, subgroupId]);
 }
 
 export function useFilteredOrders(): ImportedOrder[] {

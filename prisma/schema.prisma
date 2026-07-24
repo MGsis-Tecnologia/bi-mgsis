@@ -32,6 +32,7 @@ model SaleItem {
   id           Int    @id @default(autoincrement())
   date         String
   orderId      String @map("order_id")
+  orderType    String @default("VENDA") @map("order_type")
   channel      String
   clientId     String @map("client_id")
   clientName   String @map("client_name")

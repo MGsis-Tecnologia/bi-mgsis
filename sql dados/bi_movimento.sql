@@ -33,6 +33,7 @@ SELECT to_char(p.pedido_data_fatura, 'DD/MM/YYYY'::text) AS pedido_data,
      LEFT JOIN tipo_preco ON tipo_preco.tipo_preco_id = p.tipo_preco_id
      LEFT JOIN moeda ON moeda.moeda_id = p.moeda_id
      LEFT JOIN subgrupo ON subgrupo.subgrupo_id = pr.subgrupo_id
-  WHERE p.pedido_tipo::text = 'VENDA'::text 
+  WHERE (p.pedido_tipo::text = 'VENDA'::text 
+  OR p.pedido_tipo::text = 'DEVOLUCAO VENDA'::text)
 AND p.pedido_data_fatura >= '2022-01-01 00:00:00'::timestamp without time zone 
 AND p.pedido_data_fatura <= '2026-12-31 00:00:00'::timestamp without time zone;

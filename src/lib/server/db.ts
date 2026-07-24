@@ -24,6 +24,7 @@ CREATE TABLE IF NOT EXISTS sale_items (
   id            SERIAL PRIMARY KEY,
   date          TEXT NOT NULL DEFAULT '',
   order_id      TEXT NOT NULL DEFAULT '',
+  order_type    TEXT NOT NULL DEFAULT 'VENDA',
   channel       TEXT NOT NULL DEFAULT '',
   client_id     TEXT NOT NULL DEFAULT '',
   client_name   TEXT NOT NULL DEFAULT '',
@@ -46,6 +47,7 @@ CREATE TABLE IF NOT EXISTS sale_items (
 -- tabelas pré-existentes). Precede o índice de empresa_id abaixo.
 ALTER TABLE sale_items ADD COLUMN IF NOT EXISTS empresa_id    TEXT NOT NULL DEFAULT '';
 ALTER TABLE sale_items ADD COLUMN IF NOT EXISTS discount_orig DOUBLE PRECISION NOT NULL DEFAULT 0;
+ALTER TABLE sale_items ADD COLUMN IF NOT EXISTS order_type    TEXT NOT NULL DEFAULT 'VENDA';
 CREATE INDEX IF NOT EXISTS idx_sale_items_date       ON sale_items(date);
 CREATE INDEX IF NOT EXISTS idx_sale_items_client_id  ON sale_items(client_id);
 CREATE INDEX IF NOT EXISTS idx_sale_items_product_id ON sale_items(product_id);
