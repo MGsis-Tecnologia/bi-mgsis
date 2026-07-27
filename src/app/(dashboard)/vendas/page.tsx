@@ -12,7 +12,7 @@ import { RevenueAreaChart } from "@/components/charts/revenue-area-chart";
 import { Heatmap } from "@/components/charts/heatmap";
 import { BarChartH } from "@/components/charts/bar-chart-h";
 import { Money } from "@/components/dashboard/money";
-import { useDataset, useFilteredOrders } from "@/lib/hooks/use-dataset";
+import { useDataset, useFilteredOrders, useFilteredReturns } from "@/lib/hooks/use-dataset";
 import { useFilters } from "@/lib/store/filters";
 import { computeKpis } from "@/lib/analytics/kpis";
 import { aggregateSalesByCity, getMaxSales } from "@/lib/analytics/geo-sales";
@@ -37,6 +37,12 @@ export default function VendasPage() {
   const range = React.useMemo(() => getRange(), [preset, customRange, getRange]);
 
   const kpi = React.useMemo(() => computeKpis(orders), [orders]);
+
+  // Devoluções — trilha separada (valores vêm positivos; exibidos negativos/vermelho)
+  const returns = useFilteredReturns();
+  const totalReturns = React.useMemo(() => returns.reduce((s, o) => s + o.totalBRL, 0), [returns]);
+  const returnsPctOfSales = kpi.revenue > 0 ? totalReturns / kpi.revenue : 0;
+
   const monthly = React.useMemo(() => monthlySeries(orders, range), [orders, range]);
   const daily = React.useMemo(() => dailySeries(orders, range), [orders, range]);
   const yearly = React.useMemo(() => yearlySeries(orders), [orders]);
@@ -64,13 +70,27 @@ export default function VendasPage() {
     <div className="space-y-8">
       <PageHeader eyebrow={t("vendas.header.eyebrow")} title={t("vendas.header.title")} description={t("vendas.header.desc")} />
 
-      <section className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+      <section className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        {/* Linha 1 */}
         <KpiCard label={t("vendas.kpi.revenue")} value={formatCurrency(kpi.revenue, currency, { compact: true })} accent="accent" />
         <KpiCard label={t("vendas.kpi.orders")} value={formatNumber(kpi.ordersCount)} />
         <KpiCard label={t("vendas.kpi.ticket")} value={formatCurrency(kpi.averageTicket, currency)} />
         <KpiCard label={t("vendas.kpi.margin")} value={formatPercent(kpi.marginPct, { decimals: 1 })} />
+        {/* Linha 2 */}
         <KpiCard label="Desconto concedido" caption={`${formatPercent(kpi.discountPct, { decimals: 1 })} da venda bruta`} value={formatCurrency(kpi.discount, currency, { compact: true })} accent="negative" />
         <KpiCard label="% Desc. médio" caption={`${formatPercent(kpi.pctOrdersWithDiscount, { decimals: 0 })} dos pedidos com desconto`} value={formatPercent(kpi.discountPct, { decimals: 1 })} />
+        <KpiCard
+          label="Devoluções"
+          caption={`${formatPercent(returnsPctOfSales, { decimals: 1 })} das vendas`}
+          value={<span className="text-negative">{formatCurrency(-totalReturns, currency, { compact: true })}</span> as never}
+          accent="negative"
+        />
+        <KpiCard
+          label="% Devolução"
+          caption="sobre a receita de vendas"
+          value={<span className="text-negative">{formatPercent(returnsPctOfSales, { decimals: 1 })}</span> as never}
+          accent="negative"
+        />
       </section>
 
       <Card>
