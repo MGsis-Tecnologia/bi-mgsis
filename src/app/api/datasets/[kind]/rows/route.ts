@@ -30,12 +30,20 @@ export async function POST(req: NextRequest, ctx: Ctx) {
   try {
     const body = (await req.json()) as { rows?: unknown[] };
     rows = Array.isArray(body.rows) ? body.rows : [];
-  } catch {
+  } catch (e) {
+    console.error("❌ JSON parse error:", e);
     return NextResponse.json({ error: "invalid json body" }, { status: 400 });
   }
 
-  const inserted = await insertRows(kind, rows);
-  return NextResponse.json({ inserted });
+  try {
+    console.log(`📝 Inserindo ${rows.length} linhas para ${kind}...`);
+    const inserted = await insertRows(kind, rows);
+    console.log(`✅ ${inserted} linhas inseridas`);
+    return NextResponse.json({ inserted });
+  } catch (e) {
+    console.error(`❌ Insert error for ${kind}:`, e);
+    return NextResponse.json({ error: (e as Error).message || "Insert failed" }, { status: 500 });
+  }
 }
 
 // DELETE /api/datasets/[kind]/rows — apaga todas as linhas (mantém metadata)

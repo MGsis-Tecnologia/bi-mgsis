@@ -81,29 +81,46 @@ export async function deleteDataset(kind: DatasetKind): Promise<void> {
 
 export async function insertRows(kind: DatasetKind, rows: unknown[]): Promise<number> {
   if (!rows.length) return 0;
+  console.log(`🔗 Conectando ao banco para ${kind}...`);
   const db = await getPrisma();
+  console.log(`✅ Banco conectado`);
 
-  switch (kind) {
-    case "sales": {
-      const r = await db.saleItem.createMany({ data: rows as OrderLineItem[] });
-      return r.count;
+  try {
+    switch (kind) {
+      case "sales": {
+        console.log(`📥 Inserindo ${rows.length} vendas...`);
+        const r = await db.saleItem.createMany({ data: rows as OrderLineItem[] });
+        console.log(`✅ ${r.count} vendas inseridas`);
+        return r.count;
+      }
+      case "receivable": {
+        console.log(`📥 Inserindo ${rows.length} contas a receber...`);
+        const r = await db.receivableItem.createMany({ data: rows as ReceivableItem[] });
+        console.log(`✅ ${r.count} contas inseridas`);
+        return r.count;
+      }
+      case "payable": {
+        console.log(`📥 Inserindo ${rows.length} contas a pagar...`);
+        const r = await db.payableItem.createMany({ data: rows as PayableItem[] });
+        console.log(`✅ ${r.count} contas inseridas`);
+        return r.count;
+      }
+      case "inventory": {
+        console.log(`📥 Inserindo ${rows.length} itens de estoque...`);
+        const r = await db.inventoryItem.createMany({ data: rows as InventoryItem[] });
+        console.log(`✅ ${r.count} itens inseridos`);
+        return r.count;
+      }
+      case "caixa": {
+        console.log(`📥 Inserindo ${rows.length} movimentações...`);
+        const r = await db.caixaItem.createMany({ data: rows as CaixaItem[] });
+        console.log(`✅ ${r.count} movimentações inseridas`);
+        return r.count;
+      }
     }
-    case "receivable": {
-      const r = await db.receivableItem.createMany({ data: rows as ReceivableItem[] });
-      return r.count;
-    }
-    case "payable": {
-      const r = await db.payableItem.createMany({ data: rows as PayableItem[] });
-      return r.count;
-    }
-    case "inventory": {
-      const r = await db.inventoryItem.createMany({ data: rows as InventoryItem[] });
-      return r.count;
-    }
-    case "caixa": {
-      const r = await db.caixaItem.createMany({ data: rows as CaixaItem[] });
-      return r.count;
-    }
+  } catch (e) {
+    console.error(`❌ Erro ao inserir ${kind}:`, e);
+    throw e;
   }
 }
 

@@ -32,6 +32,7 @@ const KIND_LABEL: Record<string, string> = {
   payable: "Contas a Pagar",
   inventory: "Estoque",
   caixa: "Caixa / Banco",
+  orcamento: "Orçamentos",
 };
 
 export default function ImportacaoPage() {
@@ -124,6 +125,14 @@ export default function ImportacaoPage() {
         updateItem(nextItem.id, {
           status: "success", kind: "receivable",
           rowCount: result.receivables.rowCount,
+          warnings: [...result.warnings, ...serverWarning], skipped: result.skipped,
+        });
+      } else if (result.kind === "orcamento" && result.orcamento) {
+        // Orçamentos vão direto para a API (não armazenam localmente)
+        await pushToServer("orcamento", result.orcamento.items, { filename: result.orcamento.filename, rowCount: result.orcamento.rowCount, importedAt: result.orcamento.importedAt });
+        updateItem(nextItem.id, {
+          status: "success", kind: "orcamento",
+          rowCount: result.orcamento.rowCount,
           warnings: [...result.warnings, ...serverWarning], skipped: result.skipped,
         });
       } else if (result.dataset) {
@@ -301,6 +310,7 @@ export default function ImportacaoPage() {
         </Card>
       )}
 
+
       {/* Schema reference */}
       <Card>
         <CardHeader><CardTitle>{t("importacao.schema.title")}</CardTitle></CardHeader>
@@ -329,6 +339,11 @@ export default function ImportacaoPage() {
             heading="Leiaute · Caixa / Banco"
             note="Cada linha é uma movimentação. caixa_valor_documento negativo = saída (despesa); positivo = entrada (ingresso). Suporta hierarquia de plano de contas pelo campo plano_conta_codigo (ex: 1.1.01)."
             cols={CAIXA_SCHEMA}
+          />
+          <SchemaTable
+            heading="Leiaute · Orçamentos (Prospeccção)"
+            note="Cada linha é um item de orçamento. orcamento_confirmado = true/false (confirmado ou pendente). orcamento_data_confirmacao preenchida quando confirmado. item_quantidade_confirmada = quantidade que virou venda."
+            cols={ORCAMENTO_SCHEMA}
           />
         </CardContent>
       </Card>
@@ -525,4 +540,24 @@ const CAIXA_SCHEMA = [
   { name: "moeda_id",               type: "1|2|3",            example: "1" },
   { name: "moeda_sigla",            type: "Texto",            example: "R$" },
   { name: "empresa_id",             type: "Chave",            example: "1 (matriz) / 2 (filial)" },
+];
+
+const ORCAMENTO_SCHEMA = [
+  { name: "orcamento_id",                type: "Chave",     example: "ORC-001" },
+  { name: "orcamento_data",              type: "Data",      example: "15/01/2024" },
+  { name: "orcamento_confirmado",        type: "true/false",example: "true" },
+  { name: "orcamento_data_confirmacao",  type: "Data (opt)",example: "20/01/2024" },
+  { name: "cliente_id",                  type: "Chave",     example: "CLI-001" },
+  { name: "cliente_nome",                type: "Texto",     example: "Empresa ABC Ltda" },
+  { name: "vendedor_id",                 type: "Chave",     example: "VND-001" },
+  { name: "vendedor_nome",               type: "Texto",     example: "João Silva" },
+  { name: "empresa_id",                  type: "Chave",     example: "1" },
+  { name: "moeda_id",                    type: "1|2|3",     example: "1" },
+  { name: "moeda_sigla",                 type: "Texto",     example: "R$" },
+  { name: "item_orcamento_id",           type: "Chave",     example: "ITEM-001" },
+  { name: "produto_id",                  type: "Chave",     example: "PROD-042" },
+  { name: "produto_descricao",           type: "Texto",     example: "Notebook Pro 15" },
+  { name: "item_quantidade",             type: "Número",    example: "5" },
+  { name: "item_quantidade_confirmada",  type: "Número",    example: "3" },
+  { name: "item_total",                  type: "Decimal",   example: "5000,00" },
 ];

@@ -5,6 +5,7 @@ export const dictionaries = {
     "sidebar.nav.executive": "Executivo",
     "sidebar.nav.sales_analysis": "Análise de Vendas",
     "sidebar.nav.annual": "Comparativo Anual",
+    "sidebar.nav.prospection": "Prospeccção",
     "sidebar.section.catalog": "Catálogo",
     "sidebar.nav.products": "Produtos",
     "sidebar.nav.stock": "Estoque",

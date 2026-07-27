@@ -82,7 +82,44 @@ const CAIXA_REQUIRED_COLS = [
   "moeda_sigla",
 ] as const;
 
-export type DatasetKind = "sales" | "receivable" | "payable" | "inventory" | "caixa";
+// Required column names for the ORCAMENTO layout (quotations/proposals)
+const ORCAMENTO_REQUIRED_COLS = [
+  "orcamento_id",
+  "orcamento_data",
+  "cliente_id",
+  "produto_id",
+  "item_quantidade",
+  "item_total",
+] as const;
+
+export type DatasetKind = "sales" | "receivable" | "payable" | "inventory" | "caixa" | "orcamento";
+
+interface OrcamentoItem {
+  orcamento_id: string;
+  orcamento_data: string;
+  orcamento_confirmado: boolean;
+  orcamento_data_confirmacao: string;
+  cliente_id: string;
+  cliente_nome: string;
+  vendedor_id: string;
+  vendedor_nome: string;
+  empresa_id: string;
+  moeda_id: string;
+  moeda_sigla: string;
+  item_orcamento_id: string;
+  produto_id: string;
+  produto_descricao: string;
+  item_quantidade: number;
+  item_quantidade_confirmada: number;
+  item_total: number;
+}
+
+interface StoredOrcamento {
+  items: OrcamentoItem[];
+  importedAt: string;
+  filename: string;
+  rowCount: number;
+}
 
 export interface ParseResult {
   kind: DatasetKind | null;
@@ -91,13 +128,14 @@ export interface ParseResult {
   payables: StoredPayables | null;        // populated when kind === "payable"
   inventory: StoredInventory | null;      // populated when kind === "inventory"
   caixa: StoredCaixa | null;             // populated when kind === "caixa"
+  orcamento: StoredOrcamento | null;      // populated when kind === "orcamento"
   errors: string[];
   warnings: string[];
   skipped: number;
 }
 
 function errorResult(errors: string[], warnings: string[] = [], skipped = 0): ParseResult {
-  return { kind: null, dataset: null, receivables: null, payables: null, inventory: null, caixa: null, errors, warnings, skipped };
+  return { kind: null, dataset: null, receivables: null, payables: null, inventory: null, caixa: null, orcamento: null, errors, warnings, skipped };
 }
 
 // Parse date string → ISO YYYY-MM-DD (string, never a Date object — survives JSON serialization)
@@ -184,6 +222,9 @@ function processRows(rawRows: Record<string, unknown>[], filename: string): Pars
   if ("receber_documento" in colMap || ("pessoa_cliente_id" in colMap && "data_vencimento" in colMap)) {
     return processReceivableRows(rawRows, colMap, filename);
   }
+  if ("orcamento_id" in colMap) {
+    return processOrcamentoRows(rawRows, colMap, filename);
+  }
   if ("pedido_documento" in colMap || "pedido_tipo" in colMap) {
     return processSalesRows(rawRows, colMap, filename);
   }
@@ -197,7 +238,7 @@ function processRows(rawRows: Record<string, unknown>[], filename: string): Pars
 
   console.warn("[csv-parser] leiaute NÃO reconhecido. Colunas:", Object.keys(colMap));
   return errorResult([
-    "Leiaute não reconhecido. O arquivo deve conter colunas de Vendas (pedido_documento), Contas a Receber (pessoa_cliente_id), Contas a Pagar (pessoa_fornecedor_id), Estoque (estoque_item) ou Caixa (caixa_valor_documento).",
+    "Leiaute não reconhecido. O arquivo deve conter colunas de Vendas (pedido_documento), Contas a Receber (pessoa_cliente_id), Contas a Pagar (pessoa_fornecedor_id), Estoque (estoque_item), Caixa (caixa_valor_documento) ou Orçamentos (orcamento_id).",
   ]);
 }
 
@@ -643,6 +684,93 @@ function processCaixaRows(
     payables: null,
     inventory: null,
     caixa: {
+      items,
+      importedAt: new Date().toISOString(),
+      filename,
+      rowCount: items.length,
+    },
+    errors: [],
+    warnings: warnings.slice(0, 20),
+    skipped,
+  };
+}
+
+// ─── ORCAMENTO (orçamentos / propostas) ────────────────────────────────────────
+
+function processOrcamentoRows(
+  rawRows: Record<string, unknown>[],
+  colMap: Record<string, string>,
+  filename: string
+): ParseResult {
+  const missing = ORCAMENTO_REQUIRED_COLS.filter((c) => !(c in colMap));
+  if (missing.length > 0) {
+    console.warn("[csv-parser] orcamento — colunas ausentes:", missing);
+    console.debug("[csv-parser] orcamento — colunas presentes:", Object.keys(colMap));
+    return errorResult([`Colunas obrigatórias ausentes (Orçamento): ${missing.join(", ")}`]);
+  }
+
+  const items: OrcamentoItem[] = [];
+  const warnings: string[] = [];
+  let skipped = 0;
+  let rowNum = 0;
+
+  for (const rawRow of rawRows) {
+    rowNum++;
+    const row = mapRow(rawRow, colMap);
+
+    const orcId = String(row["orcamento_id"] ?? "").trim();
+    if (!orcId) {
+      warnings.push(`Linha ${rowNum}: orcamento_id vazio — ignorada.`);
+      skipped++;
+      continue;
+    }
+
+    const date = parseDate(String(row["orcamento_data"] ?? ""));
+    if (!date) {
+      console.debug(`[csv-parser] orcamento linha ${rowNum}: data inválida "${row["orcamento_data"]}"`);
+      warnings.push(`Linha ${rowNum}: data inválida — ignorada.`);
+      skipped++;
+      continue;
+    }
+
+    const quantity = parseNumber(row["item_quantidade"] as string);
+    const total = parseNumber(row["item_total"] as string);
+
+    items.push({
+      orcamento_id: orcId,
+      orcamento_data: date,
+      orcamento_confirmado: String(row["orcamento_confirmado"] ?? "").toLowerCase() === "true",
+      orcamento_data_confirmacao: parseDate(String(row["orcamento_data_confirmacao"] ?? "")) ?? "",
+      cliente_id: String(row["cliente_id"] ?? "").trim(),
+      cliente_nome: String(row["cliente_nome"] ?? "").trim(),
+      vendedor_id: String(row["vendedor_id"] ?? "").trim(),
+      vendedor_nome: String(row["vendedor_nome"] ?? "").trim(),
+      empresa_id: String(row["empresa_id"] ?? "1").trim(),
+      moeda_id: String(row["moeda_id"] ?? "1").trim(),
+      moeda_sigla: String(row["moeda_sigla"] ?? "R$").trim(),
+      item_orcamento_id: String(row["item_orcamento_id"] ?? `${orcId}-${rowNum}`).trim(),
+      produto_id: String(row["produto_id"] ?? "").trim(),
+      produto_descricao: String(row["produto_descricao"] ?? "").trim(),
+      item_quantidade: quantity,
+      item_quantidade_confirmada: parseNumber(row["item_quantidade_confirmada"] as string),
+      item_total: total,
+    });
+  }
+
+  if (items.length === 0) {
+    console.warn("[csv-parser] orcamento: nenhuma linha válida. Total:", rowNum, "Skipped:", skipped);
+    return errorResult(["Nenhum orçamento válido encontrado."], warnings, skipped);
+  }
+
+  console.debug(`[csv-parser] orcamento: ${items.length} itens processados`);
+  return {
+    kind: "orcamento",
+    dataset: null,
+    receivables: null,
+    payables: null,
+    inventory: null,
+    caixa: null,
+    orcamento: {
       items,
       importedAt: new Date().toISOString(),
       filename,

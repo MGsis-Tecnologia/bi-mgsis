@@ -177,7 +177,7 @@ export async function getPrisma(): Promise<PrismaClient> {
     );
 
   if (global.__prismaUrl !== url) {
-    // URL mudou (ou primeira inicialização) → reconectar
+    console.log("🔄 Reconectando ao banco de dados...");
     if (global.__prismaInstance) {
       await global.__prismaInstance.$disconnect().catch(() => {});
     }
@@ -190,18 +190,17 @@ export async function getPrisma(): Promise<PrismaClient> {
 
   const prisma = global.__prismaInstance!;
 
-  // Criar tabelas na primeira conexão com uma URL nova. Requisições
-  // concorrentes compartilham a mesma promise para não rodar a migração
-  // em paralelo dentro do processo.
   if (!global.__prismaMigrated) {
     if (!global.__prismaMigrating) {
+      console.log("🏗️ Executando migrações...");
       global.__prismaMigrating = runMigration(prisma).catch((err) => {
-        // Libera para nova tentativa em caso de falha
+        console.error("❌ Erro na migração:", err);
         global.__prismaMigrating = undefined;
         throw err;
       });
     }
     await global.__prismaMigrating;
+    console.log("✅ Migrações concluídas");
     global.__prismaMigrated = true;
   }
 

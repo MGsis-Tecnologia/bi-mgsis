@@ -57,15 +57,8 @@ export default function RootLayout({
         } as React.CSSProperties
       }
     >
-      <body className="min-h-screen bg-background font-sans antialiased grain">
-        <ThemeProvider
-          attribute="class"
-          defaultTheme="dark"
-          enableSystem
-          disableTransitionOnChange
-        >
-          {children}
-        </ThemeProvider>
+      <body className="min-h-screen bg-background font-sans antialiased grain dark">
+        {children}
       </body>
     </html>
   );
