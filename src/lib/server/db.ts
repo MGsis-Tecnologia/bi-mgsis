@@ -136,6 +136,30 @@ ALTER TABLE caixa_items ADD COLUMN IF NOT EXISTS empresa_id TEXT NOT NULL DEFAUL
 CREATE INDEX IF NOT EXISTS idx_caixa_date    ON caixa_items(date);
 CREATE INDEX IF NOT EXISTS idx_caixa_plano   ON caixa_items(plano_conta_codigo);
 CREATE INDEX IF NOT EXISTS idx_caixa_empresa ON caixa_items(empresa_id);
+
+CREATE TABLE IF NOT EXISTS orcamento_items (
+  id                         SERIAL PRIMARY KEY,
+  orcamento_id               TEXT NOT NULL DEFAULT '',
+  orcamento_data             TEXT NOT NULL DEFAULT '',
+  orcamento_confirmado       BOOLEAN NOT NULL DEFAULT false,
+  orcamento_data_confirmacao TEXT NOT NULL DEFAULT '',
+  cliente_id                 TEXT NOT NULL DEFAULT '',
+  cliente_nome               TEXT NOT NULL DEFAULT '',
+  vendedor_id                TEXT NOT NULL DEFAULT '',
+  vendedor_nome              TEXT NOT NULL DEFAULT '',
+  empresa_id                 TEXT NOT NULL DEFAULT '',
+  moeda_id                   TEXT NOT NULL DEFAULT '1',
+  moeda_sigla                TEXT NOT NULL DEFAULT 'R$',
+  item_orcamento_id          TEXT NOT NULL DEFAULT '',
+  produto_id                 TEXT NOT NULL DEFAULT '',
+  produto_descricao          TEXT NOT NULL DEFAULT '',
+  item_quantidade            DOUBLE PRECISION NOT NULL DEFAULT 0,
+  item_quantidade_confirmada DOUBLE PRECISION NOT NULL DEFAULT 0,
+  item_total                 DOUBLE PRECISION NOT NULL DEFAULT 0
+);
+CREATE INDEX IF NOT EXISTS idx_orcamento_data     ON orcamento_items(orcamento_data);
+CREATE INDEX IF NOT EXISTS idx_orcamento_empresa  ON orcamento_items(empresa_id);
+CREATE INDEX IF NOT EXISTS idx_orcamento_vendedor ON orcamento_items(vendedor_id);
 `;
 
 // Singleton global para sobreviver ao hot-reload do Next.js em desenvolvimento.

@@ -4,6 +4,7 @@ import { getPrisma } from "@/lib/server/db";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
+// Uma linha por item de orçamento (igual ao leiaute de importação).
 interface OrcamentoRow {
   orcamento_id: string;
   orcamento_data: string;
@@ -24,64 +25,51 @@ interface OrcamentoRow {
   item_total: number;
 }
 
+const CHUNK = 2000;
+
 export async function POST(req: NextRequest): Promise<NextResponse> {
   try {
-    const body = await req.json() as { rows: OrcamentoRow[] };
-    const rows = body.rows || [];
+    // `replace` (só no 1º lote) limpa a tabela antes de inserir; os demais lotes
+    // apenas anexam. O cliente envia em chunks para não estourar o JSON.stringify.
+    const body = (await req.json()) as { rows?: OrcamentoRow[]; replace?: boolean };
+    const rows = Array.isArray(body.rows) ? body.rows : [];
 
     if (!rows.length) {
       return NextResponse.json({ error: "Nenhuma linha para importar" }, { status: 400 });
     }
 
     const db = await getPrisma();
-    let insertedCount = 0;
-
-    // Agrupar por orcamento_id para não duplicar
-    const orcamentosMap = new Map<string, OrcamentoRow>();
-    const itensMap = new Map<string, OrcamentoRow[]>();
-
-    for (const row of rows) {
-      if (!orcamentosMap.has(row.orcamento_id)) {
-        orcamentosMap.set(row.orcamento_id, row);
-      }
-      if (!itensMap.has(row.orcamento_id)) {
-        itensMap.set(row.orcamento_id, []);
-      }
-      itensMap.get(row.orcamento_id)!.push(row);
+    if (body.replace) {
+      await db.orcamentoItem.deleteMany();
     }
 
-    // Inserir orçamentos
-    for (const [orcId, row] of orcamentosMap) {
-      await db.$executeRawUnsafe(`
-        INSERT INTO orcamento (orcamento_id, orcamento_tipo, orcamento_data, orcamento_confirmado,
-          orcamento_data_confirmacao, cliente_id, vendedor_id, empresa_id, moeda_id)
-        VALUES ($1, 'ORCAMENTO', $2, $3, $4, $5, $6, $7, $8)
-        ON CONFLICT (orcamento_id) DO UPDATE SET
-          orcamento_confirmado = EXCLUDED.orcamento_confirmado,
-          orcamento_data_confirmacao = EXCLUDED.orcamento_data_confirmacao
-      `, orcId, row.orcamento_data, row.orcamento_confirmado, row.orcamento_data_confirmacao || null,
-         row.cliente_id, row.vendedor_id, row.empresa_id, row.moeda_id);
-      insertedCount++;
+    const data = rows.map((r) => ({
+      orcamentoId: String(r.orcamento_id ?? ""),
+      orcamentoData: String(r.orcamento_data ?? ""),
+      orcamentoConfirmado: Boolean(r.orcamento_confirmado),
+      orcamentoDataConfirmacao: String(r.orcamento_data_confirmacao ?? ""),
+      clienteId: String(r.cliente_id ?? ""),
+      clienteNome: String(r.cliente_nome ?? ""),
+      vendedorId: String(r.vendedor_id ?? ""),
+      vendedorNome: String(r.vendedor_nome ?? ""),
+      empresaId: String(r.empresa_id ?? ""),
+      moedaId: String(r.moeda_id ?? "1"),
+      moedaSigla: String(r.moeda_sigla ?? "R$"),
+      itemOrcamentoId: String(r.item_orcamento_id ?? ""),
+      produtoId: String(r.produto_id ?? ""),
+      produtoDescricao: String(r.produto_descricao ?? ""),
+      itemQuantidade: Number(r.item_quantidade) || 0,
+      itemQuantidadeConfirmada: Number(r.item_quantidade_confirmada) || 0,
+      itemTotal: Number(r.item_total) || 0,
+    }));
+
+    let inserted = 0;
+    for (let i = 0; i < data.length; i += CHUNK) {
+      const res = await db.orcamentoItem.createMany({ data: data.slice(i, i + CHUNK) });
+      inserted += res.count;
     }
 
-    // Inserir itens de orçamento
-    for (const [orcId, items] of itensMap) {
-      for (const item of items) {
-        await db.$executeRawUnsafe(`
-          INSERT INTO item_orcamento (orcamento_id, produto_id, item_quantidade,
-            item_quantidade_confirmada, item_total)
-          VALUES ($1, $2, $3, $4, $5)
-          ON CONFLICT (item_orcamento_id) DO UPDATE SET
-            item_quantidade_confirmada = EXCLUDED.item_quantidade_confirmada
-        `, orcId, item.produto_id, item.item_quantidade, item.item_quantidade_confirmada, item.item_total);
-      }
-    }
-
-    return NextResponse.json({
-      ok: true,
-      orcamentosInserted: insertedCount,
-      itensInserted: rows.length,
-    });
+    return NextResponse.json({ ok: true, inserted });
   } catch (err) {
     console.error("Erro ao importar orçamentos:", err);
     return NextResponse.json(

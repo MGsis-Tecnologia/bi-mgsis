@@ -66,7 +66,7 @@ export default function ImportacaoPage() {
 
       const result = await parseFile(nextItem.file);
 
-      if (result.errors.length > 0 || (!result.dataset && !result.receivables && !result.payables && !result.inventory && !result.caixa)) {
+      if (result.errors.length > 0 || (!result.dataset && !result.receivables && !result.payables && !result.inventory && !result.caixa && !result.orcamento)) {
         updateItem(nextItem.id, {
           status: "error", kind: result.kind,
           errors: result.errors, warnings: result.warnings, skipped: result.skipped,
@@ -78,7 +78,7 @@ export default function ImportacaoPage() {
       // authoritative for the local browser.
       const serverWarning: string[] = [];
       async function pushToServer(
-        kind: DatasetKind,
+        kind: Exclude<DatasetKind, "orcamento">,   // orçamento tem rota própria; não passa aqui
         items: unknown[],
         meta: { filename: string; rowCount: number; importedAt: string }
       ) {
@@ -128,8 +128,27 @@ export default function ImportacaoPage() {
           warnings: [...result.warnings, ...serverWarning], skipped: result.skipped,
         });
       } else if (result.kind === "orcamento" && result.orcamento) {
-        // Orçamentos vão direto para a API (não armazenam localmente)
-        await pushToServer("orcamento", result.orcamento.items, { filename: result.orcamento.filename, rowCount: result.orcamento.rowCount, importedAt: result.orcamento.importedAt });
+        // Orçamentos têm rota própria (/api/prospeccao/import) e NÃO usam o
+        // armazenamento genérico de datasets nem cache local (IndexedDB).
+        // Envia em lotes: um JSON.stringify único de milhões de linhas estoura
+        // o tamanho máximo de string do JS ("Invalid string length").
+        try {
+          const items = result.orcamento.items;
+          const CHUNK = 3000;
+          for (let i = 0; i < items.length; i += CHUNK) {
+            const res = await fetch("/api/prospeccao/import", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ rows: items.slice(i, i + CHUNK), replace: i === 0 }),
+            });
+            if (!res.ok) {
+              const text = await res.text().catch(() => "");
+              throw new Error(`${res.status}: ${text}`);
+            }
+          }
+        } catch (err) {
+          serverWarning.push(`Falha ao importar orçamentos: ${(err as Error).message}.`);
+        }
         updateItem(nextItem.id, {
           status: "success", kind: "orcamento",
           rowCount: result.orcamento.rowCount,

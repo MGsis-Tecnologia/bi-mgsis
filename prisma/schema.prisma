@@ -143,3 +143,31 @@ model CaixaItem {
   @@index([empresaId])
   @@map("caixa_items")
 }
+
+// Orçamentos — tabela flat, uma linha por item (igual ao leiaute de importação).
+// Nomes de cliente/vendedor/produto já vêm embutidos, sem depender de tabelas do ERP.
+model OrcamentoItem {
+  id                       Int     @id @default(autoincrement())
+  orcamentoId              String  @map("orcamento_id")
+  orcamentoData            String  @map("orcamento_data")
+  orcamentoConfirmado      Boolean @default(false) @map("orcamento_confirmado")
+  orcamentoDataConfirmacao String  @default("") @map("orcamento_data_confirmacao")
+  clienteId                String  @default("") @map("cliente_id")
+  clienteNome              String  @default("") @map("cliente_nome")
+  vendedorId               String  @default("") @map("vendedor_id")
+  vendedorNome             String  @default("") @map("vendedor_nome")
+  empresaId                String  @default("") @map("empresa_id")
+  moedaId                  String  @default("1") @map("moeda_id")
+  moedaSigla               String  @default("R$") @map("moeda_sigla")
+  itemOrcamentoId          String  @default("") @map("item_orcamento_id")
+  produtoId                String  @default("") @map("produto_id")
+  produtoDescricao         String  @default("") @map("produto_descricao")
+  itemQuantidade           Float   @default(0) @map("item_quantidade")
+  itemQuantidadeConfirmada Float   @default(0) @map("item_quantidade_confirmada")
+  itemTotal                Float   @default(0) @map("item_total")
+
+  @@index([orcamentoData])
+  @@index([empresaId])
+  @@index([vendedorId])
+  @@map("orcamento_items")
+}
