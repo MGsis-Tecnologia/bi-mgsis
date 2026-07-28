@@ -15,3 +15,6 @@ E AI A TABLE MOSTRAR OS ITENS, COM ESSAS INFORMAÇÕES..COM O O PERIODO DE COBER
 Eficiência comercial
 
 Taxa de conversão, se você tiver dado de orçamento/proposta antes do pedido (quantos orçamentos viraram venda)
+
+Ideia de em caixa fazer um fluxo baseado no contas a pagar x contas a receber - sem considerar caixa saldo
+E possiveis vendas a vista - ver ideias
