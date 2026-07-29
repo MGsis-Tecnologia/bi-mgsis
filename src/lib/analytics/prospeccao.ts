@@ -40,7 +40,7 @@ export interface ProspeccaoResumo {
     taxa: number;
     valor: number;
   }>;
-  clientes: Array<{ cliente: string; orcamentos: number; confirmados: number; valor: number }>;
+  clientes: Array<{ cliente: string; orcamentos: number; confirmados: number; taxa: number; valor: number }>;
   pendentes: Array<{ orcamento_id: string; cliente_nome: string; valor: number; dias: number }>;
   // Orçamentos existentes no dataset ignorando os filtros — permite à tela
   // distinguir "nada importado" de "nada dentro do período selecionado".
@@ -234,8 +234,8 @@ export function buildProspeccao(
 
   const hoje = Date.now();
 
-  // Processar produtos: separar em completos (100%) e incompletos
-  const produtosFormatados = [...produtoAgg.values()]
+  // Processar produtos: todos, ordenados por taxa (menor para maior)
+  const produtos = [...produtoAgg.values()]
     .map((p) => ({
       produtoId: p.produtoId,
       produto: p.descricao,
@@ -244,16 +244,8 @@ export function buildProspeccao(
       vezesConfirmado: p.confirmados.size,
       taxa: taxa(p.confirmados.size, p.itens.size),
       valor: p.valor,
-    }));
-  const produtosCompletos = produtosFormatados
-    .filter((p) => p.taxa === 100)
-    .sort((a, b) => b.vezesProposto - a.vezesProposto)
-    .slice(0, 20);
-  const produtosIncompletos = produtosFormatados
-    .filter((p) => p.taxa < 100)
-    .sort((a, b) => a.taxa - b.taxa)
-    .slice(0, 20);
-  const totalProdutosIncompletos = produtosFormatados.filter((p) => p.taxa < 100).length;
+    }))
+    .sort((a, b) => a.taxa - b.taxa);
 
   return {
     kpis: {
@@ -292,11 +284,8 @@ export function buildProspeccao(
         taxa: taxa(v.confirmados, v.total),
         valor: v.valor,
       }))
-      .sort((a, b) => b.confirmados - a.confirmados || b.total - a.total)
-      .slice(0, 12),
-    produtos: produtosCompletos,
-    produtosIncompletos,
-    totalProdutosIncompletos,
+      .sort((a, b) => b.confirmados - a.confirmados || b.total - a.total),
+    produtos,
     clientes: [...cliAgg.entries()]
       .map(([cliente, c]) => ({
         cliente,
