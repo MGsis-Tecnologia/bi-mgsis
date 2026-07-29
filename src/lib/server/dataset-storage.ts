@@ -63,12 +63,12 @@ export async function deleteMeta(kind: DatasetKind): Promise<void> {
 export async function clearRows(kind: DatasetKind): Promise<void> {
   const db = await getPrisma();
   switch (kind) {
-    case "sales":      await db.saleItem.deleteMany(); break;
-    case "receivable": await db.receivableItem.deleteMany(); break;
-    case "payable":    await db.payableItem.deleteMany(); break;
-    case "inventory":  await db.inventoryItem.deleteMany(); break;
-    case "caixa":      await db.caixaItem.deleteMany(); break;
-    case "orcamento":  await db.orcamentoItem.deleteMany(); break;
+    case "sales":      await db.saleItem.deleteMany({}); break;
+    case "receivable": await db.receivableItem.deleteMany({}); break;
+    case "payable":    await db.payableItem.deleteMany({}); break;
+    case "inventory":  await db.inventoryItem.deleteMany({}); break;
+    case "caixa":      await db.caixaItem.deleteMany({}); break;
+    case "orcamento":  await db.orcamentoItem.deleteMany({}); break;
   }
 }
 
