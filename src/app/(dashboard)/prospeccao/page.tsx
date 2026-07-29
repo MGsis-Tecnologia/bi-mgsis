@@ -37,7 +37,7 @@ export default function ProspeccaoPage() {
     return new Intl.DateTimeFormat(language, { month: "short", year: "2-digit" }).format(new Date(y, m - 1, 1));
   };
 
-  const { kpis, status, evolucao, vendedores, produtos, clientes, pendentes } = data;
+  const { kpis, status, evolucao, vendedores, produtos, produtosIncompletos, totalProdutosIncompletos, clientes, pendentes } = data;
 
   const statusColors: Record<string, string> = {
     ganho: "hsl(var(--positive))",
@@ -152,7 +152,7 @@ export default function ProspeccaoPage() {
                 <CardContent className="px-0">
                   <ScrollTable
                     head={[t("prospeccao.col.seller"), t("prospeccao.col.total"), t("prospeccao.col.confirmed"), t("prospeccao.col.rate"), t("prospeccao.col.value")]}
-                    rows={vendedores.map((v) => [
+                    rows={vendedores.slice(0, 12).map((v) => [
                       <span className="block max-w-[520px] truncate font-medium" title={v.vendedor} key="n">{v.vendedor}</span>,
                       formatNumber(v.total),
                       <span className="text-positive font-medium" key="c">{formatNumber(v.confirmados)}</span>,
@@ -169,34 +169,76 @@ export default function ProspeccaoPage() {
 
           {/* Conversão por produto — largura total: a descrição do produto é o
               campo mais longo da tela e sofria truncada em meia coluna. */}
-          {produtos.length > 0 && (
-            <Card>
-              <CardHeader><CardTitle>{t("prospeccao.produtos.title")}</CardTitle></CardHeader>
-              <CardContent className="px-0">
-                <ScrollTable
-                  head={[
-                    t("prospeccao.col.mfr"),
-                    t("prospeccao.col.product"),
-                    t("prospeccao.col.proposed"),
-                    t("prospeccao.col.confirmed"),
-                    t("prospeccao.col.rate"),
-                    t("prospeccao.col.value"),
-                  ]}
-                  rows={produtos.map((p) => [
-                    <span className="font-mono text-xs text-muted-foreground whitespace-nowrap" key="f">
-                      {p.fabricante || "—"}
-                    </span>,
-                    <span className="block max-w-[640px] truncate" title={p.produto} key="p">{p.produto}</span>,
-                    formatNumber(p.vezesProposto),
-                    <span className="text-positive font-medium" key="c">{formatNumber(p.vezesConfirmado)}</span>,
-                    <span className={cn("font-medium", p.taxa < 20 ? "text-negative" : p.taxa < 40 ? "text-warning" : "text-foreground")} key="t">{formatPercent(p.taxa / 100, { decimals: 1 })}</span>,
-                    money(p.valor),
-                  ])}
-                  align={["left", "left", "right", "right", "right", "right"]}
-                  colClassName={["w-[1%]", "w-full", "w-[1%]", "w-[1%]", "w-[1%]", "w-[1%]"]}
-                />
-              </CardContent>
-            </Card>
+          {(produtos.length > 0 || produtosIncompletos.length > 0) && (
+            <>
+              {produtos.length > 0 && (
+                <Card>
+                  <CardHeader><CardTitle>{t("prospeccao.produtos.title")} — 100%</CardTitle></CardHeader>
+                  <CardContent className="px-0">
+                    <ScrollTable
+                      head={[
+                        t("prospeccao.col.mfr"),
+                        t("prospeccao.col.product"),
+                        t("prospeccao.col.proposed"),
+                        t("prospeccao.col.confirmed"),
+                        t("prospeccao.col.rate"),
+                        t("prospeccao.col.value"),
+                      ]}
+                      rows={produtos.map((p) => [
+                        <span className="font-mono text-xs text-muted-foreground whitespace-nowrap" key="f">
+                          {p.fabricante || "—"}
+                        </span>,
+                        <span className="block max-w-[640px] truncate" title={p.produto} key="p">{p.produto}</span>,
+                        formatNumber(p.vezesProposto),
+                        <span className="text-positive font-medium" key="c">{formatNumber(p.vezesConfirmado)}</span>,
+                        <span className="font-medium text-positive" key="t">{formatPercent(p.taxa / 100, { decimals: 1 })}</span>,
+                        money(p.valor),
+                      ])}
+                      align={["left", "left", "right", "right", "right", "right"]}
+                      colClassName={["w-[1%]", "w-full", "w-[1%]", "w-[1%]", "w-[1%]", "w-[1%]"]}
+                    />
+                  </CardContent>
+                </Card>
+              )}
+              {produtosIncompletos.length > 0 && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center justify-between">
+                      <span>{t("prospeccao.produtos.title")} — Conversão Parcial</span>
+                      {totalProdutosIncompletos > produtosIncompletos.length && (
+                        <Badge variant="outline" className="text-xs">
+                          Mostrando {produtosIncompletos.length} de {totalProdutosIncompletos}
+                        </Badge>
+                      )}
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="px-0">
+                    <ScrollTable
+                      head={[
+                        t("prospeccao.col.mfr"),
+                        t("prospeccao.col.product"),
+                        t("prospeccao.col.proposed"),
+                        t("prospeccao.col.confirmed"),
+                        t("prospeccao.col.rate"),
+                        t("prospeccao.col.value"),
+                      ]}
+                      rows={produtosIncompletos.map((p) => [
+                        <span className="font-mono text-xs text-muted-foreground whitespace-nowrap" key="f">
+                          {p.fabricante || "—"}
+                        </span>,
+                        <span className="block max-w-[640px] truncate" title={p.produto} key="p">{p.produto}</span>,
+                        formatNumber(p.vezesProposto),
+                        <span className="text-positive font-medium" key="c">{formatNumber(p.vezesConfirmado)}</span>,
+                        <span className={cn("font-medium", p.taxa < 20 ? "text-negative" : p.taxa < 40 ? "text-warning" : "text-foreground")} key="t">{formatPercent(p.taxa / 100, { decimals: 1 })}</span>,
+                        money(p.valor),
+                      ])}
+                      align={["left", "left", "right", "right", "right", "right"]}
+                      colClassName={["w-[1%]", "w-full", "w-[1%]", "w-[1%]", "w-[1%]", "w-[1%]"]}
+                    />
+                  </CardContent>
+                </Card>
+              )}
+            </>
           )}
 
           {/* Top clientes */}
@@ -205,15 +247,16 @@ export default function ProspeccaoPage() {
               <CardHeader><CardTitle>{t("prospeccao.clientes.title")}</CardTitle></CardHeader>
               <CardContent className="px-0">
                 <ScrollTable
-                  head={[t("prospeccao.col.client"), t("prospeccao.col.quotes"), t("prospeccao.col.confirmed"), t("prospeccao.col.value")]}
+                  head={[t("prospeccao.col.client"), t("prospeccao.col.quotes"), t("prospeccao.col.confirmed"), "%", t("prospeccao.col.value")]}
                   rows={clientes.map((c) => [
                     <span className="block max-w-[520px] truncate font-medium" title={c.cliente} key="c">{c.cliente}</span>,
                     formatNumber(c.orcamentos),
-                    <span className="text-positive" key="cf">{formatNumber(c.confirmados)}</span>,
+                    <span className="text-positive font-medium" key="cf">{formatNumber(c.confirmados)}</span>,
+                    formatPercent(c.taxa / 100, { decimals: 1 }),
                     <span className="font-medium" key="v">{money(c.valor)}</span>,
                   ])}
-                  align={["left", "right", "right", "right"]}
-                  colClassName={["w-full", "w-[1%]", "w-[1%]", "w-[1%]"]}
+                  align={["left", "right", "right", "right", "right"]}
+                  colClassName={["w-full", "w-[1%]", "w-[1%]", "w-[1%]", "w-[1%]"]}
                 />
               </CardContent>
             </Card>

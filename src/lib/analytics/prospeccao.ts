@@ -40,7 +40,17 @@ export interface ProspeccaoResumo {
     taxa: number;
     valor: number;
   }>;
-  clientes: Array<{ cliente: string; orcamentos: number; confirmados: number; valor: number }>;
+  produtosIncompletos: Array<{
+    produtoId: string;
+    produto: string;
+    fabricante: string;
+    vezesProposto: number;
+    vezesConfirmado: number;
+    taxa: number;
+    valor: number;
+  }>;
+  totalProdutosIncompletos: number;
+  clientes: Array<{ cliente: string; orcamentos: number; confirmados: number; taxa: number; valor: number }>;
   pendentes: Array<{ orcamento_id: string; cliente_nome: string; valor: number; dias: number }>;
   // Orçamentos existentes no dataset ignorando os filtros — permite à tela
   // distinguir "nada importado" de "nada dentro do período selecionado".
@@ -53,7 +63,7 @@ export const EMPTY_RESUMO: ProspeccaoResumo = {
     valorTotal: 0, valorGanho: 0, valorEmRisco: 0, ticketMedio: 0,
     itensPorOrcamento: 0, tempoMedioDias: 0,
   },
-  status: [], evolucao: [], vendedores: [], produtos: [], clientes: [], pendentes: [],
+  status: [], evolucao: [], vendedores: [], produtos: [], produtosIncompletos: [], totalProdutosIncompletos: 0, clientes: [], pendentes: [],
   totalGeral: 0,
 };
 
@@ -271,24 +281,41 @@ export function buildProspeccao(
         taxa: taxa(v.confirmados, v.total),
         valor: v.valor,
       }))
-      .sort((a, b) => b.confirmados - a.confirmados || b.total - a.total)
-      .slice(0, 50),
-    produtos: [...produtoAgg.values()]
-      .map((p) => ({
-        produtoId: p.produtoId,
-        produto: p.descricao,
-        fabricante: p.fabricante,
-        vezesProposto: p.itens.size,
-        vezesConfirmado: p.confirmados.size,
-        taxa: taxa(p.confirmados.size, p.itens.size),
-        valor: p.valor,
-      }))
-      .sort((a, b) => b.vezesProposto - a.vezesProposto)
-      .slice(0, 15),
+      .sort((a, b) => b.confirmados - a.confirmados || b.total - a.total),
+    ...((): { produtos: ProspeccaoResumo["produtos"]; produtosIncompletos: ProspeccaoResumo["produtosIncompletos"]; totalProdutosIncompletos: number } => {
+      const produtosFormatados = [...produtoAgg.values()]
+        .map((p) => ({
+          produtoId: p.produtoId,
+          produto: p.descricao,
+          fabricante: p.fabricante,
+          vezesProposto: p.itens.size,
+          vezesConfirmado: p.confirmados.size,
+          taxa: taxa(p.confirmados.size, p.itens.size),
+          valor: p.valor,
+        }));
+      const completos = produtosFormatados
+        .filter((p) => p.taxa === 100)
+        .sort((a, b) => b.vezesProposto - a.vezesProposto)
+        .slice(0, 20);
+      const incompletos = produtosFormatados
+        .filter((p) => p.taxa < 100)
+        .sort((a, b) => a.taxa - b.taxa);
+      return {
+        produtos: completos,
+        produtosIncompletos: incompletos.slice(0, 20),
+        totalProdutosIncompletos: incompletos.length,
+      };
+    })(),
     clientes: [...cliAgg.entries()]
-      .map(([cliente, c]) => ({ cliente, orcamentos: c.orcamentos, confirmados: c.confirmados, valor: c.valor }))
+      .map(([cliente, c]) => ({
+        cliente,
+        orcamentos: c.orcamentos,
+        confirmados: c.confirmados,
+        taxa: taxa(c.confirmados, c.orcamentos),
+        valor: c.valor,
+      }))
       .sort((a, b) => b.valor - a.valor)
-      .slice(0, 15),
+      .slice(0, 20),
     pendentes: lista
       .filter((q) => statusDe(q) === "perdido")
       .sort((a, b) => a.data.localeCompare(b.data))
