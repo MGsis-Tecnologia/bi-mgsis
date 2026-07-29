@@ -234,6 +234,27 @@ export function buildProspeccao(
 
   const hoje = Date.now();
 
+  // Processar produtos: separar em completos (100%) e incompletos
+  const produtosFormatados = [...produtoAgg.values()]
+    .map((p) => ({
+      produtoId: p.produtoId,
+      produto: p.descricao,
+      fabricante: p.fabricante,
+      vezesProposto: p.itens.size,
+      vezesConfirmado: p.confirmados.size,
+      taxa: taxa(p.confirmados.size, p.itens.size),
+      valor: p.valor,
+    }));
+  const produtosCompletos = produtosFormatados
+    .filter((p) => p.taxa === 100)
+    .sort((a, b) => b.vezesProposto - a.vezesProposto)
+    .slice(0, 20);
+  const produtosIncompletos = produtosFormatados
+    .filter((p) => p.taxa < 100)
+    .sort((a, b) => a.taxa - b.taxa)
+    .slice(0, 20);
+  const totalProdutosIncompletos = produtosFormatados.filter((p) => p.taxa < 100).length;
+
   return {
     kpis: {
       total,
@@ -272,23 +293,20 @@ export function buildProspeccao(
         valor: v.valor,
       }))
       .sort((a, b) => b.confirmados - a.confirmados || b.total - a.total)
-      .slice(0, 50),
-    produtos: [...produtoAgg.values()]
-      .map((p) => ({
-        produtoId: p.produtoId,
-        produto: p.descricao,
-        fabricante: p.fabricante,
-        vezesProposto: p.itens.size,
-        vezesConfirmado: p.confirmados.size,
-        taxa: taxa(p.confirmados.size, p.itens.size),
-        valor: p.valor,
-      }))
-      .sort((a, b) => b.vezesProposto - a.vezesProposto)
-      .slice(0, 15),
+      .slice(0, 12),
+    produtos: produtosCompletos,
+    produtosIncompletos,
+    totalProdutosIncompletos,
     clientes: [...cliAgg.entries()]
-      .map(([cliente, c]) => ({ cliente, orcamentos: c.orcamentos, confirmados: c.confirmados, valor: c.valor }))
+      .map(([cliente, c]) => ({
+        cliente,
+        orcamentos: c.orcamentos,
+        confirmados: c.confirmados,
+        taxa: taxa(c.confirmados, c.orcamentos),
+        valor: c.valor,
+      }))
       .sort((a, b) => b.valor - a.valor)
-      .slice(0, 15),
+      .slice(0, 20),
     pendentes: lista
       .filter((q) => statusDe(q) === "perdido")
       .sort((a, b) => a.data.localeCompare(b.data))
