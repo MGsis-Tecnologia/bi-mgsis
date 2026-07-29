@@ -3,6 +3,7 @@ import * as XLSX from "xlsx";
 import type {
   CaixaItem,
   InventoryItem,
+  OrcamentoLineItem,
   OrderLineItem,
   OrderType,
   PayableItem,
@@ -10,6 +11,7 @@ import type {
   StoredCaixa,
   StoredDataset,
   StoredInventory,
+  StoredOrcamento,
   StoredPayables,
   StoredReceivables,
 } from "@/lib/types/dataset";
@@ -94,33 +96,6 @@ const ORCAMENTO_REQUIRED_COLS = [
 
 export type DatasetKind = "sales" | "receivable" | "payable" | "inventory" | "caixa" | "orcamento";
 
-interface OrcamentoItem {
-  orcamento_id: string;
-  orcamento_data: string;
-  orcamento_confirmado: boolean;
-  orcamento_data_confirmacao: string;
-  cliente_id: string;
-  cliente_nome: string;
-  vendedor_id: string;
-  vendedor_nome: string;
-  empresa_id: string;
-  moeda_id: string;
-  moeda_sigla: string;
-  item_orcamento_id: string;
-  produto_id: string;
-  produto_descricao: string;
-  item_quantidade: number;
-  item_quantidade_confirmada: number;
-  item_total: number;
-}
-
-interface StoredOrcamento {
-  items: OrcamentoItem[];
-  importedAt: string;
-  filename: string;
-  rowCount: number;
-}
-
 export interface ParseResult {
   kind: DatasetKind | null;
   dataset: StoredDataset | null;          // populated when kind === "sales"
@@ -178,6 +153,21 @@ function parseNumber(raw: string | number): number {
     return parseFloat(s.replace(/\./g, "").replace(",", ".")) || 0;
   }
   return parseFloat(s.replace(/,/g, "")) || 0;
+}
+
+// Interpreta um campo booleano vindo de CSV/Excel. A view `bi_orcamentos`
+// exporta `status_orcamento` como "Confirmado"/"Pendente", mas exportações
+// antigas (e o leiaute documentado) usam `orcamento_confirmado` = true/false.
+// Aceita ainda 1/0, sim/não e S/N para não depender da grafia do ERP.
+const TRUE_TOKENS = new Set([
+  "true", "t", "1", "sim", "s", "yes", "y",
+  "confirmado", "confirmada", "confirmed", "ok",
+]);
+
+function parseBool(raw: unknown): boolean {
+  if (typeof raw === "boolean") return raw;
+  if (typeof raw === "number") return raw !== 0;
+  return TRUE_TOKENS.has(String(raw ?? "").trim().toLowerCase());
 }
 
 // Normalize column header: strip BOM, lowercase, trim, collapse spaces/underscores
@@ -714,10 +704,28 @@ function processOrcamentoRows(
     return errorResult([`Colunas obrigatórias ausentes (Orçamento): ${missing.join(", ")}`]);
   }
 
-  const items: OrcamentoItem[] = [];
+  const items: OrcamentoLineItem[] = [];
   const warnings: string[] = [];
   let skipped = 0;
   let rowNum = 0;
+
+  // Qual coluna carrega o "confirmado?". A view bi_orcamentos exporta
+  // `status_orcamento` (Confirmado/Pendente); o leiaute documentado usa
+  // `orcamento_confirmado` (true/false). Sem nenhuma das duas, cai para a
+  // presença da data de confirmação.
+  const statusCol =
+    "orcamento_confirmado" in colMap ? "orcamento_confirmado"
+    : "status_orcamento" in colMap ? "status_orcamento"
+    : null;
+
+  if (!statusCol) {
+    warnings.push(
+      "Colunas 'orcamento_confirmado' e 'status_orcamento' ausentes — " +
+      "orçamentos com data de confirmação preenchida serão tratados como confirmados."
+    );
+  }
+
+  let confirmados = 0;
 
   for (const rawRow of rawRows) {
     rowNum++;
@@ -740,25 +748,34 @@ function processOrcamentoRows(
 
     const quantity = parseNumber(row["item_quantidade"] as string);
     const total = parseNumber(row["item_total"] as string);
+    const dataConfirmacao = parseDate(String(row["orcamento_data_confirmacao"] ?? "")) ?? "";
+
+    const confirmado = statusCol ? parseBool(row[statusCol]) : dataConfirmacao !== "";
+    if (confirmado) confirmados++;
 
     items.push({
-      orcamento_id: orcId,
-      orcamento_data: date,
-      orcamento_confirmado: String(row["orcamento_confirmado"] ?? "").toLowerCase() === "true",
-      orcamento_data_confirmacao: parseDate(String(row["orcamento_data_confirmacao"] ?? "")) ?? "",
-      cliente_id: String(row["cliente_id"] ?? "").trim(),
-      cliente_nome: String(row["cliente_nome"] ?? "").trim(),
-      vendedor_id: String(row["vendedor_id"] ?? "").trim(),
-      vendedor_nome: String(row["vendedor_nome"] ?? "").trim(),
-      empresa_id: String(row["empresa_id"] ?? "1").trim(),
-      moeda_id: String(row["moeda_id"] ?? "1").trim(),
-      moeda_sigla: String(row["moeda_sigla"] ?? "R$").trim(),
-      item_orcamento_id: String(row["item_orcamento_id"] ?? `${orcId}-${rowNum}`).trim(),
-      produto_id: String(row["produto_id"] ?? "").trim(),
-      produto_descricao: String(row["produto_descricao"] ?? "").trim(),
-      item_quantidade: quantity,
-      item_quantidade_confirmada: parseNumber(row["item_quantidade_confirmada"] as string),
-      item_total: total,
+      orcamentoId: orcId,
+      orcamentoData: date,
+      orcamentoConfirmado: confirmado,
+      orcamentoDataConfirmacao: dataConfirmacao,
+      clienteId: String(row["cliente_id"] ?? "").trim(),
+      clienteNome: String(row["cliente_nome"] ?? "").trim(),
+      vendedorId: String(row["vendedor_id"] ?? "").trim(),
+      vendedorNome: String(row["vendedor_nome"] ?? "").trim(),
+      empresaId: String(row["empresa_id"] ?? "").trim(),
+      moedaId: String(row["moeda_id"] ?? "1").trim(),
+      moedaSigla: String(row["moeda_sigla"] ?? "R$").trim(),
+      // `||` (e não `??`): a coluna pode existir com valor vazio — sem o
+      // fallback todos os itens ficariam com a mesma chave "" e a contagem de
+      // itens distintos por produto colapsaria em 1.
+      itemOrcamentoId: String(row["item_orcamento_id"] ?? "").trim() || `${orcId}-${rowNum}`,
+      produtoId: String(row["produto_id"] ?? "").trim(),
+      produtoDescricao: String(row["produto_descricao"] ?? "").trim(),
+      // Opcional: quando ausente, a Prospecção resolve pelo dataset de Estoque.
+      produtoFabricante: String(row["produto_fabricante"] ?? "").trim(),
+      itemQuantidade: quantity,
+      itemQuantidadeConfirmada: parseNumber(row["item_quantidade_confirmada"] as string),
+      itemTotal: total,
     });
   }
 
@@ -767,7 +784,14 @@ function processOrcamentoRows(
     return errorResult(["Nenhum orçamento válido encontrado."], warnings, skipped);
   }
 
-  console.debug(`[csv-parser] orcamento: ${items.length} itens processados`);
+  if (confirmados === 0) {
+    warnings.unshift(
+      "Nenhum orçamento marcado como confirmado — a taxa de conversão ficará em 0%. " +
+      `Verifique a coluna ${statusCol ?? "de status"} no arquivo.`
+    );
+  }
+
+  console.debug(`[csv-parser] orcamento: ${items.length} itens processados, ${confirmados} confirmados`);
   return {
     kind: "orcamento",
     dataset: null,

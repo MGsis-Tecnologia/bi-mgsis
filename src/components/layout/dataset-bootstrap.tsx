@@ -9,6 +9,7 @@ import {
   PAYABLES_IDB_KEY,
   INVENTORY_IDB_KEY,
   CAIXA_IDB_KEY,
+  ORCAMENTO_IDB_KEY,
 } from "@/lib/store/dataset";
 import { idbGet, idbSet } from "@/lib/store/idb";
 import { serverGetMeta, serverDownloadAll } from "@/lib/server/dataset-client";
@@ -17,6 +18,7 @@ import type {
   StoredCaixa,
   StoredDataset,
   StoredInventory,
+  StoredOrcamento,
   StoredPayables,
   StoredReceivables,
 } from "@/lib/types/dataset";
@@ -66,14 +68,16 @@ export function DatasetBootstrap() {
       syncOne<StoredPayables>("payable", PAYABLES_IDB_KEY),
       syncOne<StoredInventory>("inventory", INVENTORY_IDB_KEY),
       syncOne<StoredCaixa>("caixa", CAIXA_IDB_KEY),
+      syncOne<StoredOrcamento>("orcamento", ORCAMENTO_IDB_KEY),
     ])
-      .then(([data, receivables, payables, inventory, caixa]) => {
+      .then(([data, receivables, payables, inventory, caixa, orcamento]) => {
         const store = useDatasetStore.getState();
         if (data) store.setDataset(data);
         if (receivables) store.setReceivables(receivables);
         if (payables) store.setPayables(payables);
         if (inventory) store.setInventory(inventory);
         if (caixa) store.setCaixa(caixa);
+        if (orcamento) store.setOrcamento(orcamento);
         store._setLoaded();
       })
       .catch(() => {

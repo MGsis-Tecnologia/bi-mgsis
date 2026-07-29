@@ -1,5 +1,21 @@
 import type { AppCurrencyId } from "@/lib/types/dataset";
 
+// Locale usado por todos os formatadores. pt-BR e es-PY compartilham a mesma
+// convenção numérica (1.234,56), mas divergem em nomes de mês e nas abreviações
+// da notação compacta ("mi" × "M") — por isso o locale acompanha o idioma
+// escolhido. Mantido em módulo (e não em contexto React) porque estas funções
+// são chamadas de dezenas de pontos, muitos deles fora de componentes.
+// Quem atualiza é o store de idioma (ver lib/store/i18n.ts).
+let activeLocale = "pt-BR";
+
+export function setFormatLocale(locale: string) {
+  activeLocale = locale;
+}
+
+export function getFormatLocale(): string {
+  return activeLocale;
+}
+
 // R$ and US$: 2 decimal places, Brazilian locale
 // G$: integer, no decimals, thousands with dot
 export function formatCurrency(
@@ -18,7 +34,7 @@ export function formatCurrency(
     if (compact) {
       const abs = Math.abs(intVal);
       const fmt = (n: number) =>
-        new Intl.NumberFormat("pt-BR", {
+        new Intl.NumberFormat(activeLocale, {
           minimumFractionDigits: 0,
           maximumFractionDigits: n < 10 ? 1 : 0,
         }).format(n);
@@ -28,14 +44,14 @@ export function formatCurrency(
       } else if (abs >= 1_000_000) {
         body = `${fmt(intVal / 1_000_000)} M`;
       } else {
-        body = new Intl.NumberFormat("pt-BR", {
+        body = new Intl.NumberFormat(activeLocale, {
           minimumFractionDigits: 0,
           maximumFractionDigits: 0,
         }).format(intVal);
       }
       return `${sign}G$ ${body}`;
     }
-    const formatted = new Intl.NumberFormat("pt-BR", {
+    const formatted = new Intl.NumberFormat(activeLocale, {
       minimumFractionDigits: 0,
       maximumFractionDigits: 0,
     }).format(intVal);
@@ -44,7 +60,7 @@ export function formatCurrency(
 
   // R$ (1), US$ (2), ALL (base = R$)
   const symbol = currencyId === "2" ? "US$ " : "R$ ";
-  const formatted = new Intl.NumberFormat("pt-BR", {
+  const formatted = new Intl.NumberFormat(activeLocale, {
     minimumFractionDigits: compact ? 0 : 2,
     maximumFractionDigits: compact ? 1 : 2,
     notation: compact ? "compact" : "standard",
@@ -57,7 +73,7 @@ export function formatNumber(
   opts: { compact?: boolean; decimals?: number; signed?: boolean } = {}
 ) {
   const { compact, decimals = 0, signed } = opts;
-  return new Intl.NumberFormat("pt-BR", {
+  return new Intl.NumberFormat(activeLocale, {
     notation: compact ? "compact" : "standard",
     minimumFractionDigits: decimals,
     maximumFractionDigits: decimals,
@@ -67,7 +83,7 @@ export function formatNumber(
 
 export function formatPercent(value: number, opts: { decimals?: number; signed?: boolean } = {}) {
   const { decimals = 1, signed } = opts;
-  return new Intl.NumberFormat("pt-BR", {
+  return new Intl.NumberFormat(activeLocale, {
     style: "percent",
     minimumFractionDigits: decimals,
     maximumFractionDigits: decimals,
@@ -75,17 +91,27 @@ export function formatPercent(value: number, opts: { decimals?: number; signed?:
   }).format(value);
 }
 
-export function formatDate(date: Date | string, fmt: "short" | "long" | "month" | "day" = "short") {
+export function formatDate(
+  date: Date | string,
+  fmt: "short" | "long" | "month" | "day" | "datetime" = "short"
+) {
   const d = typeof date === "string" ? new Date(date) : date;
   switch (fmt) {
     case "long":
-      return new Intl.DateTimeFormat("pt-BR", { day: "2-digit", month: "long", year: "numeric" }).format(d);
+      return new Intl.DateTimeFormat(activeLocale, { day: "2-digit", month: "long", year: "numeric" }).format(d);
+    // Data + hora do import — o usuário precisa saber "quando" com precisão
+    // para distinguir duas cargas do mesmo arquivo no mesmo dia.
+    case "datetime":
+      return new Intl.DateTimeFormat(activeLocale, {
+        day: "2-digit", month: "2-digit", year: "numeric",
+        hour: "2-digit", minute: "2-digit",
+      }).format(d);
     case "month":
-      return new Intl.DateTimeFormat("pt-BR", { month: "short", year: "2-digit" }).format(d);
+      return new Intl.DateTimeFormat(activeLocale, { month: "short", year: "2-digit" }).format(d);
     case "day":
-      return new Intl.DateTimeFormat("pt-BR", { day: "2-digit", month: "short" }).format(d);
+      return new Intl.DateTimeFormat(activeLocale, { day: "2-digit", month: "short" }).format(d);
     default:
-      return new Intl.DateTimeFormat("pt-BR").format(d);
+      return new Intl.DateTimeFormat(activeLocale).format(d);
   }
 }
 

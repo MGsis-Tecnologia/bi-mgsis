@@ -162,6 +162,7 @@ model OrcamentoItem {
   itemOrcamentoId          String  @default("") @map("item_orcamento_id")
   produtoId                String  @default("") @map("produto_id")
   produtoDescricao         String  @default("") @map("produto_descricao")
+  produtoFabricante        String  @default("") @map("produto_fabricante")
   itemQuantidade           Float   @default(0) @map("item_quantidade")
   itemQuantidadeConfirmada Float   @default(0) @map("item_quantidade_confirmada")
   itemTotal                Float   @default(0) @map("item_total")

@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { RefreshCw, AlertCircle, Package } from "lucide-react";
+import { AlertCircle, Package } from "lucide-react";
 import {
   LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
 } from "recharts";
@@ -12,51 +12,22 @@ import { Badge } from "@/components/ui/badge";
 import { LabeledDonut } from "@/components/charts/labeled-donut";
 import { useFilters } from "@/lib/store/filters";
 import { useExchangeRates } from "@/lib/store/exchange-rates";
+import { useProspeccao } from "@/lib/hooks/use-prospeccao";
 import { useTranslation } from "@/lib/hooks/use-translation";
 import { formatCurrency, formatNumber, formatPercent } from "@/lib/utils/format";
 import type { AppCurrencyId } from "@/lib/types/dataset";
 import { cn } from "@/lib/utils";
 
-interface Resumo {
-  kpis: {
-    total: number; ganhos: number; perdidos: number; abertos: number; taxaConversao: number;
-    valorTotal: number; valorGanho: number; valorEmRisco: number; ticketMedio: number;
-    itensPorOrcamento: number; tempoMedioDias: number;
-  };
-  status: Array<{ key: "ganho" | "aberto" | "perdido"; count: number; valor: number }>;
-  evolucao: Array<{ mes: string; criados: number; confirmados: number; taxa: number; valor: number }>;
-  vendedores: Array<{ vendedor: string; total: number; confirmados: number; taxa: number; valor: number }>;
-  produtos: Array<{ produto: string; vezesProposto: number; vezesConfirmado: number; taxa: number; valor: number }>;
-  clientes: Array<{ cliente: string; orcamentos: number; confirmados: number; valor: number }>;
-  pendentes: Array<{ orcamento_id: string; cliente_nome: string; valor: number; dias: number }>;
-}
-
-const EMPTY: Resumo = {
-  kpis: { total: 0, ganhos: 0, perdidos: 0, abertos: 0, taxaConversao: 0, valorTotal: 0, valorGanho: 0, valorEmRisco: 0, ticketMedio: 0, itensPorOrcamento: 0, tempoMedioDias: 0 },
-  status: [], evolucao: [], vendedores: [], produtos: [], clientes: [], pendentes: [],
-};
-
-function ymd(d: Date): string {
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-}
-
 export default function ProspeccaoPage() {
   const { t, language } = useTranslation();
   const currency = useFilters((s) => s.currency);
-  const empresaId = useFilters((s) => s.empresaId);
-  const preset = useFilters((s) => s.preset);
-  const customRange = useFilters((s) => s.customRange);
-  const getRange = useFilters((s) => s.getRange);
-  const rates = useExchangeRates((s) => s.rates);
   const fetchRates = useExchangeRates((s) => s.fetchRates);
 
   React.useEffect(() => { fetchRates(); }, [fetchRates]);
 
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  const range = React.useMemo(() => getRange(), [preset, customRange, getRange]);
-  const dataInicio = ymd(range.from);
-  const dataFim = ymd(range.to);
-  const ratesKey = JSON.stringify(rates);
+  // Todo o resumo sai do dataset já carregado no boot e é recalculado por memo
+  // quando os filtros mudam — igual às demais páginas, sem consulta ao servidor.
+  const data = useProspeccao();
 
   const displayCurrencyId: AppCurrencyId = currency === "ALL" ? "1" : currency;
   const money = (v: number, compact = false) => formatCurrency(v, displayCurrencyId, { compact });
@@ -65,25 +36,6 @@ export default function ProspeccaoPage() {
     if (!y || !m) return ym;
     return new Intl.DateTimeFormat(language, { month: "short", year: "2-digit" }).format(new Date(y, m - 1, 1));
   };
-
-  const [data, setData] = React.useState<Resumo>(EMPTY);
-  const [loading, setLoading] = React.useState(true);
-
-  const fetchData = React.useCallback(async () => {
-    setLoading(true);
-    try {
-      const params = new URLSearchParams({ dataInicio, dataFim, currency, empresaId, rates: ratesKey });
-      const res = await fetch(`/api/prospeccao/resumo?${params}`, { cache: "no-store" });
-      if (!res.ok) throw new Error("Erro ao carregar");
-      setData(await res.json());
-    } catch (err) {
-      console.error("Erro:", err);
-    } finally {
-      setLoading(false);
-    }
-  }, [dataInicio, dataFim, currency, empresaId, ratesKey]);
-
-  React.useEffect(() => { fetchData(); }, [fetchData]);
 
   const { kpis, status, evolucao, vendedores, produtos, clientes, pendentes } = data;
 
@@ -106,21 +58,19 @@ export default function ProspeccaoPage() {
 
   return (
     <div className="space-y-8">
-      <PageHeader eyebrow={t("prospeccao.header.eyebrow")} title={t("prospeccao.header.title")} description={t("prospeccao.header.desc")}>
-        <button
-          onClick={fetchData}
-          className="inline-flex h-8 items-center gap-1.5 rounded-md border border-border bg-surface px-2.5 text-xs font-medium hover:bg-muted/40 transition-colors"
-        >
-          <RefreshCw className={cn("h-3.5 w-3.5", loading && "animate-spin")} />
-          {t("prospeccao.refresh")}
-        </button>
-      </PageHeader>
+      <PageHeader eyebrow={t("prospeccao.header.eyebrow")} title={t("prospeccao.header.title")} description={t("prospeccao.header.desc")} />
 
       {!hasData ? (
         <Card>
           <CardContent className="py-16 text-center">
             <Package className="mx-auto h-12 w-12 text-muted-foreground/30 mb-4" />
-            <p className="text-sm text-muted-foreground">{t("prospeccao.empty")}</p>
+            <p className="text-sm text-muted-foreground">
+              {/* Há orçamentos importados, mas nenhum passa nos filtros atuais —
+                  o caso mais comum é o período padrão (mês atual). */}
+              {data.totalGeral > 0
+                ? t("prospeccao.empty.filtered", { count: formatNumber(data.totalGeral) })
+                : t("prospeccao.empty")}
+            </p>
           </CardContent>
         </Card>
       ) : (
@@ -177,20 +127,22 @@ export default function ProspeccaoPage() {
           )}
 
           {/* Vendedores: gráfico + tabela */}
+          {/* Conversão por vendedor — gráfico em largura total (nomes de vendedor
+              não cabiam em meia coluna) e a tabela logo abaixo. */}
           {vendedores.length > 0 && (
-            <section className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+            <>
               <Card>
                 <CardHeader><CardTitle>{t("prospeccao.vendedores.title")}</CardTitle></CardHeader>
                 <CardContent>
-                  <ResponsiveContainer width="100%" height={300}>
-                    <BarChart data={vendedores.slice(0, 10)} margin={{ right: 12, top: 8 }}>
+                  <ResponsiveContainer width="100%" height={340}>
+                    <BarChart data={vendedores.slice(0, 15)} margin={{ right: 12, top: 8 }}>
                       <CartesianGrid stroke="hsl(var(--border))" strokeDasharray="2 4" vertical={false} />
-                      <XAxis dataKey="vendedor" tickLine={false} axisLine={false} tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 10 }} angle={-30} textAnchor="end" height={70} interval={0} />
+                      <XAxis dataKey="vendedor" tickLine={false} axisLine={false} tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 11 }} angle={-25} textAnchor="end" height={80} interval={0} />
                       <YAxis tickLine={false} axisLine={false} tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 10 }} allowDecimals={false} width={36} />
                       <Tooltip contentStyle={{ background: "hsl(var(--surface-elevated))", border: "1px solid hsl(var(--border))", borderRadius: 8, fontSize: 12 }} />
                       <Legend wrapperStyle={{ fontSize: 12 }} />
-                      <Bar dataKey="total" fill="hsl(var(--accent))" name={t("prospeccao.col.total")} radius={[3, 3, 0, 0]} />
-                      <Bar dataKey="confirmados" fill="hsl(var(--positive))" name={t("prospeccao.col.confirmed")} radius={[3, 3, 0, 0]} />
+                      <Bar dataKey="total" fill="hsl(var(--accent))" name={t("prospeccao.col.total")} radius={[3, 3, 0, 0]} maxBarSize={48} />
+                      <Bar dataKey="confirmados" fill="hsl(var(--positive))" name={t("prospeccao.col.confirmed")} radius={[3, 3, 0, 0]} maxBarSize={48} />
                     </BarChart>
                   </ResponsiveContainer>
                 </CardContent>
@@ -201,56 +153,71 @@ export default function ProspeccaoPage() {
                   <ScrollTable
                     head={[t("prospeccao.col.seller"), t("prospeccao.col.total"), t("prospeccao.col.confirmed"), t("prospeccao.col.rate"), t("prospeccao.col.value")]}
                     rows={vendedores.map((v) => [
-                      <span className="font-medium" key="n">{v.vendedor}</span>,
+                      <span className="block max-w-[520px] truncate font-medium" title={v.vendedor} key="n">{v.vendedor}</span>,
                       formatNumber(v.total),
                       <span className="text-positive font-medium" key="c">{formatNumber(v.confirmados)}</span>,
                       formatPercent(v.taxa / 100, { decimals: 1 }),
                       money(v.valor),
                     ])}
                     align={["left", "right", "right", "right", "right"]}
+                    colClassName={["w-full", "w-[1%]", "w-[1%]", "w-[1%]", "w-[1%]"]}
                   />
                 </CardContent>
               </Card>
-            </section>
+            </>
           )}
 
-          {/* Produtos + Top clientes */}
-          <section className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-            {produtos.length > 0 && (
-              <Card>
-                <CardHeader><CardTitle>{t("prospeccao.produtos.title")}</CardTitle></CardHeader>
-                <CardContent className="px-0">
-                  <ScrollTable
-                    head={[t("prospeccao.col.product"), t("prospeccao.col.proposed"), t("prospeccao.col.confirmed"), t("prospeccao.col.rate")]}
-                    rows={produtos.map((p) => [
-                      <span className="truncate block max-w-[220px]" key="p">{p.produto}</span>,
-                      formatNumber(p.vezesProposto),
-                      <span className="text-positive font-medium" key="c">{formatNumber(p.vezesConfirmado)}</span>,
-                      <span className={cn("font-medium", p.taxa < 20 ? "text-negative" : p.taxa < 40 ? "text-warning" : "text-foreground")} key="t">{formatPercent(p.taxa / 100, { decimals: 1 })}</span>,
-                    ])}
-                    align={["left", "right", "right", "right"]}
-                  />
-                </CardContent>
-              </Card>
-            )}
-            {clientes.length > 0 && (
-              <Card>
-                <CardHeader><CardTitle>{t("prospeccao.clientes.title")}</CardTitle></CardHeader>
-                <CardContent className="px-0">
-                  <ScrollTable
-                    head={[t("prospeccao.col.client"), t("prospeccao.col.quotes"), t("prospeccao.col.confirmed"), t("prospeccao.col.value")]}
-                    rows={clientes.map((c) => [
-                      <span className="truncate block max-w-[220px] font-medium" key="c">{c.cliente}</span>,
-                      formatNumber(c.orcamentos),
-                      <span className="text-positive" key="cf">{formatNumber(c.confirmados)}</span>,
-                      <span className="font-medium" key="v">{money(c.valor)}</span>,
-                    ])}
-                    align={["left", "right", "right", "right"]}
-                  />
-                </CardContent>
-              </Card>
-            )}
-          </section>
+          {/* Conversão por produto — largura total: a descrição do produto é o
+              campo mais longo da tela e sofria truncada em meia coluna. */}
+          {produtos.length > 0 && (
+            <Card>
+              <CardHeader><CardTitle>{t("prospeccao.produtos.title")}</CardTitle></CardHeader>
+              <CardContent className="px-0">
+                <ScrollTable
+                  head={[
+                    t("prospeccao.col.mfr"),
+                    t("prospeccao.col.product"),
+                    t("prospeccao.col.proposed"),
+                    t("prospeccao.col.confirmed"),
+                    t("prospeccao.col.rate"),
+                    t("prospeccao.col.value"),
+                  ]}
+                  rows={produtos.map((p) => [
+                    <span className="font-mono text-xs text-muted-foreground whitespace-nowrap" key="f">
+                      {p.fabricante || "—"}
+                    </span>,
+                    <span className="block max-w-[640px] truncate" title={p.produto} key="p">{p.produto}</span>,
+                    formatNumber(p.vezesProposto),
+                    <span className="text-positive font-medium" key="c">{formatNumber(p.vezesConfirmado)}</span>,
+                    <span className={cn("font-medium", p.taxa < 20 ? "text-negative" : p.taxa < 40 ? "text-warning" : "text-foreground")} key="t">{formatPercent(p.taxa / 100, { decimals: 1 })}</span>,
+                    money(p.valor),
+                  ])}
+                  align={["left", "left", "right", "right", "right", "right"]}
+                  colClassName={["w-[1%]", "w-full", "w-[1%]", "w-[1%]", "w-[1%]", "w-[1%]"]}
+                />
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Top clientes */}
+          {clientes.length > 0 && (
+            <Card>
+              <CardHeader><CardTitle>{t("prospeccao.clientes.title")}</CardTitle></CardHeader>
+              <CardContent className="px-0">
+                <ScrollTable
+                  head={[t("prospeccao.col.client"), t("prospeccao.col.quotes"), t("prospeccao.col.confirmed"), t("prospeccao.col.value")]}
+                  rows={clientes.map((c) => [
+                    <span className="block max-w-[520px] truncate font-medium" title={c.cliente} key="c">{c.cliente}</span>,
+                    formatNumber(c.orcamentos),
+                    <span className="text-positive" key="cf">{formatNumber(c.confirmados)}</span>,
+                    <span className="font-medium" key="v">{money(c.valor)}</span>,
+                  ])}
+                  align={["left", "right", "right", "right"]}
+                  colClassName={["w-full", "w-[1%]", "w-[1%]", "w-[1%]"]}
+                />
+              </CardContent>
+            </Card>
+          )}
 
           {/* Pendentes */}
           {pendentes.length > 0 && (
@@ -287,11 +254,14 @@ export default function ProspeccaoPage() {
 }
 
 function ScrollTable({
-  head, rows, align,
+  head, rows, align, colClassName,
 }: {
   head: string[];
   rows: React.ReactNode[][];
   align: ("left" | "right")[];
+  // Largura por coluna. "w-full" na coluna de texto faz as demais encolherem ao
+  // conteúdo, dando todo o espaço restante à descrição.
+  colClassName?: string[];
 }) {
   return (
     <div className="overflow-x-auto overflow-y-auto max-h-[420px]">
@@ -299,7 +269,16 @@ function ScrollTable({
         <thead className="[&_th]:sticky [&_th]:top-0 [&_th]:z-10 [&_th]:bg-surface [&_th]:border-b [&_th]:border-border">
           <tr className="text-[10px] uppercase tracking-[0.14em] text-muted-foreground">
             {head.map((h, i) => (
-              <th key={i} className={cn("font-medium py-2 px-4", align[i] === "right" ? "text-right" : "text-left")}>{h}</th>
+              <th
+                key={i}
+                className={cn(
+                  "font-medium py-2 px-4 whitespace-nowrap",
+                  align[i] === "right" ? "text-right" : "text-left",
+                  colClassName?.[i]
+                )}
+              >
+                {h}
+              </th>
             ))}
           </tr>
         </thead>

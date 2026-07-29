@@ -181,16 +181,45 @@ export interface StoredCaixa {
   rowCount: number;
 }
 
-// ─── Empresa (matriz / filiais) ──────────────────────────────────────────────
-// O filtro de empresa é global. "all" = Todas as empresas; caso contrário é o
-// empresa_id exato vindo dos dados importados. As empresas disponíveis são
-// derivadas dinamicamente dos datasets (ver use-empresas.ts).
-export type EmpresaFilter = "all" | string;
-
-// Rótulo exibido para um empresa_id — os dados só trazem o id numérico.
-export function empresaLabel(id: string): string {
-  return id ? `Empresa ${id}` : "Sem empresa";
+// ─── Orçamentos (quotations / prospecção) ────────────────────────────────────
+// Uma linha por ITEM de orçamento — o cabeçalho do orçamento se repete em cada
+// linha, igual ao leiaute da view bi_orcamentos. Os nomes dos campos espelham o
+// model Prisma OrcamentoItem para que a linha vá direto do parser ao banco, sem
+// mapeamento intermediário (mesmo contrato dos demais datasets).
+export interface OrcamentoLineItem {
+  orcamentoId: string;
+  orcamentoData: string;              // ISO YYYY-MM-DD
+  orcamentoConfirmado: boolean;
+  orcamentoDataConfirmacao: string;   // ISO YYYY-MM-DD, "" quando pendente
+  clienteId: string;
+  clienteNome: string;
+  vendedorId: string;
+  vendedorNome: string;
+  empresaId: string;
+  moedaId: string;                    // "1" | "2" | "3"
+  moedaSigla: string;
+  itemOrcamentoId: string;
+  produtoId: string;
+  produtoDescricao: string;
+  // produto_fabricante é opcional no leiaute de orçamentos (a view bi_orcamentos
+  // ainda não o exporta). Quando vazio, a Prospecção busca o código pelo
+  // produto_id no dataset de Estoque — mesmo recurso da página de Produtos.
+  produtoFabricante: string;
+  itemQuantidade: number;
+  itemQuantidadeConfirmada: number;   // quantidade que virou venda
+  itemTotal: number;                  // na moeda de moedaId
 }
+
+export interface StoredOrcamento {
+  items: OrcamentoLineItem[];
+  importedAt: string;    // ISO
+  filename: string;
+  rowCount: number;
+}
+
+// ─── Empresa (matriz / filiais) ──────────────────────────────────────────────
+// O rótulo exibido é montado no idioma ativo (chaves filters.empresa.*).
+export type EmpresaFilter = "all" | string;
 
 // "1"=R$  "2"=US$  "3"=G$  "ALL"=Todas Moedas (converte para R$)
 export type AppCurrencyId = "1" | "2" | "3" | "ALL";

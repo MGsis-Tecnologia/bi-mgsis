@@ -6,7 +6,8 @@
       "Bash(git add *)",
       "Bash(git commit *)",
       "Bash(git push *)",
-      "Bash(git rev-list *)"
+      "Bash(git rev-list *)",
+      "PowerShell(npx tsc --noEmit -p tsconfig.json 2>&1)"
     ]
   }
 }

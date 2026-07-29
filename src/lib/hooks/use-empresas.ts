@@ -2,22 +2,21 @@
 
 import * as React from "react";
 import { useDatasetStore } from "@/lib/store/dataset";
-import { empresaLabel } from "@/lib/types/dataset";
 
 export interface EmpresaOption {
   id: string;      // empresa_id vindo dos dados importados
-  label: string;   // "Empresa {id}"
 }
 
 // Coleta os empresa_id distintos presentes em qualquer dataset importado
-// (vendas, receber, pagar, estoque, caixa) e os devolve ordenados. O filtro
-// de empresa é global, por isso a lista precisa cobrir todas as áreas.
+// (vendas, receber, pagar, estoque, caixa, orçamentos) e os devolve ordenados.
+// O filtro de empresa é global, por isso a lista precisa cobrir todas as áreas.
 export function useEmpresas(): EmpresaOption[] {
   const dataset     = useDatasetStore((s) => s.dataset);
   const receivables = useDatasetStore((s) => s.receivables);
   const payables    = useDatasetStore((s) => s.payables);
   const inventory   = useDatasetStore((s) => s.inventory);
   const caixa       = useDatasetStore((s) => s.caixa);
+  const orcamento   = useDatasetStore((s) => s.orcamento);
 
   return React.useMemo(() => {
     const ids = new Set<string>();
@@ -26,6 +25,7 @@ export function useEmpresas(): EmpresaOption[] {
     for (const it of payables?.items ?? [])    if (it.empresaId) ids.add(it.empresaId);
     for (const it of inventory?.items ?? [])   if (it.empresaId) ids.add(it.empresaId);
     for (const it of caixa?.items ?? [])       if (it.empresaId) ids.add(it.empresaId);
+    for (const it of orcamento?.items ?? [])   if (it.empresaId) ids.add(it.empresaId);
 
     return [...ids]
       // ordena numericamente quando possível, senão alfabético
@@ -34,6 +34,8 @@ export function useEmpresas(): EmpresaOption[] {
         if (!isNaN(na) && !isNaN(nb)) return na - nb;
         return a.localeCompare(b);
       })
-      .map((id) => ({ id, label: empresaLabel(id) }));
-  }, [dataset, receivables, payables, inventory, caixa]);
+      // Só o id — o rótulo é montado no idioma ativo por quem consome
+      // (ver EmpresaSwitcher / chave filters.empresa.item).
+      .map((id) => ({ id }));
+  }, [dataset, receivables, payables, inventory, caixa, orcamento]);
 }

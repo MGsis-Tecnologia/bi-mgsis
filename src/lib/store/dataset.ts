@@ -3,6 +3,7 @@ import type {
   StoredCaixa,
   StoredDataset,
   StoredInventory,
+  StoredOrcamento,
   StoredPayables,
   StoredReceivables,
 } from "@/lib/types/dataset";
@@ -17,6 +18,7 @@ interface DatasetState {
   payables: StoredPayables | null;
   inventory: StoredInventory | null;
   caixa: StoredCaixa | null;
+  orcamento: StoredOrcamento | null;
   isLoaded: boolean;
   setDataset: (d: StoredDataset) => void;
   clearDataset: () => void;
@@ -28,6 +30,8 @@ interface DatasetState {
   clearInventory: () => void;
   setCaixa: (c: StoredCaixa) => void;
   clearCaixa: () => void;
+  setOrcamento: (o: StoredOrcamento) => void;
+  clearOrcamento: () => void;
   _setLoaded: () => void;
 }
 
@@ -37,6 +41,7 @@ export const useDatasetStore = create<DatasetState>()((set) => ({
   payables: null,
   inventory: null,
   caixa: null,
+  orcamento: null,
   isLoaded: false,
   setDataset:       (dataset)     => set({ dataset }),
   clearDataset:     ()            => set({ dataset: null }),
@@ -48,6 +53,8 @@ export const useDatasetStore = create<DatasetState>()((set) => ({
   clearInventory:   ()            => set({ inventory: null }),
   setCaixa:         (caixa)       => set({ caixa }),
   clearCaixa:       ()            => set({ caixa: null }),
+  setOrcamento:     (orcamento)   => set({ orcamento }),
+  clearOrcamento:   ()            => set({ orcamento: null }),
   _setLoaded:       ()            => set({ isLoaded: true }),
 }));
 
@@ -56,3 +63,4 @@ export const RECEIVABLES_IDB_KEY = "mgsis-receivables";
 export const PAYABLES_IDB_KEY = "mgsis-payables";
 export const INVENTORY_IDB_KEY = "mgsis-inventory";
 export const CAIXA_IDB_KEY = "mgsis-caixa";
+export const ORCAMENTO_IDB_KEY = "mgsis-orcamento";

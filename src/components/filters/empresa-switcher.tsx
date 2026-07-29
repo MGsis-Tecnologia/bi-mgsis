@@ -11,8 +11,10 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useFilters } from "@/lib/store/filters";
 import { useEmpresas } from "@/lib/hooks/use-empresas";
+import { useTranslation } from "@/lib/hooks/use-translation";
 
 export function EmpresaSwitcher() {
+  const { t } = useTranslation();
   const empresaId = useFilters((s) => s.empresaId);
   const setEmpresa = useFilters((s) => s.setEmpresa);
   const empresas = useEmpresas();
@@ -20,8 +22,12 @@ export function EmpresaSwitcher() {
   // Só faz sentido oferecer o filtro quando há mais de uma empresa nos dados.
   if (empresas.length <= 1) return null;
 
-  const current = empresas.find((e) => e.id === empresaId);
-  const triggerLabel = empresaId === "all" ? "Todas" : current?.label ?? "Todas";
+  // Os dados só trazem o id numérico — o rótulo é montado no idioma ativo.
+  const label = (id: string) =>
+    id ? t("filters.empresa.item", { id }) : t("filters.empresa.none");
+
+  const triggerLabel =
+    empresaId === "all" ? t("filters.empresa.all_short") : label(empresaId);
 
   return (
     <DropdownMenu>
@@ -31,13 +37,13 @@ export function EmpresaSwitcher() {
         <ChevronDown className="h-3 w-3 opacity-60" />
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-56">
-        <DropdownMenuLabel>Empresa</DropdownMenuLabel>
+        <DropdownMenuLabel>{t("filters.empresa.title")}</DropdownMenuLabel>
         <DropdownMenuSeparator />
         <DropdownMenuItem
           onClick={() => setEmpresa("all")}
           className="flex items-center justify-between"
         >
-          <span className="text-foreground">Todas as empresas</span>
+          <span className="text-foreground">{t("filters.empresa.all")}</span>
           {empresaId === "all" && <Check className="h-3.5 w-3.5 text-foreground" />}
         </DropdownMenuItem>
         <DropdownMenuSeparator />
@@ -47,7 +53,7 @@ export function EmpresaSwitcher() {
             onClick={() => setEmpresa(e.id)}
             className="flex items-center justify-between"
           >
-            <span className="text-foreground">{e.label}</span>
+            <span className="text-foreground">{label(e.id)}</span>
             {empresaId === e.id && <Check className="h-3.5 w-3.5 text-foreground" />}
           </DropdownMenuItem>
         ))}

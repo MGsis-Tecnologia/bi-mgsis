@@ -1,15 +1,16 @@
 "use client";
 
 import * as React from "react";
-import { Boxes, CheckCircle2, CircleDollarSign, Clock, CreditCard, Landmark, Loader2, ShoppingCart, Trash2, Upload, XCircle } from "lucide-react";
+import { Boxes, CheckCircle2, CircleDollarSign, Clock, CreditCard, FileSpreadsheet, Landmark, Loader2, ShoppingCart, Trash2, Upload, XCircle } from "lucide-react";
 import { PageHeader } from "@/components/layout/page-header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { parseFile, type DatasetKind } from "@/lib/parsers/csv-parser";
-import { useDatasetStore, IDB_KEY, RECEIVABLES_IDB_KEY, PAYABLES_IDB_KEY, INVENTORY_IDB_KEY, CAIXA_IDB_KEY } from "@/lib/store/dataset";
+import { useDatasetStore, IDB_KEY, RECEIVABLES_IDB_KEY, PAYABLES_IDB_KEY, INVENTORY_IDB_KEY, CAIXA_IDB_KEY, ORCAMENTO_IDB_KEY } from "@/lib/store/dataset";
 import { idbSet, idbDel } from "@/lib/store/idb";
 import { serverDelete, serverImport } from "@/lib/server/dataset-client";
 import { useTranslation } from "@/lib/hooks/use-translation";
+import type { DictionaryKey } from "@/lib/i18n/dictionaries";
 import { formatNumber, formatDate } from "@/lib/utils/format";
 
 type ItemStatus = "waiting" | "parsing" | "success" | "error";
@@ -26,14 +27,10 @@ interface QueueItem {
   rowCount: number;
 }
 
-const KIND_LABEL: Record<string, string> = {
-  sales: "Vendas",
-  receivable: "Contas a Receber",
-  payable: "Contas a Pagar",
-  inventory: "Estoque",
-  caixa: "Caixa / Banco",
-  orcamento: "Orçamentos",
-};
+// Rótulo e unidade ("linhas", "títulos", "itens"…) de cada tipo de dado vêm do
+// dicionário — as chaves seguem o próprio DatasetKind.
+const kindLabelKey = (k: DatasetKind) => `importacao.kind.${k}` as DictionaryKey;
+const kindUnitKey  = (k: DatasetKind) => `importacao.unit.${k}` as DictionaryKey;
 
 export default function ImportacaoPage() {
   const { t } = useTranslation();
@@ -44,9 +41,9 @@ export default function ImportacaoPage() {
   const inputRef = React.useRef<HTMLInputElement>(null);
 
   const {
-    dataset, receivables, payables, inventory, caixa,
-    setDataset, setReceivables, setPayables, setInventory, setCaixa,
-    clearDataset, clearReceivables, clearPayables, clearInventory, clearCaixa,
+    dataset, receivables, payables, inventory, caixa, orcamento,
+    setDataset, setReceivables, setPayables, setInventory, setCaixa, setOrcamento,
+    clearDataset, clearReceivables, clearPayables, clearInventory, clearCaixa, clearOrcamento,
   } = useDatasetStore();
 
   function updateItem(id: string, patch: Partial<QueueItem>) {
@@ -78,16 +75,14 @@ export default function ImportacaoPage() {
       // authoritative for the local browser.
       const serverWarning: string[] = [];
       async function pushToServer(
-        kind: Exclude<DatasetKind, "orcamento">,   // orçamento tem rota própria; não passa aqui
+        kind: DatasetKind,
         items: unknown[],
         meta: { filename: string; rowCount: number; importedAt: string }
       ) {
         try {
           await serverImport(kind, items, meta);
         } catch (err) {
-          serverWarning.push(
-            `Falha ao salvar no servidor: ${(err as Error).message}. Dados ficaram só no navegador.`
-          );
+          serverWarning.push(t("importacao.error.server", { msg: (err as Error).message }));
         }
       }
 
@@ -128,27 +123,9 @@ export default function ImportacaoPage() {
           warnings: [...result.warnings, ...serverWarning], skipped: result.skipped,
         });
       } else if (result.kind === "orcamento" && result.orcamento) {
-        // Orçamentos têm rota própria (/api/prospeccao/import) e NÃO usam o
-        // armazenamento genérico de datasets nem cache local (IndexedDB).
-        // Envia em lotes: um JSON.stringify único de milhões de linhas estoura
-        // o tamanho máximo de string do JS ("Invalid string length").
-        try {
-          const items = result.orcamento.items;
-          const CHUNK = 3000;
-          for (let i = 0; i < items.length; i += CHUNK) {
-            const res = await fetch("/api/prospeccao/import", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ rows: items.slice(i, i + CHUNK), replace: i === 0 }),
-            });
-            if (!res.ok) {
-              const text = await res.text().catch(() => "");
-              throw new Error(`${res.status}: ${text}`);
-            }
-          }
-        } catch (err) {
-          serverWarning.push(`Falha ao importar orçamentos: ${(err as Error).message}.`);
-        }
+        await idbSet(ORCAMENTO_IDB_KEY, result.orcamento);
+        await pushToServer("orcamento", result.orcamento.items, { filename: result.orcamento.filename, rowCount: result.orcamento.rowCount, importedAt: result.orcamento.importedAt });
+        setOrcamento(result.orcamento);
         updateItem(nextItem.id, {
           status: "success", kind: "orcamento",
           rowCount: result.orcamento.rowCount,
@@ -201,7 +178,7 @@ export default function ImportacaoPage() {
 
   const isRunning = queue.some(i => i.status === "waiting" || i.status === "parsing");
   const hasQueue = queue.length > 0;
-  const hasDatasets = !!(dataset || receivables || payables || inventory || caixa);
+  const hasDatasets = !!(dataset || receivables || payables || inventory || caixa || orcamento);
 
   return (
     <div className="space-y-8">
@@ -229,12 +206,8 @@ export default function ImportacaoPage() {
             <div className="text-center">
               <p className="text-sm font-medium text-foreground">{t("importacao.upload.title")}</p>
               <p className="mt-1 text-xs text-muted-foreground">{t("importacao.upload.desc")}</p>
-              <p className="mt-1 text-[11px] text-muted-foreground">
-                Vendas, Contas a Receber, Contas a Pagar, Estoque e Caixa/Banco — o tipo é identificado automaticamente pelas colunas.
-              </p>
-              <p className="mt-1 text-[11px] text-muted-foreground">
-                Selecione vários arquivos de uma vez para importar em fila.
-              </p>
+              <p className="mt-1 text-[11px] text-muted-foreground">{t("importacao.upload.kinds")}</p>
+              <p className="mt-1 text-[11px] text-muted-foreground">{t("importacao.upload.multi")}</p>
             </div>
           </div>
           <input ref={inputRef} type="file" accept=".csv,.xlsx,.xls" multiple className="hidden" onChange={onInputChange} />
@@ -246,10 +219,13 @@ export default function ImportacaoPage() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between py-4">
             <CardTitle className="text-sm">
-              Fila de importação
+              {t("importacao.queue.title")}
               {isRunning && (
                 <span className="ml-2 text-xs font-normal text-muted-foreground">
-                  {queue.filter(i => i.status === "success").length}/{queue.length} concluídos
+                  {t("importacao.queue.progress", {
+                    done: queue.filter(i => i.status === "success").length,
+                    total: queue.length,
+                  })}
                 </span>
               )}
             </CardTitle>
@@ -258,7 +234,7 @@ export default function ImportacaoPage() {
                 onClick={() => { queueRef.current = []; setQueue([]); }}
                 className="text-xs text-muted-foreground hover:text-foreground transition-colors"
               >
-                Limpar
+                {t("importacao.queue.clear")}
               </button>
             )}
           </CardHeader>
@@ -273,56 +249,66 @@ export default function ImportacaoPage() {
       {/* Current datasets */}
       {hasDatasets && (
         <Card>
-          <CardHeader><CardTitle>Dados importados</CardTitle></CardHeader>
+          <CardHeader><CardTitle>{t("importacao.current.title")}</CardTitle></CardHeader>
           <CardContent className="space-y-3">
             {dataset && (
               <DatasetRow
                 icon={<ShoppingCart className="h-4 w-4 text-accent" />}
-                title="Vendas"
+                kind="sales"
                 filename={dataset.filename}
-                rowLabel={`${formatNumber(dataset.rowCount)} linhas`}
+                rowCount={dataset.rowCount}
                 importedAt={dataset.importedAt}
-                onRemove={() => { idbDel(IDB_KEY); serverDelete("sales"); clearDataset(); }}
+                onRemove={async () => { await idbDel(IDB_KEY); await serverDelete("sales"); clearDataset(); }}
               />
             )}
             {receivables && (
               <DatasetRow
                 icon={<CircleDollarSign className="h-4 w-4 text-accent" />}
-                title="Contas a Receber"
+                kind="receivable"
                 filename={receivables.filename}
-                rowLabel={`${formatNumber(receivables.rowCount)} títulos`}
+                rowCount={receivables.rowCount}
                 importedAt={receivables.importedAt}
-                onRemove={() => { idbDel(RECEIVABLES_IDB_KEY); serverDelete("receivable"); clearReceivables(); }}
+                onRemove={async () => { await idbDel(RECEIVABLES_IDB_KEY); await serverDelete("receivable"); clearReceivables(); }}
               />
             )}
             {payables && (
               <DatasetRow
                 icon={<CreditCard className="h-4 w-4 text-accent" />}
-                title="Contas a Pagar"
+                kind="payable"
                 filename={payables.filename}
-                rowLabel={`${formatNumber(payables.rowCount)} títulos`}
+                rowCount={payables.rowCount}
                 importedAt={payables.importedAt}
-                onRemove={() => { idbDel(PAYABLES_IDB_KEY); serverDelete("payable"); clearPayables(); }}
+                onRemove={async () => { await idbDel(PAYABLES_IDB_KEY); await serverDelete("payable"); clearPayables(); }}
               />
             )}
             {inventory && (
               <DatasetRow
                 icon={<Boxes className="h-4 w-4 text-accent" />}
-                title="Estoque"
+                kind="inventory"
                 filename={inventory.filename}
-                rowLabel={`${formatNumber(inventory.rowCount)} SKUs`}
+                rowCount={inventory.rowCount}
                 importedAt={inventory.importedAt}
-                onRemove={() => { idbDel(INVENTORY_IDB_KEY); serverDelete("inventory"); clearInventory(); }}
+                onRemove={async () => { await idbDel(INVENTORY_IDB_KEY); await serverDelete("inventory"); clearInventory(); }}
               />
             )}
             {caixa && (
               <DatasetRow
                 icon={<Landmark className="h-4 w-4 text-accent" />}
-                title="Caixa / Banco"
+                kind="caixa"
                 filename={caixa.filename}
-                rowLabel={`${formatNumber(caixa.rowCount)} movimentações`}
+                rowCount={caixa.rowCount}
                 importedAt={caixa.importedAt}
-                onRemove={() => { idbDel(CAIXA_IDB_KEY); serverDelete("caixa"); clearCaixa(); }}
+                onRemove={async () => { await idbDel(CAIXA_IDB_KEY); await serverDelete("caixa"); clearCaixa(); }}
+              />
+            )}
+            {orcamento && (
+              <DatasetRow
+                icon={<FileSpreadsheet className="h-4 w-4 text-accent" />}
+                kind="orcamento"
+                filename={orcamento.filename}
+                rowCount={orcamento.rowCount}
+                importedAt={orcamento.importedAt}
+                onRemove={async () => { await idbDel(ORCAMENTO_IDB_KEY); await serverDelete("orcamento"); clearOrcamento(); }}
               />
             )}
           </CardContent>
@@ -334,36 +320,12 @@ export default function ImportacaoPage() {
       <Card>
         <CardHeader><CardTitle>{t("importacao.schema.title")}</CardTitle></CardHeader>
         <CardContent className="space-y-6">
-          <SchemaTable
-            heading="Leiaute · Vendas"
-            note="Datas: DD/MM/AAAA · Decimais: vírgula (padrão BR) · moeda_id: 1=R$ 2=US$ 3=G$ · importa linhas com pedido_tipo = VENDA e DEVOLUCAO VENDA (as devoluções ficam armazenadas, mas todos os indicadores atuais consideram apenas VENDA). empresa_id identifica a matriz/filial e alimenta o filtro global de empresa (presente em todos os leiautes). item_desconto (opcional) é o desconto da linha; produto_valor_total já é líquido, então a venda bruta = total + desconto."
-            cols={SALES_SCHEMA}
-          />
-          <SchemaTable
-            heading="Leiaute · Contas a Receber"
-            note="Cada linha é um título. data_recebimento preenchida = título recebido; vazia = pendente. pessoa_cidade é opcional."
-            cols={RECEIVABLE_SCHEMA}
-          />
-          <SchemaTable
-            heading="Leiaute · Contas a Pagar"
-            note="Cada linha é uma obrigação de pagamento. data_pagamento preenchida = pago; vazia = pendente."
-            cols={PAYABLE_SCHEMA}
-          />
-          <SchemaTable
-            heading="Leiaute · Estoque"
-            note="Snapshot do inventário (uma linha por SKU/empresa). produto_id liga ao item de venda. valor_estoque é o custo total do estoque na moeda indicada por moeda_id (1=R$ 2=US$ 3=G$); respeita o seletor global de moeda como as demais áreas. Se moeda_id ausente, assume R$."
-            cols={INVENTORY_SCHEMA}
-          />
-          <SchemaTable
-            heading="Leiaute · Caixa / Banco"
-            note="Cada linha é uma movimentação. caixa_valor_documento negativo = saída (despesa); positivo = entrada (ingresso). Suporta hierarquia de plano de contas pelo campo plano_conta_codigo (ex: 1.1.01)."
-            cols={CAIXA_SCHEMA}
-          />
-          <SchemaTable
-            heading="Leiaute · Orçamentos (Prospeccção)"
-            note="Cada linha é um item de orçamento. orcamento_confirmado = true/false (confirmado ou pendente). orcamento_data_confirmacao preenchida quando confirmado. item_quantidade_confirmada = quantidade que virou venda."
-            cols={ORCAMENTO_SCHEMA}
-          />
+          <SchemaTable kind="sales" cols={SALES_SCHEMA} />
+          <SchemaTable kind="receivable" cols={RECEIVABLE_SCHEMA} />
+          <SchemaTable kind="payable" cols={PAYABLE_SCHEMA} />
+          <SchemaTable kind="inventory" cols={INVENTORY_SCHEMA} />
+          <SchemaTable kind="caixa" cols={CAIXA_SCHEMA} />
+          <SchemaTable kind="orcamento" cols={ORCAMENTO_SCHEMA} />
         </CardContent>
       </Card>
     </div>
@@ -371,6 +333,7 @@ export default function ImportacaoPage() {
 }
 
 function QueueRow({ item }: { item: QueueItem }) {
+  const { t } = useTranslation();
   return (
     <div className="flex items-start gap-3 rounded-md border border-border p-3">
       <div className="mt-0.5 shrink-0">
@@ -383,24 +346,26 @@ function QueueRow({ item }: { item: QueueItem }) {
         <div className="flex flex-wrap items-center gap-2">
           <span className="text-xs font-mono text-foreground truncate">{item.filename}</span>
           {item.status === "waiting" && (
-            <span className="text-[11px] text-muted-foreground">Na fila…</span>
+            <span className="text-[11px] text-muted-foreground">{t("importacao.queue.waiting")}</span>
           )}
           {item.status === "parsing" && (
-            <span className="text-[11px] text-accent animate-pulse">Processando…</span>
+            <span className="text-[11px] text-accent animate-pulse">{t("importacao.queue.processing")}</span>
           )}
           {item.status === "success" && item.kind && (
             <>
-              <Badge variant="ghost">{KIND_LABEL[item.kind]}</Badge>
+              <Badge variant="ghost">{t(kindLabelKey(item.kind))}</Badge>
               <span className="text-[11px] text-muted-foreground">
-                {formatNumber(item.rowCount)} {item.kind === "sales" ? "linha(s)" : item.kind === "inventory" ? "SKU(s)" : item.kind === "caixa" ? "movimentação(ões)" : "título(s)"}
+                {formatNumber(item.rowCount)} {t(kindUnitKey(item.kind))}
               </span>
               {item.skipped > 0 && (
-                <span className="text-[11px] text-muted-foreground">{item.skipped} ignorada(s)</span>
+                <span className="text-[11px] text-muted-foreground">
+                  {t("importacao.queue.skipped", { count: item.skipped })}
+                </span>
               )}
             </>
           )}
           {item.status === "error" && (
-            <span className="text-[11px] text-negative">{item.errors[0] ?? "Erro ao processar"}</span>
+            <span className="text-[11px] text-negative">{item.errors[0] ?? t("importacao.queue.error")}</span>
           )}
         </div>
         {item.warnings.map((w, i) => (
@@ -412,171 +377,205 @@ function QueueRow({ item }: { item: QueueItem }) {
 }
 
 function DatasetRow({
-  icon, title, filename, rowLabel, importedAt, onRemove,
+  icon, kind, filename, rowCount, importedAt, onRemove,
 }: {
   icon: React.ReactNode;
-  title: string;
+  kind: DatasetKind;
   filename: string;
-  rowLabel: string;
+  rowCount: number;
   importedAt: string;
-  onRemove: () => void;
+  onRemove: () => Promise<void>;
 }) {
+  const { t } = useTranslation();
+  // Apagar milhões de linhas no servidor não é instantâneo — o botão precisa
+  // refletir isso, senão parece que o clique não fez nada.
+  const [busy, setBusy] = React.useState(false);
+
+  async function handleRemove() {
+    if (busy) return;
+    setBusy(true);
+    try {
+      await onRemove();
+    } finally {
+      setBusy(false);
+    }
+  }
+
   return (
     <div className="flex items-center justify-between gap-3 rounded-md border border-border p-3">
       <div className="flex items-center gap-3 min-w-0">
         <div className="flex h-9 w-9 items-center justify-center rounded-md bg-muted shrink-0">{icon}</div>
         <div className="min-w-0">
           <div className="flex items-center gap-2">
-            <span className="text-sm font-medium text-foreground">{title}</span>
+            <span className="text-sm font-medium text-foreground">{t(kindLabelKey(kind))}</span>
             <Badge variant="positive" className="gap-1">
-              <span className="h-1.5 w-1.5 rounded-full bg-positive" />Ativo
+              <span className="h-1.5 w-1.5 rounded-full bg-positive" />{t("importacao.current.active")}
             </Badge>
           </div>
           <div className="text-xs text-muted-foreground truncate">
-            <span className="font-mono">{filename}</span> · {rowLabel} · {formatDate(new Date(importedAt), "long")}
+            <span className="font-mono">{filename}</span>
+            {" · "}{formatNumber(rowCount)} {t(kindUnitKey(kind))}
+            {" · "}{formatDate(new Date(importedAt), "datetime")}
           </div>
         </div>
       </div>
       <button
-        onClick={onRemove}
-        className="inline-flex items-center gap-1.5 rounded-md border border-border px-2.5 py-1.5 text-xs text-muted-foreground hover:text-negative hover:border-negative transition-colors shrink-0"
+        onClick={handleRemove}
+        disabled={busy}
+        className="inline-flex items-center gap-1.5 rounded-md border border-border px-2.5 py-1.5 text-xs text-muted-foreground hover:text-negative hover:border-negative transition-colors shrink-0 disabled:opacity-60 disabled:hover:text-muted-foreground disabled:hover:border-border"
       >
-        <Trash2 className="h-3.5 w-3.5" /> Remover
+        {busy
+          ? <><Loader2 className="h-3.5 w-3.5 animate-spin" /> {t("importacao.current.removing")}</>
+          : <><Trash2 className="h-3.5 w-3.5" /> {t("importacao.current.remove")}</>}
       </button>
     </div>
   );
 }
 
-function SchemaTable({
-  heading, note, cols,
-}: {
-  heading: string;
-  note: string;
-  cols: { name: string; type: string; example: string }[];
-}) {
+// Tipos das colunas dos leiautes — token traduzido em importacao.type.*
+type TypeToken =
+  | "date" | "date_opt" | "key" | "key_opt" | "text" | "text_opt"
+  | "number" | "decimal" | "decimal_opt" | "currency" | "bool";
+
+interface SchemaCol {
+  name: string;
+  type: TypeToken;
+  example: string;
+}
+
+function SchemaTable({ kind, cols }: { kind: DatasetKind; cols: SchemaCol[] }) {
+  const { t } = useTranslation();
   return (
     <div>
-      <h3 className="text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground mb-2">{heading}</h3>
+      <h3 className="text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground mb-2">
+        {t(`importacao.schema.heading.${kind}` as DictionaryKey)}
+      </h3>
       <div className="overflow-x-auto">
         <table className="w-full text-xs">
           <thead>
             <tr className="border-b border-border text-left">
-              <th className="pb-2 pr-6 font-medium text-muted-foreground uppercase tracking-wide">Coluna</th>
-              <th className="pb-2 pr-6 font-medium text-muted-foreground uppercase tracking-wide">Tipo</th>
-              <th className="pb-2 font-medium text-muted-foreground uppercase tracking-wide">Exemplo</th>
+              <th className="pb-2 pr-6 font-medium text-muted-foreground uppercase tracking-wide">{t("importacao.schema.col")}</th>
+              <th className="pb-2 pr-6 font-medium text-muted-foreground uppercase tracking-wide">{t("importacao.schema.type")}</th>
+              <th className="pb-2 font-medium text-muted-foreground uppercase tracking-wide">{t("importacao.schema.example")}</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-border/50">
             {cols.map((col) => (
               <tr key={col.name}>
                 <td className="py-2 pr-6 font-mono text-foreground">{col.name}</td>
-                <td className="py-2 pr-6 text-muted-foreground">{col.type}</td>
+                <td className="py-2 pr-6 text-muted-foreground">{t(`importacao.type.${col.type}` as DictionaryKey)}</td>
                 <td className="py-2 text-muted-foreground">{col.example}</td>
               </tr>
             ))}
           </tbody>
         </table>
       </div>
-      <p className="mt-3 text-[11px] text-muted-foreground">{note}</p>
+      <p className="mt-3 text-[11px] text-muted-foreground">
+        {t(`importacao.schema.note.${kind}` as DictionaryKey)}
+      </p>
     </div>
   );
 }
 
-const SALES_SCHEMA = [
-  { name: "pedido_data",         type: "Data",    example: "25/12/2024" },
-  { name: "pedido_documento",    type: "Chave",   example: "PED-00123" },
-  { name: "pedido_canal",        type: "Texto",   example: "Atacado / Varejo" },
-  { name: "cliente_id",          type: "Chave",   example: "CLI-001" },
-  { name: "cliente_nome",        type: "Texto",   example: "Empresa ABC Ltda" },
-  { name: "produto_id",          type: "Chave",   example: "PROD-042" },
-  { name: "produto_descricao",   type: "Texto",   example: "Notebook Pro 15" },
-  { name: "produto_quantidade",  type: "Número",  example: "2" },
-  { name: "produto_valor_total", type: "Decimal", example: "1250,00" },
-  { name: "produto_valor_custo", type: "Decimal", example: "900,00" },
-  { name: "item_desconto",       type: "Decimal (opcional)", example: "150,00" },
-  { name: "subgrupo_id",         type: "Chave",   example: "SG-05" },
-  { name: "subgrupo_descricao",  type: "Texto",   example: "Informática" },
-  { name: "vendedor_id",         type: "Chave",   example: "VND-003" },
-  { name: "vendedor_nome",       type: "Texto",   example: "João Silva" },
-  { name: "moeda_id",            type: "1|2|3",   example: "1" },
-  { name: "moeda_sigla",         type: "Texto",   example: "R$" },
-  { name: "pedido_tipo",         type: "Texto",   example: "VENDA / DEVOLUCAO VENDA" },
-  { name: "empresa_id",          type: "Chave",   example: "1 (matriz) / 2 (filial)" },
+const SALES_SCHEMA: SchemaCol[] = [
+  { name: "pedido_data",         type: "date",        example: "25/12/2024" },
+  { name: "pedido_documento",    type: "key",         example: "PED-00123" },
+  { name: "pedido_canal",        type: "text",        example: "Atacado / Varejo" },
+  { name: "cliente_id",          type: "key",         example: "CLI-001" },
+  { name: "cliente_nome",        type: "text",        example: "Empresa ABC Ltda" },
+  { name: "produto_id",          type: "key",         example: "PROD-042" },
+  { name: "produto_descricao",   type: "text",        example: "Notebook Pro 15" },
+  { name: "produto_quantidade",  type: "number",      example: "2" },
+  { name: "produto_valor_total", type: "decimal",     example: "1250,00" },
+  { name: "produto_valor_custo", type: "decimal",     example: "900,00" },
+  { name: "item_desconto",       type: "decimal_opt", example: "150,00" },
+  { name: "subgrupo_id",         type: "key",         example: "SG-05" },
+  { name: "subgrupo_descricao",  type: "text",        example: "Informática" },
+  { name: "vendedor_id",         type: "key",         example: "VND-003" },
+  { name: "vendedor_nome",       type: "text",        example: "João Silva" },
+  { name: "moeda_id",            type: "currency",    example: "1" },
+  { name: "moeda_sigla",         type: "text",        example: "R$" },
+  { name: "pedido_tipo",         type: "text",        example: "VENDA / DEVOLUCAO VENDA" },
+  { name: "empresa_id",          type: "key",         example: "1 / 2" },
 ];
 
-const RECEIVABLE_SCHEMA = [
-  { name: "moeda_id",            type: "1|2|3",          example: "1" },
-  { name: "moeda_sigla",         type: "Texto",          example: "R$" },
-  { name: "pessoa_cliente_id",   type: "Chave",          example: "CLI-001" },
-  { name: "pessoa_nome",         type: "Texto",          example: "Empresa ABC Ltda" },
-  { name: "data_emissao",        type: "Data",           example: "25/12/2024" },
-  { name: "data_vencimento",     type: "Data",           example: "25/01/2025" },
-  { name: "receber_documento",   type: "Texto (opcional)", example: "DUP-00123" },
-  { name: "tipolanzamiento",     type: "Texto",          example: "Duplicata" },
-  { name: "valor_documento",     type: "Decimal",        example: "1250,00" },
-  { name: "data_recebimento",    type: "Data (opcional)", example: "20/01/2025" },
-  { name: "vendedor_id",         type: "Chave",          example: "VND-003" },
-  { name: "vendedor_nome",       type: "Texto",          example: "João Silva" },
-  { name: "pessoa_cidade",       type: "Texto (opcional)", example: "São Paulo" },
-  { name: "empresa_id",          type: "Chave",          example: "1 (matriz) / 2 (filial)" },
+const RECEIVABLE_SCHEMA: SchemaCol[] = [
+  { name: "moeda_id",            type: "currency", example: "1" },
+  { name: "moeda_sigla",         type: "text",     example: "R$" },
+  { name: "pessoa_cliente_id",   type: "key",      example: "CLI-001" },
+  { name: "pessoa_nome",         type: "text",     example: "Empresa ABC Ltda" },
+  { name: "data_emissao",        type: "date",     example: "25/12/2024" },
+  { name: "data_vencimento",     type: "date",     example: "25/01/2025" },
+  { name: "receber_documento",   type: "text_opt", example: "DUP-00123" },
+  { name: "tipolanzamiento",     type: "text",     example: "Duplicata" },
+  { name: "valor_documento",     type: "decimal",  example: "1250,00" },
+  { name: "data_recebimento",    type: "date_opt", example: "20/01/2025" },
+  { name: "vendedor_id",         type: "key",      example: "VND-003" },
+  { name: "vendedor_nome",       type: "text",     example: "João Silva" },
+  { name: "pessoa_cidade",       type: "text_opt", example: "São Paulo" },
+  { name: "empresa_id",          type: "key",      example: "1 / 2" },
 ];
 
-const PAYABLE_SCHEMA = [
-  { name: "moeda_id",              type: "1|2|3",          example: "1" },
-  { name: "moeda_sigla",           type: "Texto",          example: "R$" },
-  { name: "pessoa_fornecedor_id",  type: "Chave",          example: "FOR-001" },
-  { name: "pessoa_nome",           type: "Texto",          example: "Fornecedor XYZ Ltda" },
-  { name: "data_emissao",          type: "Data (opcional)", example: "01/12/2024" },
-  { name: "data_vencimento",       type: "Data",           example: "31/12/2024" },
-  { name: "pagar_documento",       type: "Texto (opcional)", example: "NF-00456" },
-  { name: "tipolanzamiento",       type: "Texto",          example: "Nota Fiscal" },
-  { name: "valor_documento",       type: "Decimal",        example: "3500,00" },
-  { name: "data_pagamento",        type: "Data (opcional)", example: "28/12/2024" },
-  { name: "empresa_id",            type: "Chave",          example: "1 (matriz) / 2 (filial)" },
+const PAYABLE_SCHEMA: SchemaCol[] = [
+  { name: "moeda_id",              type: "currency", example: "1" },
+  { name: "moeda_sigla",           type: "text",     example: "R$" },
+  { name: "pessoa_fornecedor_id",  type: "key",      example: "FOR-001" },
+  { name: "pessoa_nome",           type: "text",     example: "Fornecedor XYZ Ltda" },
+  { name: "data_emissao",          type: "date_opt", example: "01/12/2024" },
+  { name: "data_vencimento",       type: "date",     example: "31/12/2024" },
+  { name: "pagar_documento",       type: "text_opt", example: "NF-00456" },
+  { name: "tipolanzamiento",       type: "text",     example: "Nota Fiscal" },
+  { name: "valor_documento",       type: "decimal",  example: "3500,00" },
+  { name: "data_pagamento",        type: "date_opt", example: "28/12/2024" },
+  { name: "empresa_id",            type: "key",      example: "1 / 2" },
 ];
 
-const INVENTORY_SCHEMA = [
-  { name: "produto_id",            type: "Chave",   example: "PROD-042" },
-  { name: "produto_descricao",     type: "Texto",   example: "Notebook Pro 15" },
-  { name: "produto_fabricante",    type: "Texto",   example: "DL-1500X-BLK" },
-  { name: "estoque_item",          type: "Número",  example: "37" },
-  { name: "valor_estoque",         type: "Decimal", example: "1850,00" },
-  { name: "moeda_id",              type: "1|2|3",   example: "1" },
-  { name: "moeda_sigla",           type: "Texto",   example: "R$" },
-  { name: "empresa_id",            type: "Chave",   example: "1 (matriz) / 2 (filial)" },
+const INVENTORY_SCHEMA: SchemaCol[] = [
+  { name: "produto_id",            type: "key",      example: "PROD-042" },
+  { name: "produto_descricao",     type: "text",     example: "Notebook Pro 15" },
+  { name: "produto_fabricante",    type: "text",     example: "DL-1500X-BLK" },
+  { name: "estoque_item",          type: "number",   example: "37" },
+  { name: "valor_estoque",         type: "decimal",  example: "1850,00" },
+  { name: "moeda_id",              type: "currency", example: "1" },
+  { name: "moeda_sigla",           type: "text",     example: "R$" },
+  { name: "empresa_id",            type: "key",      example: "1 / 2" },
 ];
 
-const CAIXA_SCHEMA = [
-  { name: "caixa_data_emissao",      type: "Data",            example: "25/12/2024" },
-  { name: "centro_custo_id",         type: "Chave (opcional)", example: "CC-01" },
-  { name: "centro_custo_descricao",  type: "Texto (opcional)", example: "Administrativo" },
-  { name: "plano_conta_id",          type: "Chave",            example: "42" },
-  { name: "plano_conta_codigo",      type: "Texto",            example: "3.1.02" },
-  { name: "plano_conta_descricao",   type: "Texto",            example: "Aluguel" },
-  { name: "caixa_id",               type: "Chave",            example: "CX-01" },
-  { name: "caixa_descricao",        type: "Texto",            example: "Conta Corrente BB" },
-  { name: "caixa_valor_documento",  type: "Decimal",          example: "-1500,00 / 5000,00" },
-  { name: "moeda_id",               type: "1|2|3",            example: "1" },
-  { name: "moeda_sigla",            type: "Texto",            example: "R$" },
-  { name: "empresa_id",             type: "Chave",            example: "1 (matriz) / 2 (filial)" },
+const CAIXA_SCHEMA: SchemaCol[] = [
+  { name: "caixa_data_emissao",      type: "date",     example: "25/12/2024" },
+  { name: "centro_custo_id",         type: "key_opt",  example: "CC-01" },
+  { name: "centro_custo_descricao",  type: "text_opt", example: "Administrativo" },
+  { name: "plano_conta_id",          type: "key",      example: "42" },
+  { name: "plano_conta_codigo",      type: "text",     example: "3.1.02" },
+  { name: "plano_conta_descricao",   type: "text",     example: "Aluguel" },
+  { name: "caixa_id",                type: "key",      example: "CX-01" },
+  { name: "caixa_descricao",         type: "text",     example: "Conta Corrente BB" },
+  { name: "caixa_valor_documento",   type: "decimal",  example: "-1500,00 / 5000,00" },
+  { name: "moeda_id",                type: "currency", example: "1" },
+  { name: "moeda_sigla",             type: "text",     example: "R$" },
+  { name: "empresa_id",              type: "key",      example: "1 / 2" },
 ];
 
-const ORCAMENTO_SCHEMA = [
-  { name: "orcamento_id",                type: "Chave",     example: "ORC-001" },
-  { name: "orcamento_data",              type: "Data",      example: "15/01/2024" },
-  { name: "orcamento_confirmado",        type: "true/false",example: "true" },
-  { name: "orcamento_data_confirmacao",  type: "Data (opt)",example: "20/01/2024" },
-  { name: "cliente_id",                  type: "Chave",     example: "CLI-001" },
-  { name: "cliente_nome",                type: "Texto",     example: "Empresa ABC Ltda" },
-  { name: "vendedor_id",                 type: "Chave",     example: "VND-001" },
-  { name: "vendedor_nome",               type: "Texto",     example: "João Silva" },
-  { name: "empresa_id",                  type: "Chave",     example: "1" },
-  { name: "moeda_id",                    type: "1|2|3",     example: "1" },
-  { name: "moeda_sigla",                 type: "Texto",     example: "R$" },
-  { name: "item_orcamento_id",           type: "Chave",     example: "ITEM-001" },
-  { name: "produto_id",                  type: "Chave",     example: "PROD-042" },
-  { name: "produto_descricao",           type: "Texto",     example: "Notebook Pro 15" },
-  { name: "item_quantidade",             type: "Número",    example: "5" },
-  { name: "item_quantidade_confirmada",  type: "Número",    example: "3" },
-  { name: "item_total",                  type: "Decimal",   example: "5000,00" },
+const ORCAMENTO_SCHEMA: SchemaCol[] = [
+  { name: "orcamento_id",                type: "key",      example: "ORC-001" },
+  { name: "orcamento_data",              type: "date",     example: "15/01/2024" },
+  // A view bi_orcamentos exporta status_orcamento; orcamento_confirmado é a
+  // alternativa aceita (uma das duas basta).
+  { name: "status_orcamento",            type: "text",     example: "Confirmado / Pendente" },
+  { name: "orcamento_confirmado",        type: "bool",     example: "true" },
+  { name: "orcamento_data_confirmacao",  type: "date_opt", example: "20/01/2024" },
+  { name: "cliente_id",                  type: "key",      example: "CLI-001" },
+  { name: "cliente_nome",                type: "text",     example: "Empresa ABC Ltda" },
+  { name: "vendedor_id",                 type: "key",      example: "VND-001" },
+  { name: "vendedor_nome",               type: "text",     example: "João Silva" },
+  { name: "empresa_id",                  type: "key",      example: "1 / 2" },
+  { name: "moeda_id",                    type: "currency", example: "1" },
+  { name: "moeda_sigla",                 type: "text",     example: "R$" },
+  { name: "item_orcamento_id",           type: "key",      example: "ITEM-001" },
+  { name: "produto_id",                  type: "key",      example: "PROD-042" },
+  { name: "produto_descricao",           type: "text",     example: "Notebook Pro 15" },
+  { name: "produto_fabricante",          type: "text_opt", example: "DL-1500X-BLK" },
+  { name: "item_quantidade",             type: "number",   example: "5" },
+  { name: "item_quantidade_confirmada",  type: "number",   example: "3" },
+  { name: "item_total",                  type: "decimal",  example: "5000,00" },
 ];

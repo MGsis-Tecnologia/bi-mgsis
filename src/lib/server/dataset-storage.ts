@@ -5,11 +5,12 @@ import type {
   PayableItem,
   InventoryItem,
   CaixaItem,
+  OrcamentoLineItem,
 } from "@/lib/types/dataset";
 
-export type DatasetKind = "sales" | "receivable" | "payable" | "inventory" | "caixa";
+export type DatasetKind = "sales" | "receivable" | "payable" | "inventory" | "caixa" | "orcamento";
 
-const VALID_KINDS = new Set<DatasetKind>(["sales", "receivable", "payable", "inventory", "caixa"]);
+const VALID_KINDS = new Set<DatasetKind>(["sales", "receivable", "payable", "inventory", "caixa", "orcamento"]);
 
 export function isValidKind(s: string): s is DatasetKind {
   return VALID_KINDS.has(s as DatasetKind);
@@ -67,6 +68,7 @@ export async function clearRows(kind: DatasetKind): Promise<void> {
     case "payable":    await db.payableItem.deleteMany(); break;
     case "inventory":  await db.inventoryItem.deleteMany(); break;
     case "caixa":      await db.caixaItem.deleteMany(); break;
+    case "orcamento":  await db.orcamentoItem.deleteMany(); break;
   }
 }
 
@@ -117,6 +119,12 @@ export async function insertRows(kind: DatasetKind, rows: unknown[]): Promise<nu
         console.log(`✅ ${r.count} movimentações inseridas`);
         return r.count;
       }
+      case "orcamento": {
+        console.log(`📥 Inserindo ${rows.length} itens de orçamento...`);
+        const r = await db.orcamentoItem.createMany({ data: rows as OrcamentoLineItem[] });
+        console.log(`✅ ${r.count} itens de orçamento inseridos`);
+        return r.count;
+      }
     }
   } catch (e) {
     console.error(`❌ Erro ao inserir ${kind}:`, e);
@@ -149,6 +157,10 @@ export async function getRows(kind: DatasetKind, skip: number, take: number): Pr
       );
     case "caixa":
       return (await db.caixaItem.findMany({ skip, take, orderBy: { id: "asc" } })).map(
+        ({ id: _id, ...rest }) => rest
+      );
+    case "orcamento":
+      return (await db.orcamentoItem.findMany({ skip, take, orderBy: { id: "asc" } })).map(
         ({ id: _id, ...rest }) => rest
       );
   }

@@ -153,10 +153,12 @@ CREATE TABLE IF NOT EXISTS orcamento_items (
   item_orcamento_id          TEXT NOT NULL DEFAULT '',
   produto_id                 TEXT NOT NULL DEFAULT '',
   produto_descricao          TEXT NOT NULL DEFAULT '',
+  produto_fabricante         TEXT NOT NULL DEFAULT '',
   item_quantidade            DOUBLE PRECISION NOT NULL DEFAULT 0,
   item_quantidade_confirmada DOUBLE PRECISION NOT NULL DEFAULT 0,
   item_total                 DOUBLE PRECISION NOT NULL DEFAULT 0
 );
+ALTER TABLE orcamento_items ADD COLUMN IF NOT EXISTS produto_fabricante TEXT NOT NULL DEFAULT '';
 CREATE INDEX IF NOT EXISTS idx_orcamento_data     ON orcamento_items(orcamento_data);
 CREATE INDEX IF NOT EXISTS idx_orcamento_empresa  ON orcamento_items(empresa_id);
 CREATE INDEX IF NOT EXISTS idx_orcamento_vendedor ON orcamento_items(vendedor_id);

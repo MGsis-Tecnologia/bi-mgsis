@@ -14,8 +14,11 @@ import { useFilters } from "@/lib/store/filters";
 import { useExchangeRates } from "@/lib/store/exchange-rates";
 import { CURRENCY_OPTIONS } from "@/lib/types/dataset";
 import type { AppCurrencyId } from "@/lib/types/dataset";
+import { useTranslation } from "@/lib/hooks/use-translation";
+import type { DictionaryKey } from "@/lib/i18n/dictionaries";
 
 export function CurrencySwitcher() {
+  const { t } = useTranslation();
   const currency = useFilters((s) => s.currency);
   const setCurrency = useFilters((s) => s.setCurrency);
   const { fetchRates, isLoading, fetchError } = useExchangeRates();
@@ -32,7 +35,7 @@ export function CurrencySwitcher() {
         <ChevronDown className="h-3 w-3 opacity-60" />
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-60">
-        <DropdownMenuLabel>Moeda de exibição</DropdownMenuLabel>
+        <DropdownMenuLabel>{t("topbar.currency.title")}</DropdownMenuLabel>
         <DropdownMenuSeparator />
         {CURRENCY_OPTIONS.map((opt) => (
           <DropdownMenuItem
@@ -42,7 +45,9 @@ export function CurrencySwitcher() {
           >
             <span className="flex items-center gap-2">
               <span className="font-mono text-foreground w-8">{opt.code}</span>
-              <span className="text-muted-foreground">{opt.namePt}</span>
+              <span className="text-muted-foreground">
+                {t(`currency.name.${opt.id}` as DictionaryKey)}
+              </span>
             </span>
             {currency === opt.id && <Check className="h-3.5 w-3.5 text-foreground" />}
           </DropdownMenuItem>
@@ -50,10 +55,10 @@ export function CurrencySwitcher() {
         <DropdownMenuSeparator />
         <div className="px-2 py-1.5 flex items-center gap-1.5 text-[10px] text-muted-foreground">
           {isLoading
-            ? <><RefreshCw className="h-3 w-3 animate-spin" /> Atualizando câmbio…</>
+            ? <><RefreshCw className="h-3 w-3 animate-spin" /> {t("topbar.currency.updating")}</>
             : fetchError
             ? <span className="text-warning">{fetchError}</span>
-            : <span>Todas as moedas convertem para R$.</span>
+            : <span>{t("topbar.currency.note")}</span>
           }
         </div>
       </DropdownMenuContent>

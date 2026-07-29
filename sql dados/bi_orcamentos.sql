@@ -29,6 +29,7 @@ SELECT
     io.item_orcamento_id,
     io.produto_id,
     pr.produto_descricao,
+    pr.produto_fabricante,
     sg.subgrupo_id,
     sg.subgrupo_descricao,
     io.item_quantidade,
