@@ -10,14 +10,17 @@ import {
   ArrowUpRight,
   BarChart3,
   Boxes,
+  Building2,
   CalendarRange,
   ChevronLeft,
   ChevronRight,
   CircleDollarSign,
   LayoutList,
+  Mail,
   Package,
   Receipt,
   Sparkles,
+  UserCog,
   TrendingDown,
   TrendingUp,
   Upload,
@@ -76,7 +79,31 @@ const NAV: NavGroup[] = [
       { href: "/importacao", labelKey: "sidebar.nav.import", icon: Upload },
     ],
   },
+  {
+    sectionKey: "sidebar.section.settings",
+    items: [
+      { href: "/configuracoes/email", labelKey: "sidebar.nav.smtp", icon: Mail },
+    ],
+  },
 ];
+
+// Só aparece pra role "admin" (ou master) — gestão dos usuários da própria empresa.
+const NAV_TEAM: NavGroup = {
+  sectionKey: "sidebar.section.team",
+  items: [
+    { href: "/usuarios", labelKey: "sidebar.nav.users", icon: UserCog },
+  ],
+};
+
+// Só aparece pra sessões com isMaster — gestão de empresas do catalog.
+const NAV_MASTER: NavGroup = {
+  sectionKey: "sidebar.section.master",
+  items: [
+    { href: "/master/empresas", labelKey: "sidebar.nav.empresas", icon: Building2 },
+  ],
+};
+
+const SETTINGS_SECTION_KEY: DictionaryKey = "sidebar.section.settings";
 
 const INSIGHT_TONE_STYLES: Record<Insight["tone"], { icon: React.ElementType; iconClass: string }> = {
   positive: { icon: TrendingUp, iconClass: "text-emerald-500" },
@@ -93,9 +120,33 @@ const INSIGHT_HREF: Record<string, string> = {
   "momentum": "/vendas",
 };
 
-export function Sidebar() {
+interface SidebarProps {
+  isMaster?: boolean;
+  role?: string;
+  allowedMenus?: string[];
+}
+
+export function Sidebar({ isMaster = false, role, allowedMenus }: SidebarProps) {
   const pathname = usePathname();
   const { t } = useTranslation();
+
+  const isAdmin = role === "admin";
+  const navGroups = React.useMemo(() => {
+    let groups = NAV;
+
+    // role "user": só enxerga os menus liberados (allow-list) e nunca a
+    // seção de Configurações (é exclusiva de admin/master).
+    if (!isMaster && !isAdmin) {
+      const allowed = new Set(allowedMenus ?? []);
+      groups = NAV.filter((g) => g.sectionKey !== SETTINGS_SECTION_KEY)
+        .map((g) => ({ ...g, items: g.items.filter((i) => allowed.has(i.href)) }))
+        .filter((g) => g.items.length > 0);
+    }
+
+    if (isAdmin || isMaster) groups = [...groups, NAV_TEAM];
+    if (isMaster) groups = [...groups, NAV_MASTER];
+    return groups;
+  }, [isAdmin, isMaster, allowedMenus]);
 
   const [collapsed, setCollapsed] = React.useState(false);
 
@@ -170,7 +221,7 @@ export function Sidebar() {
 
       {/* Nav */}
       <nav className="flex-1 overflow-y-auto py-4">
-        {NAV.map((group) => (
+        {navGroups.map((group) => (
           <div key={group.sectionKey} className={cn("pb-4", collapsed ? "px-1.5" : "px-3")}>
             {!collapsed && (
               <div className="px-2 pb-1.5 text-[10px] font-medium uppercase tracking-[0.18em] text-muted-foreground">

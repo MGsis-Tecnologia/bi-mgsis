@@ -1,0 +1,73 @@
+// Schema do banco "catalog" — separado do schema de tenant (prisma/schema.prisma).
+// Guarda os metadados de todas as empresas cadastradas e o(s) usuário(s) master
+// do sistema. Não guarda nenhum dado operacional de empresa (isso vive no
+// banco de cada tenant, um por empresa).
+//
+// Por padrão aponta pra CATALOG_DATABASE_URL; se não definida, cai no mesmo
+// DATABASE_URL do banco atual (útil enquanto só existe uma database — quando
+// as empresas forem provisionadas em databases próprias, basta apontar
+// CATALOG_DATABASE_URL pra uma database dedicada no mesmo servidor Postgres).
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "linux-musl-openssl-3.0.x"]
+  output        = "../../node_modules/.prisma/catalog-client"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("CATALOG_DATABASE_URL")
+}
+
+model Empresa {
+  id          Int      @id @default(autoincrement())
+  cnpjRuc     String   @unique @map("cnpj_ruc") // normalizado: só dígitos
+  nome        String
+  dbName      String   @unique @map("db_name") // nome da database do tenant, ex: empresa_12345678000199
+  status      String   @default("pendente") // pendente | ativa | suspensa
+  emailMaster String   @map("email_master") // e-mail do admin da empresa, recebe o convite
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  inviteTokens      InviteToken[]
+  integrationTokens IntegrationToken[]
+
+  @@map("empresas")
+}
+
+model MasterUser {
+  id           Int      @id @default(autoincrement())
+  email        String   @unique
+  passwordHash String   @map("password_hash")
+  name         String   @default("")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  @@map("master_users")
+}
+
+model InviteToken {
+  id        Int       @id @default(autoincrement())
+  empresaId Int       @map("empresa_id")
+  tokenHash String    @unique @map("token_hash") // nunca guardar o token em texto puro
+  email     String
+  role      String    @default("admin") // papel do usuário criado na ativação: "admin" | "user"
+  expiresAt DateTime  @map("expires_at")
+  usedAt    DateTime? @map("used_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  empresa Empresa @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+
+  @@index([empresaId])
+  @@map("invite_tokens")
+}
+
+model IntegrationToken {
+  id         Int       @id @default(autoincrement())
+  empresaId  Int       @map("empresa_id")
+  tokenHash  String    @unique @map("token_hash")
+  createdAt  DateTime  @default(now()) @map("created_at")
+  revokedAt  DateTime? @map("revoked_at")
+
+  empresa Empresa @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+
+  @@index([empresaId])
+  @@map("integration_tokens")
+}

@@ -40,11 +40,17 @@ export async function POST(req: NextRequest) {
     data: { email, name, passwordHash, role: "admin" },
   });
 
+  // Cadastro do 1º admin do tenant atual (fluxo legado, hoje só usado antes do
+  // catalog existir). empresaId 0 = "sem empresa resolvida ainda"; quem passa
+  // por aqui não tem CNPJ/RUC pra vincular. Novos tenants (fase 5 em diante)
+  // ganham seu primeiro admin pelo link de convite, que já sabe o empresaId.
   const token = await signToken({
     userId: user.id,
     email: user.email,
     name: user.name,
     role: user.role,
+    empresaId: 0,
+    isMaster: false,
   });
 
   return setSessionCookie(NextResponse.json({ ok: true }), token);

@@ -1,4 +1,4 @@
-import { getPrisma } from "./db";
+import type { PrismaClient } from "@prisma/client";
 import type {
   OrderLineItem,
   ReceivableItem,
@@ -35,15 +35,13 @@ export interface DatasetSummary {
 // Metadata
 // ---------------------------------------------------------------------------
 
-export async function getMeta(kind: DatasetKind): Promise<DatasetMeta | null> {
-  const db = await getPrisma();
+export async function getMeta(db: PrismaClient, kind: DatasetKind): Promise<DatasetMeta | null> {
   const row = await db.datasetMeta.findUnique({ where: { kind } });
   if (!row) return null;
   return { kind: row.kind as DatasetKind, filename: row.filename, rowCount: row.rowCount, importedAt: row.importedAt };
 }
 
-export async function upsertMeta(meta: DatasetMeta): Promise<void> {
-  const db = await getPrisma();
+export async function upsertMeta(db: PrismaClient, meta: DatasetMeta): Promise<void> {
   await db.datasetMeta.upsert({
     where: { kind: meta.kind },
     create: { kind: meta.kind, filename: meta.filename, rowCount: meta.rowCount, importedAt: meta.importedAt },
@@ -51,8 +49,7 @@ export async function upsertMeta(meta: DatasetMeta): Promise<void> {
   });
 }
 
-export async function deleteMeta(kind: DatasetKind): Promise<void> {
-  const db = await getPrisma();
+export async function deleteMeta(db: PrismaClient, kind: DatasetKind): Promise<void> {
   await db.datasetMeta.deleteMany({ where: { kind } });
 }
 
@@ -60,8 +57,7 @@ export async function deleteMeta(kind: DatasetKind): Promise<void> {
 // Row operations — clear
 // ---------------------------------------------------------------------------
 
-export async function clearRows(kind: DatasetKind): Promise<void> {
-  const db = await getPrisma();
+export async function clearRows(db: PrismaClient, kind: DatasetKind): Promise<void> {
   switch (kind) {
     case "sales":      await db.saleItem.deleteMany({}); break;
     case "receivable": await db.receivableItem.deleteMany({}); break;
@@ -72,19 +68,18 @@ export async function clearRows(kind: DatasetKind): Promise<void> {
   }
 }
 
-export async function deleteDataset(kind: DatasetKind): Promise<void> {
-  await clearRows(kind);
-  await deleteMeta(kind);
+export async function deleteDataset(db: PrismaClient, kind: DatasetKind): Promise<void> {
+  await clearRows(db, kind);
+  await deleteMeta(db, kind);
 }
 
 // ---------------------------------------------------------------------------
-// Row operations — batch insert (max ~3 000 rows per call)
+// Row operations — batch insert (max ~3 000 rows por call)
 // ---------------------------------------------------------------------------
 
-export async function insertRows(kind: DatasetKind, rows: unknown[]): Promise<number> {
+export async function insertRows(db: PrismaClient, kind: DatasetKind, rows: unknown[]): Promise<number> {
   if (!rows.length) return 0;
   console.log(`🔗 Conectando ao banco para ${kind}...`);
-  const db = await getPrisma();
   console.log(`✅ Banco conectado`);
 
   try {
@@ -136,8 +131,7 @@ export async function insertRows(kind: DatasetKind, rows: unknown[]): Promise<nu
 // Row operations — paginated read
 // ---------------------------------------------------------------------------
 
-export async function getRows(kind: DatasetKind, skip: number, take: number): Promise<unknown[]> {
-  const db = await getPrisma();
+export async function getRows(db: PrismaClient, kind: DatasetKind, skip: number, take: number): Promise<unknown[]> {
   switch (kind) {
     case "sales":
       return (await db.saleItem.findMany({ skip, take, orderBy: { id: "asc" } })).map(
@@ -170,12 +164,12 @@ export async function getRows(kind: DatasetKind, skip: number, take: number): Pr
 // Summary helpers (used by existing /api/datasets route)
 // ---------------------------------------------------------------------------
 
-export async function summarize(kind: DatasetKind): Promise<DatasetSummary> {
-  const meta = await getMeta(kind);
+export async function summarize(db: PrismaClient, kind: DatasetKind): Promise<DatasetSummary> {
+  const meta = await getMeta(db, kind);
   if (!meta) return { kind, present: false };
   return { kind, present: true, filename: meta.filename, rowCount: meta.rowCount, importedAt: meta.importedAt };
 }
 
-export async function summarizeAll(): Promise<DatasetSummary[]> {
-  return Promise.all([...VALID_KINDS].map((k) => summarize(k)));
+export async function summarizeAll(db: PrismaClient): Promise<DatasetSummary[]> {
+  return Promise.all([...VALID_KINDS].map((k) => summarize(db, k)));
 }

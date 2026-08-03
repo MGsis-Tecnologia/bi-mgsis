@@ -13,10 +13,42 @@ model User {
   email        String   @unique
   passwordHash String   @map("password_hash")
   name         String
-  role         String   @default("admin")
+  role         String   @default("admin") // "admin" | "user"
+  isActive     Boolean  @default(true) @map("is_active")
   createdAt    DateTime @default(now()) @map("created_at")
 
+  menuAccess MenuPermission[]
+
   @@map("users")
+}
+
+// Allow-list de menus por usuário: presença de linha = enxerga aquele menu.
+// Só vale pra role "user" — "admin" sempre vê tudo (ver seção 5.1 do plano).
+model MenuPermission {
+  id      Int    @id @default(autoincrement())
+  userId  Int    @map("user_id")
+  menuKey String @map("menu_key") // mesma chave usada em src/lib/menu-catalog.ts (o href da página)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, menuKey])
+  @@map("menu_permissions")
+}
+
+// Conta SMTP única usada para disparo de e-mails do sistema (convites, notificações).
+// Linha única (id fixo = 1) preenchida pelo master nas Configurações.
+model SmtpConfig {
+  id          Int      @id @default(1)
+  host        String
+  port        Int      @default(587)
+  secure      Boolean  @default(false)
+  user        String
+  passwordEnc String   @map("password_enc")
+  fromName    String   @default("MGSIS Analytics") @map("from_name")
+  fromEmail   String   @map("from_email")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@map("smtp_config")
 }
 
 model DatasetMeta {

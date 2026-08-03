@@ -37,9 +37,10 @@ gerenciado pelo Coolify. Não usa `docker-compose`.
    | Variável | Exemplo | Obrigatória |
    |---|---|---|
    | `DATABASE_URL` | `postgresql://postgres:senha@host:5432/postgres?schema=public` | **Sim** |
-   | `AUTH_SECRET` | saída de `openssl rand -base64 32` | **Sim** (recomendada) |
+   | `AUTH_SECRET` | saída de `openssl rand -base64 32` | **Sim (obrigatória)** — sem ela o app recusa subir em produção |
    | `NEXT_PUBLIC_APP_NAME` | `Dash BI` | Não (tem default) |
    | `NEXT_PUBLIC_DEFAULT_CURRENCY` | `BRL` | Não (tem default) |
+   | `SETTINGS_ENCRYPTION_KEY` | saída de `openssl rand -base64 32` | Recomendada — criptografa a senha SMTP salva em Configurações > E-mail (cai no `AUTH_SECRET` se ausente) |
 
    `PORT`, `HOST`/`HOSTNAME` e `NODE_ENV` **não** precisam ser setados — os
    defaults do `Dockerfile` (`3000` / `0.0.0.0` / `production`) já servem.

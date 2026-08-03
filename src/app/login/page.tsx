@@ -10,6 +10,7 @@ export default function LoginPage() {
   const { t } = useTranslation();
   const [showPassword, setShowPassword] = React.useState(false);
   const [isLoading, setIsLoading] = React.useState(false);
+  const [cnpjRuc, setCnpjRuc] = React.useState("");
   const [email, setEmail] = React.useState("");
   const [password, setPassword] = React.useState("");
   const [error, setError] = React.useState("");
@@ -22,7 +23,7 @@ export default function LoginPage() {
       const res = await fetch("/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ cnpjRuc, email, password }),
       });
       const data = (await res.json()) as { ok?: boolean; error?: string };
       if (!res.ok || !data.ok) { setError(data.error ?? "Erro ao entrar"); return; }
@@ -124,6 +125,22 @@ export default function LoginPage() {
 
           {/* Login Form */}
           <form onSubmit={handleLogin} className="space-y-5">
+            {/* CNPJ/RUC Field */}
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-2">
+                CNPJ ou RUC da empresa
+              </label>
+              <input
+                type="text"
+                value={cnpjRuc}
+                onChange={(e) => setCnpjRuc(e.target.value)}
+                placeholder="00.000.000/0000-00"
+                required
+                disabled={isLoading}
+                className="w-full px-4 py-3 border border-slate-200 rounded-lg bg-white text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+              />
+            </div>
+
             {/* Email Field */}
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-2">

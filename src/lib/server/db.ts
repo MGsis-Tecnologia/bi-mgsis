@@ -10,7 +10,29 @@ CREATE TABLE IF NOT EXISTS users (
   password_hash TEXT NOT NULL DEFAULT '',
   name          TEXT NOT NULL DEFAULT '',
   role          TEXT NOT NULL DEFAULT 'admin',
+  is_active     BOOLEAN NOT NULL DEFAULT true,
   created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+ALTER TABLE users ADD COLUMN IF NOT EXISTS is_active BOOLEAN NOT NULL DEFAULT true;
+
+CREATE TABLE IF NOT EXISTS menu_permissions (
+  id        SERIAL PRIMARY KEY,
+  user_id   INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  menu_key  TEXT NOT NULL,
+  UNIQUE(user_id, menu_key)
+);
+CREATE INDEX IF NOT EXISTS idx_menu_permissions_user ON menu_permissions(user_id);
+
+CREATE TABLE IF NOT EXISTS smtp_config (
+  id           INTEGER PRIMARY KEY DEFAULT 1,
+  host         TEXT NOT NULL DEFAULT '',
+  port         INTEGER NOT NULL DEFAULT 587,
+  secure       BOOLEAN NOT NULL DEFAULT false,
+  "user"       TEXT NOT NULL DEFAULT '',
+  password_enc TEXT NOT NULL DEFAULT '',
+  from_name    TEXT NOT NULL DEFAULT 'MGSIS Analytics',
+  from_email   TEXT NOT NULL DEFAULT '',
+  updated_at   TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 CREATE TABLE IF NOT EXISTS dataset_meta (
@@ -164,16 +186,51 @@ CREATE INDEX IF NOT EXISTS idx_orcamento_empresa  ON orcamento_items(empresa_id)
 CREATE INDEX IF NOT EXISTS idx_orcamento_vendedor ON orcamento_items(vendedor_id);
 `;
 
-// Singleton global para sobreviver ao hot-reload do Next.js em desenvolvimento.
+// Cache de clients por URL de conexão (uma entrada por tenant), em vez de um
+// único client global que troca de banco. Isso é o que torna seguro ter mais
+// de um banco de tenant vivo ao mesmo tempo no processo: hoje só existe uma
+// URL em uso (DATABASE_URL), então na prática o cache tem 1 entrada só — mas
+// sem essa troca, duas requisições concorrentes contra bancos diferentes (uma
+// vez que o cadastro multi-empresa existir) derrubariam a conexão uma da
+// outra, porque o client global era substituído a cada URL diferente.
+interface TenantEntry {
+  client: PrismaClient;
+  migrated: boolean;
+  migrating?: Promise<void>;
+  lastUsedAt: number;
+}
+
 declare global {
   // eslint-disable-next-line no-var
-  var __prismaInstance: PrismaClient | undefined;
+  var __prismaTenants: Map<string, TenantEntry> | undefined;
   // eslint-disable-next-line no-var
-  var __prismaUrl: string | undefined;
-  // eslint-disable-next-line no-var
-  var __prismaMigrated: boolean | undefined;
-  // eslint-disable-next-line no-var
-  var __prismaMigrating: Promise<void> | undefined;
+  var __prismaEvictionTimer: NodeJS.Timeout | undefined;
+}
+
+function tenants(): Map<string, TenantEntry> {
+  if (!global.__prismaTenants) global.__prismaTenants = new Map();
+  return global.__prismaTenants;
+}
+
+// Desconecta clients de tenant ociosos há muito tempo, pra não acumular
+// conexões abertas indefinidamente conforme o número de empresas cresce.
+const IDLE_EVICTION_MS = 10 * 60_000;
+const EVICTION_SWEEP_INTERVAL_MS = 5 * 60_000;
+
+function scheduleEviction(): void {
+  if (global.__prismaEvictionTimer) return;
+  const timer = setInterval(async () => {
+    const now = Date.now();
+    for (const [url, entry] of tenants()) {
+      if (now - entry.lastUsedAt > IDLE_EVICTION_MS) {
+        tenants().delete(url);
+        await entry.client.$disconnect().catch(() => {});
+        console.log("🧹 Conexão de tenant ociosa desconectada");
+      }
+    }
+  }, EVICTION_SWEEP_INTERVAL_MS);
+  timer.unref?.();
+  global.__prismaEvictionTimer = timer;
 }
 
 // Chave arbitrária (mas fixa) para o advisory lock do Postgres.
@@ -195,52 +252,59 @@ async function runMigration(prisma: PrismaClient): Promise<void> {
   ]);
 }
 
-export async function getPrisma(): Promise<PrismaClient> {
-  const url = getDatabaseUrl();
-  if (!url)
+/**
+ * Retorna o client do tenant identificado por `url` (padrão: DATABASE_URL, o
+ * comportamento de hoje — único tenant). Cada URL distinta ganha seu próprio
+ * client em cache, migrado de forma independente e isolada das demais.
+ */
+export async function getPrisma(url?: string): Promise<PrismaClient> {
+  const resolvedUrl = url ?? getDatabaseUrl();
+  if (!resolvedUrl)
     throw new Error(
       "Banco de dados não configurado. Defina a variável de ambiente DATABASE_URL."
     );
 
-  if (global.__prismaUrl !== url) {
-    console.log("🔄 Reconectando ao banco de dados...");
-    if (global.__prismaInstance) {
-      await global.__prismaInstance.$disconnect().catch(() => {});
-    }
-    global.__prismaInstance = new PrismaClient({
-      datasources: { db: { url } },
-    });
-    global.__prismaUrl = url;
-    global.__prismaMigrated = false;
+  scheduleEviction();
+
+  let entry = tenants().get(resolvedUrl);
+  if (!entry) {
+    console.log("🔄 Conectando ao banco de dados do tenant...");
+    entry = {
+      client: new PrismaClient({ datasources: { db: { url: resolvedUrl } } }),
+      migrated: false,
+      lastUsedAt: Date.now(),
+    };
+    tenants().set(resolvedUrl, entry);
   }
+  entry.lastUsedAt = Date.now();
 
-  const prisma = global.__prismaInstance!;
-
-  if (!global.__prismaMigrated) {
-    if (!global.__prismaMigrating) {
+  if (!entry.migrated) {
+    if (!entry.migrating) {
       console.log("🏗️ Executando migrações...");
-      global.__prismaMigrating = runMigration(prisma).catch((err) => {
+      entry.migrating = runMigration(entry.client).catch((err) => {
         console.error("❌ Erro na migração:", err);
-        global.__prismaMigrating = undefined;
+        entry.migrating = undefined;
         throw err;
       });
     }
-    await global.__prismaMigrating;
+    await entry.migrating;
     console.log("✅ Migrações concluídas");
-    global.__prismaMigrated = true;
+    entry.migrated = true;
   }
 
-  return prisma;
+  return entry.client;
 }
 
-export async function resetPrismaClient(): Promise<void> {
-  if (global.__prismaInstance) {
-    await global.__prismaInstance.$disconnect().catch(() => {});
+/** Desconecta e remove do cache o client do tenant `url` — ou todos, se omitido. */
+export async function resetPrismaClient(url?: string): Promise<void> {
+  const map = tenants();
+  const entries = url ? [[url, map.get(url)] as const] : [...map.entries()];
+
+  for (const [key, entry] of entries) {
+    if (!entry) continue;
+    await entry.client.$disconnect().catch(() => {});
+    map.delete(key);
   }
-  global.__prismaInstance = undefined;
-  global.__prismaUrl = undefined;
-  global.__prismaMigrated = false;
-  global.__prismaMigrating = undefined;
 }
 
 export async function testConnection(url: string): Promise<void> {
