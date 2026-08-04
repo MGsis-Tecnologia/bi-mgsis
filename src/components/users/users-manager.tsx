@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { ChevronDown, ChevronUp, Loader2, Plus, UserCog } from "lucide-react";
+import { ChevronDown, ChevronUp, Loader2, Mail, Plus, UserCog, X } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -15,11 +15,25 @@ interface UserRow {
   name: string;
   role: string;
   isActive: boolean;
+  failedLoginAttempts: number;
   createdAt: string;
   menuKeys: string[];
 }
 
-interface InviteResult {
+interface License {
+  used: number;
+  max: number;
+}
+
+interface InviteRow {
+  id: number;
+  email: string;
+  role: string;
+  createdAt: string;
+  expiresAt: string;
+}
+
+interface LinkResult {
   activationLink: string;
   emailSent: boolean;
   emailError?: string;
@@ -87,20 +101,31 @@ function PermissionMatrix({ user, onSaved }: { user: UserRow; onSaved: (menuKeys
 
 export function UsersManager() {
   const [users, setUsers] = React.useState<UserRow[]>([]);
+  const [license, setLicense] = React.useState<License | null>(null);
   const [loading, setLoading] = React.useState(true);
   const [expandedId, setExpandedId] = React.useState<number | null>(null);
 
   const [form, setForm] = React.useState({ name: "", email: "", role: "user" });
   const [inviting, setInviting] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
-  const [inviteResult, setInviteResult] = React.useState<InviteResult | null>(null);
+  const [inviteResult, setInviteResult] = React.useState<LinkResult | null>(null);
+
+  const [resetBusyId, setResetBusyId] = React.useState<number | null>(null);
+  const [resetResult, setResetResult] = React.useState<LinkResult | null>(null);
+  const [rowError, setRowError] = React.useState<string | null>(null);
+
+  const [invites, setInvites] = React.useState<InviteRow[]>([]);
+  const [cancelBusyId, setCancelBusyId] = React.useState<number | null>(null);
 
   const loadUsers = React.useCallback(async () => {
     setLoading(true);
     try {
-      const res = await fetch("/api/users");
-      const data = (await res.json()) as { users?: UserRow[] };
-      setUsers(data.users ?? []);
+      const [usersRes, invitesRes] = await Promise.all([fetch("/api/users"), fetch("/api/users/invites")]);
+      const usersData = (await usersRes.json()) as { users?: UserRow[]; license?: License };
+      const invitesData = (await invitesRes.json()) as { invites?: InviteRow[] };
+      setUsers(usersData.users ?? []);
+      setLicense(usersData.license ?? null);
+      setInvites(invitesData.invites ?? []);
     } finally {
       setLoading(false);
     }
@@ -109,6 +134,24 @@ export function UsersManager() {
   React.useEffect(() => {
     loadUsers();
   }, [loadUsers]);
+
+  const cancelInvite = async (invite: InviteRow) => {
+    setRowError(null);
+    setCancelBusyId(invite.id);
+    try {
+      const res = await fetch(`/api/users/invites/${invite.id}`, { method: "DELETE" });
+      const data = (await res.json()) as { ok?: boolean; error?: string };
+      if (!res.ok || !data.ok) {
+        setRowError(data.error ?? "Erro ao cancelar convite");
+        return;
+      }
+      await loadUsers();
+    } finally {
+      setCancelBusyId(null);
+    }
+  };
+
+  const licenseFull = license ? license.used >= license.max : false;
 
   const handleInvite = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -120,7 +163,7 @@ export function UsersManager() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(form),
       });
-      const data = (await res.json()) as InviteResult & { ok?: boolean; error?: string };
+      const data = (await res.json()) as LinkResult & { ok?: boolean; error?: string };
       if (!res.ok || !data.ok) {
         setError(data.error ?? "Erro ao convidar usuário");
         return;
@@ -135,17 +178,54 @@ export function UsersManager() {
     }
   };
 
-  const toggleActive = async (user: UserRow) => {
+  const inactivate = async (user: UserRow) => {
+    setRowError(null);
     const res = await fetch(`/api/users/${user.id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ isActive: !user.isActive }),
+      body: JSON.stringify({ isActive: false }),
     });
-    if (res.ok) await loadUsers();
+    const data = (await res.json()) as { ok?: boolean; error?: string };
+    if (!res.ok || !data.ok) {
+      setRowError(data.error ?? "Erro ao inativar");
+      return;
+    }
+    await loadUsers();
+  };
+
+  // Único jeito de reativar: gera e (tenta) envia um link novo de senha — a
+  // conta só volta a ficar ativa quando o link for de fato usado.
+  const sendResetLink = async (user: UserRow) => {
+    setRowError(null);
+    setResetResult(null);
+    setResetBusyId(user.id);
+    try {
+      const res = await fetch(`/api/users/${user.id}/reset-link`, { method: "POST" });
+      const data = (await res.json()) as LinkResult & { ok?: boolean; error?: string };
+      if (!res.ok || !data.ok) {
+        setRowError(data.error ?? "Erro ao gerar link de redefinição");
+        return;
+      }
+      setResetResult(data);
+    } finally {
+      setResetBusyId(null);
+    }
   };
 
   return (
     <div className="flex flex-col gap-6">
+      {license && (
+        <p className="text-sm text-muted-foreground">
+          Licenças em uso: <span className="font-medium text-foreground">{license.used}</span> de{" "}
+          <span className="font-medium text-foreground">{license.max}</span>
+          {licenseFull && (
+            <span className="ml-2 text-negative">
+              limite atingido — fale com o master para liberar mais
+            </span>
+          )}
+        </p>
+      )}
+
       <Card>
         <form onSubmit={handleInvite}>
           <CardHeader>
@@ -193,10 +273,15 @@ export function UsersManager() {
             )}
           </CardContent>
           <CardFooter>
-            <Button type="submit" disabled={inviting}>
+            <Button type="submit" disabled={inviting || licenseFull}>
               {inviting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
               Convidar
             </Button>
+            {licenseFull && (
+              <span className="ml-3 text-xs text-negative">
+                Limite de licenças atingido — fale com o master para liberar mais.
+              </span>
+            )}
           </CardFooter>
         </form>
       </Card>
@@ -217,12 +302,79 @@ export function UsersManager() {
         </Card>
       )}
 
+      {resetResult && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Link de redefinição gerado</CardTitle>
+            <CardDescription>
+              {resetResult.emailSent
+                ? "O e-mail com o novo link foi enviado ao usuário."
+                : `Não foi possível enviar o e-mail (${resetResult.emailError ?? "SMTP não configurado"}) — copie o link e envie manualmente.`}
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Input value={resetResult.activationLink} readOnly className="font-mono text-xs" />
+          </CardContent>
+        </Card>
+      )}
+
+      {invites.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Convites pendentes</CardTitle>
+            <CardDescription>
+              Cada um ocupa uma licença até ser aceito, cancelado ou expirar (7 dias).
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex flex-col">
+              {invites.map((invite) => (
+                <div
+                  key={invite.id}
+                  className="flex items-center justify-between gap-4 py-2.5 border-b border-border/50 last:border-0"
+                >
+                  <div className="flex items-center gap-2 min-w-0">
+                    <Mail className="h-4 w-4 shrink-0 text-muted-foreground" />
+                    <div className="min-w-0">
+                      <p className="text-sm truncate">{invite.email}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {invite.role === "admin" ? "admin" : "usuário"} · expira em{" "}
+                        {new Date(invite.expiresAt).toLocaleDateString("pt-BR")}
+                      </p>
+                    </div>
+                  </div>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    disabled={cancelBusyId === invite.id}
+                    onClick={() => void cancelInvite(invite)}
+                  >
+                    {cancelBusyId === invite.id ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <X className="h-4 w-4" />
+                    )}
+                    Cancelar
+                  </Button>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       <Card>
         <CardHeader>
           <CardTitle>Usuários da empresa</CardTitle>
           <CardDescription>Clique num usuário para editar os menus liberados.</CardDescription>
         </CardHeader>
         <CardContent>
+          {rowError && (
+            <p className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-2.5 text-sm text-red-700">
+              {rowError}
+            </p>
+          )}
           {loading ? (
             <div className="flex items-center gap-2 py-6 text-sm text-muted-foreground">
               <Loader2 className="h-4 w-4 animate-spin" />
@@ -237,6 +389,7 @@ export function UsersManager() {
             <div className="flex flex-col">
               {users.map((user) => {
                 const expanded = expandedId === user.id;
+                const locked = !user.isActive && user.failedLoginAttempts >= 3;
                 return (
                   <div key={user.id} className="border-b border-border/50 last:border-0">
                     <div
@@ -262,19 +415,35 @@ export function UsersManager() {
                       <div className="flex items-center gap-2 shrink-0">
                         <Badge variant={user.role === "admin" ? "accent" : "default"}>{user.role}</Badge>
                         <Badge variant={user.isActive ? "positive" : "negative"}>
-                          {user.isActive ? "ativo" : "inativo"}
+                          {user.isActive ? "ativo" : locked ? "bloqueado (3 tentativas)" : "inativo"}
                         </Badge>
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            toggleActive(user);
-                          }}
-                        >
-                          {user.isActive ? "Inativar" : "Ativar"}
-                        </Button>
+                        {user.isActive ? (
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              void inactivate(user);
+                            }}
+                          >
+                            Inativar
+                          </Button>
+                        ) : (
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            disabled={resetBusyId === user.id}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              void sendResetLink(user);
+                            }}
+                          >
+                            {resetBusyId === user.id && <Loader2 className="h-4 w-4 animate-spin" />}
+                            Enviar link de redefinição
+                          </Button>
+                        )}
                         {user.role !== "admin" &&
                           (expanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />)}
                       </div>

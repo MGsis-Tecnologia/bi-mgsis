@@ -29,6 +29,7 @@ model Empresa {
   dbName      String   @unique @map("db_name") // nome da database do tenant, ex: empresa_12345678000199
   status      String   @default("pendente") // pendente | ativa | suspensa
   emailMaster String   @default("") @map("email_master") // e-mail do admin da empresa, recebe o convite
+  maxUsers    Int      @default(5) @map("max_users") // limite de licenças (usuários ativos + convites pendentes)
   createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
 
   inviteTokens      InviteToken[]

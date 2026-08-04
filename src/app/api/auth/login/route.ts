@@ -9,6 +9,7 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 const GENERIC_ERROR = "CNPJ/RUC, e-mail ou senha incorretos";
+const MAX_FAILED_LOGIN_ATTEMPTS = 3;
 
 export async function POST(req: NextRequest) {
   let cnpjRucRaw: string, email: string, password: string;
@@ -56,8 +57,40 @@ export async function POST(req: NextRequest) {
 
   const tenantDb = await getPrisma(buildTenantUrl(empresa.dbName));
   const user = await tenantDb.user.findUnique({ where: { email } });
-  if (!user || !(await bcrypt.compare(password, user.passwordHash))) return invalid();
-  if (!user.isActive) return invalid();
+  if (!user) return invalid();
+
+  // Conta já bloqueada (por tentativas ou inativada pelo admin): nem senha
+  // certa libera — só reativa quem passa pelo link de redefinição enviado
+  // pelo gestor (ver POST /api/users/[id]/reset-link e /api/ativar).
+  if (!user.isActive) {
+    return NextResponse.json(
+      { error: "Conta bloqueada. Peça ao administrador da sua empresa para liberar o acesso." },
+      { status: 401 }
+    );
+  }
+
+  if (!(await bcrypt.compare(password, user.passwordHash))) {
+    const attempts = user.failedLoginAttempts + 1;
+    if (attempts >= MAX_FAILED_LOGIN_ATTEMPTS) {
+      await tenantDb.user.update({
+        where: { id: user.id },
+        data: { isActive: false, failedLoginAttempts: attempts },
+      });
+      return NextResponse.json(
+        {
+          error:
+            "Conta bloqueada após 3 tentativas incorretas. Peça ao administrador da sua empresa para liberar o acesso.",
+        },
+        { status: 401 }
+      );
+    }
+    await tenantDb.user.update({ where: { id: user.id }, data: { failedLoginAttempts: attempts } });
+    return invalid();
+  }
+
+  if (user.failedLoginAttempts > 0) {
+    await tenantDb.user.update({ where: { id: user.id }, data: { failedLoginAttempts: 0 } });
+  }
 
   // "admin" enxerga tudo (allowedMenus fica de fora do payload); "user" só
   // enxerga os menus com uma linha em MenuPermission (nega por padrão).

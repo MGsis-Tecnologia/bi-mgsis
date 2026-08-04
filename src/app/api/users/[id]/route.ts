@@ -16,9 +16,10 @@ async function requireAdmin(): Promise<SessionPayload | null> {
   return session;
 }
 
-// PATCH /api/users/[id] — ativa/inativa ou muda o papel de um usuário da
-// própria empresa. Não permite o admin se auto-inativar (evita se trancar
-// fora do sistema por engano).
+// PATCH /api/users/[id] — inativa (imediato) ou muda o papel de um usuário da
+// própria empresa. NÃO aceita isActive:true: reativar exige o fluxo de link
+// de redefinição (POST /api/users/[id]/reset-link + /api/ativar), pra sempre
+// trocar a senha de quem estava bloqueado — nunca reabrir com a senha antiga.
 export async function PATCH(req: NextRequest, ctx: Ctx) {
   const session = await requireAdmin();
   if (!session) return NextResponse.json({ error: "Não autorizado" }, { status: 403 });
@@ -41,6 +42,13 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
 
   if (isActive === undefined && role === undefined) {
     return NextResponse.json({ error: "Nada para atualizar" }, { status: 400 });
+  }
+
+  if (isActive === true) {
+    return NextResponse.json(
+      { error: "Reative enviando um novo link de redefinição de senha, não é possível reativar direto." },
+      { status: 400 }
+    );
   }
 
   if (!session.isMaster && id === session.userId && isActive === false) {

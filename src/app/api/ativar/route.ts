@@ -41,20 +41,35 @@ export async function POST(req: NextRequest) {
 
   const tenantDb = await getPrisma(buildTenantUrl(empresa.dbName));
 
-  const existingUser = await tenantDb.user.findUnique({ where: { email: invite.email } });
-  if (existingUser) {
-    return NextResponse.json({ error: "Já existe um usuário com esse e-mail" }, { status: 409 });
-  }
-
   const passwordHash = await bcrypt.hash(password, 12);
-  const user = await tenantDb.user.create({
-    data: { email: invite.email, name, passwordHash, role: invite.role },
-  });
+  const existingUser = await tenantDb.user.findUnique({ where: { email: invite.email } });
+
+  // Mesmo link serve pra dois casos: ativação de conta nova (nenhum usuário
+  // com esse e-mail ainda) e redefinição/reativação de uma já existente
+  // (convite gerado por POST /api/users/[id]/reset-link) — nesse segundo
+  // caso, troca a senha e destrava a conta em vez de tentar criar duplicata.
+  const user = existingUser
+    ? await tenantDb.user.update({
+        where: { id: existingUser.id },
+        data: { passwordHash, isActive: true, failedLoginAttempts: 0 },
+      })
+    : await tenantDb.user.create({
+        data: { email: invite.email, name, passwordHash, role: invite.role },
+      });
 
   await catalog.$transaction([
     catalog.inviteToken.update({ where: { id: invite.id }, data: { usedAt: new Date() } }),
     catalog.empresa.update({ where: { id: empresa.id }, data: { status: "ativa" } }),
   ]);
+
+  // "admin" enxerga tudo; "user" novo nasce sem nenhuma linha em
+  // MenuPermission (nega por padrão), e um "user" existente sendo
+  // redefinido mantém as permissões que já tinha.
+  let allowedMenus: string[] | undefined;
+  if (user.role !== "admin") {
+    const permissions = await tenantDb.menuPermission.findMany({ where: { userId: user.id } });
+    allowedMenus = permissions.map((p) => p.menuKey);
+  }
 
   const sessionToken = await signToken({
     userId: user.id,
@@ -63,9 +78,7 @@ export async function POST(req: NextRequest) {
     role: user.role,
     empresaId: empresa.id,
     isMaster: false,
-    // Usuário recém-criado nasce sem nenhuma linha em MenuPermission (nega
-    // por padrão) — o admin concede acesso depois pela tela de Usuários.
-    allowedMenus: [],
+    allowedMenus,
   });
 
   return setSessionCookie(NextResponse.json({ ok: true }), sessionToken);

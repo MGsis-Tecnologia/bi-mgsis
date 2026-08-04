@@ -6,6 +6,13 @@ import { useTranslation } from "@/lib/hooks/use-translation";
 import { LanguageSwitcher } from "@/components/filters/language-switcher";
 import { ClientMounted } from "@/components/providers/client-mounted";
 
+// Navegadores só sabem salvar credencial como usuário+senha — não existe um
+// terceiro campo nativo pra "empresa". Guardamos o CNPJ/RUC no localStorage
+// (não é dado sensível, é só o identificador da empresa) pra pré-preencher
+// sozinho da próxima vez, já que o gerenciador de senha do navegador nunca
+// vai lembrar dele.
+const CNPJ_STORAGE_KEY = "mgsis_last_cnpj";
+
 export default function LoginPage() {
   const { t } = useTranslation();
   const [showPassword, setShowPassword] = React.useState(false);
@@ -14,6 +21,13 @@ export default function LoginPage() {
   const [email, setEmail] = React.useState("");
   const [password, setPassword] = React.useState("");
   const [error, setError] = React.useState("");
+
+  React.useEffect(() => {
+    try {
+      const saved = localStorage.getItem(CNPJ_STORAGE_KEY);
+      if (saved) setCnpjRuc(saved);
+    } catch {}
+  }, []);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -27,6 +41,9 @@ export default function LoginPage() {
       });
       const data = (await res.json()) as { ok?: boolean; error?: string };
       if (!res.ok || !data.ok) { setError(data.error ?? "Erro ao entrar"); return; }
+      try {
+        localStorage.setItem(CNPJ_STORAGE_KEY, cnpjRuc);
+      } catch {}
       window.location.replace("/dashboard");
     } catch (err) {
       setError((err as Error).message);
@@ -137,6 +154,7 @@ export default function LoginPage() {
                 placeholder="00.000.000/0000-00"
                 required
                 disabled={isLoading}
+                autoComplete="organization"
                 className="w-full px-4 py-3 border border-slate-200 rounded-lg bg-white text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
               />
             </div>
@@ -153,6 +171,7 @@ export default function LoginPage() {
                 placeholder="seu@email.com"
                 required
                 disabled={isLoading}
+                autoComplete="username"
                 className="w-full px-4 py-3 border border-slate-200 rounded-lg bg-white text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
               />
             </div>
@@ -176,6 +195,7 @@ export default function LoginPage() {
                   placeholder="••••••••"
                   required
                   disabled={isLoading}
+                  autoComplete="current-password"
                   className="w-full px-4 py-3 border border-slate-200 rounded-lg bg-white text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all pr-10"
                 />
                 <button

@@ -55,16 +55,23 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
   let nome: string | undefined;
   let emailMaster: string | undefined;
   let status: string | undefined;
+  let maxUsers: number | undefined;
   try {
-    const body = (await req.json()) as { nome?: string; emailMaster?: string; status?: string };
+    const body = (await req.json()) as {
+      nome?: string;
+      emailMaster?: string;
+      status?: string;
+      maxUsers?: number;
+    };
     nome = body.nome?.trim() || undefined;
     emailMaster = body.emailMaster?.trim().toLowerCase() || undefined;
     status = body.status && STATUS_VALIDOS.has(body.status) ? body.status : undefined;
+    maxUsers = Number.isInteger(body.maxUsers) && (body.maxUsers as number) >= 1 ? body.maxUsers : undefined;
   } catch {
     return NextResponse.json({ error: "Corpo inválido" }, { status: 400 });
   }
 
-  if (!nome && !emailMaster && !status) {
+  if (!nome && !emailMaster && !status && maxUsers === undefined) {
     return NextResponse.json({ error: "Nada para atualizar" }, { status: 400 });
   }
 
@@ -88,6 +95,7 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
       ...(nome && { nome }),
       ...(emailMaster && { emailMaster }),
       ...(status && { status }),
+      ...(maxUsers !== undefined && { maxUsers }),
     },
   });
 

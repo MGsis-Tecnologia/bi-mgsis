@@ -23,10 +23,19 @@ export async function GET() {
   if (!session) return NextResponse.json({ error: "Não autorizado" }, { status: 403 });
 
   const db = await getTenantPrisma(session);
-  const users = await db.user.findMany({
-    orderBy: { createdAt: "asc" },
-    include: { menuAccess: { select: { menuKey: true } } },
+  const [users, catalog] = await Promise.all([
+    db.user.findMany({
+      orderBy: { createdAt: "asc" },
+      include: { menuAccess: { select: { menuKey: true } } },
+    }),
+    getCatalogPrisma(),
+  ]);
+
+  const empresa = await catalog.empresa.findUnique({ where: { id: session.empresaId } });
+  const pendingInvites = await catalog.inviteToken.count({
+    where: { empresaId: session.empresaId, usedAt: null, expiresAt: { gt: new Date() } },
   });
+  const activeUsers = users.filter((u) => u.isActive).length;
 
   return NextResponse.json({
     users: users.map((u) => ({
@@ -35,9 +44,11 @@ export async function GET() {
       name: u.name,
       role: u.role,
       isActive: u.isActive,
+      failedLoginAttempts: u.failedLoginAttempts,
       createdAt: u.createdAt,
       menuKeys: u.menuAccess.map((m) => m.menuKey),
     })),
+    license: { used: activeUsers + pendingInvites, max: empresa?.maxUsers ?? 0 },
   });
 }
 
@@ -69,6 +80,28 @@ export async function POST(req: NextRequest) {
   }
 
   const catalog = await getCatalogPrisma();
+
+  // Limite de licenças (fixado pelo master no cadastro da empresa): conta
+  // usuários ativos + convites ainda não usados/expirados, pra que não dê pra
+  // furar o limite convidando várias pessoas antes de qualquer uma ativar.
+  const empresa = await catalog.empresa.findUnique({ where: { id: session.empresaId } });
+  if (!empresa) return NextResponse.json({ error: "Empresa não encontrada" }, { status: 500 });
+
+  const [activeUsers, pendingInvites] = await Promise.all([
+    tenantDb.user.count({ where: { isActive: true } }),
+    catalog.inviteToken.count({
+      where: { empresaId: session.empresaId, usedAt: null, expiresAt: { gt: new Date() } },
+    }),
+  ]);
+  if (activeUsers + pendingInvites >= empresa.maxUsers) {
+    return NextResponse.json(
+      {
+        error: `Limite de licenças atingido (máximo ${empresa.maxUsers} usuários). Fale com o master para liberar mais.`,
+      },
+      { status: 403 }
+    );
+  }
+
   const invite = generateToken();
   await catalog.inviteToken.create({
     data: {

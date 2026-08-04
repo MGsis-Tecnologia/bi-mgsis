@@ -35,12 +35,18 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Não autorizado" }, { status: 403 });
   }
 
-  let nome: string, cnpjRucRaw: string, emailMaster: string;
+  let nome: string, cnpjRucRaw: string, emailMaster: string, maxUsers: number;
   try {
-    const body = (await req.json()) as { nome?: string; cnpjRuc?: string; emailMaster?: string };
+    const body = (await req.json()) as {
+      nome?: string;
+      cnpjRuc?: string;
+      emailMaster?: string;
+      maxUsers?: number;
+    };
     nome = (body.nome ?? "").trim();
     cnpjRucRaw = body.cnpjRuc ?? "";
     emailMaster = (body.emailMaster ?? "").trim().toLowerCase();
+    maxUsers = Number.isInteger(body.maxUsers) ? (body.maxUsers as number) : 5;
   } catch {
     return NextResponse.json({ error: "Corpo inválido" }, { status: 400 });
   }
@@ -51,6 +57,9 @@ export async function POST(req: NextRequest) {
       { error: "Preencha nome, CNPJ/RUC e e-mail do responsável" },
       { status: 400 }
     );
+  }
+  if (maxUsers < 1) {
+    return NextResponse.json({ error: "O máximo de licenças precisa ser pelo menos 1" }, { status: 400 });
   }
 
   const dbName = `empresa_${cnpjRuc}`;
@@ -96,7 +105,7 @@ export async function POST(req: NextRequest) {
 
   // 3. Registra a empresa e os tokens no catalog.
   const empresa = await catalog.empresa.create({
-    data: { cnpjRuc, nome, dbName, status: "pendente", emailMaster },
+    data: { cnpjRuc, nome, dbName, status: "pendente", emailMaster, maxUsers },
   });
 
   const integration = generateToken();

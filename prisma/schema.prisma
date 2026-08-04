@@ -23,6 +23,7 @@ model User {
   name         String   @default("")
   role         String   @default("admin") // "admin" | "user"
   isActive     Boolean  @default(true) @map("is_active")
+  failedLoginAttempts Int @default(0) @map("failed_login_attempts") // zera a cada login OK; 3 erradas seguidas inativa a conta
   createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
 
   menuAccess MenuPermission[]

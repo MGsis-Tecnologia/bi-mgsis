@@ -25,6 +25,7 @@ interface Empresa {
   dbName: string;
   status: string;
   emailMaster: string;
+  maxUsers: number;
   createdAt: string;
 }
 
@@ -68,6 +69,127 @@ function CopyField({ label, value }: { label: string; value: string }) {
 }
 
 /**
+ * Token de integração da empresa — credencial pra um ERP externo enviar dados
+ * via API no futuro (hoje os dados ainda entram só por CSV manual; nenhuma
+ * rota de ingestão consome este token ainda, mas o master já pode gerar e
+ * distribuir a credencial com antecedência).
+ *
+ * O token em si nunca é guardado em texto puro (só o hash), então uma vez
+ * gerado é IMPOSSÍVEL reexibi-lo — só dá pra ver se existe um ativo e gerar
+ * um novo (o que revoga o anterior).
+ */
+function IntegrationTokenPanel({ empresaId }: { empresaId: number }) {
+  const [status, setStatus] = React.useState<{ active: boolean; createdAt: string | null } | null>(null);
+  const [loading, setLoading] = React.useState(true);
+  const [gerando, setGerando] = React.useState(false);
+  const [novoToken, setNovoToken] = React.useState<string | null>(null);
+  const [confirmandoGeracao, setConfirmandoGeracao] = React.useState(false);
+  const [erro, setErro] = React.useState<string | null>(null);
+
+  const carregar = React.useCallback(async () => {
+    setLoading(true);
+    try {
+      const res = await fetch(`/api/master/empresas/${empresaId}/integration-token`);
+      const data = (await res.json()) as { active?: boolean; createdAt?: string | null };
+      setStatus({ active: !!data.active, createdAt: data.createdAt ?? null });
+    } finally {
+      setLoading(false);
+    }
+  }, [empresaId]);
+
+  React.useEffect(() => {
+    carregar();
+  }, [carregar]);
+
+  const gerar = async () => {
+    setErro(null);
+    setGerando(true);
+    try {
+      const res = await fetch(`/api/master/empresas/${empresaId}/integration-token`, { method: "POST" });
+      const data = (await res.json()) as { ok?: boolean; integrationToken?: string; error?: string };
+      if (!res.ok || !data.ok || !data.integrationToken) {
+        setErro(data.error ?? "Erro ao gerar token");
+        return;
+      }
+      setNovoToken(data.integrationToken);
+      setConfirmandoGeracao(false);
+      await carregar();
+    } catch (err) {
+      setErro((err as Error).message);
+    } finally {
+      setGerando(false);
+    }
+  };
+
+  return (
+    <div className="mt-4 rounded-lg border border-border bg-surface/60 p-3">
+      <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+        Token de integração (API)
+      </p>
+
+      {loading ? (
+        <p className="mt-2 text-sm text-muted-foreground">Carregando...</p>
+      ) : (
+        <p className="mt-2 text-sm text-foreground">
+          {status?.active ? (
+            <>
+              Token ativo desde{" "}
+              <span className="font-medium">
+                {status.createdAt && new Date(status.createdAt).toLocaleDateString("pt-BR")}
+              </span>
+              . Gerar um novo revoga este.
+            </>
+          ) : (
+            "Nenhum token ativo ainda."
+          )}
+        </p>
+      )}
+
+      {novoToken && (
+        <div className="mt-3">
+          <CopyField label="Novo token (copie agora — não será mostrado de novo)" value={novoToken} />
+        </div>
+      )}
+
+      {erro && (
+        <p className="mt-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
+          {erro}
+        </p>
+      )}
+
+      <div className="mt-3">
+        {!confirmandoGeracao ? (
+          <Button type="button" size="sm" variant="outline" onClick={() => setConfirmandoGeracao(true)}>
+            {status?.active ? "Gerar novo token" : "Gerar token"}
+          </Button>
+        ) : (
+          <div className="flex flex-wrap items-center gap-2">
+            {status?.active && (
+              <span className="text-xs text-negative">
+                Isso invalida o token atual — o ERP vai parar de enviar dados até ser atualizado lá também.
+              </span>
+            )}
+            <Button type="button" size="sm" onClick={gerar} disabled={gerando}>
+              {gerando && <Loader2 className="h-4 w-4 animate-spin" />}
+              Confirmar geração
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              disabled={gerando}
+              onClick={() => setConfirmandoGeracao(false)}
+            >
+              Cancelar
+            </Button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/**
  * Painel de edição de uma empresa. A exclusão fica atrás de uma confirmação por
  * nome exato porque é irreversível: derruba a database do tenant com todos os
  * dados (vendas, financeiro, usuários) — não é só remover o cadastro.
@@ -83,6 +205,7 @@ function EmpresaEditor({
 }) {
   const [nome, setNome] = React.useState(empresa.nome);
   const [emailMaster, setEmailMaster] = React.useState(empresa.emailMaster);
+  const [maxUsers, setMaxUsers] = React.useState(empresa.maxUsers);
   const [saving, setSaving] = React.useState(false);
   const [erro, setErro] = React.useState<string | null>(null);
   const [ok, setOk] = React.useState(false);
@@ -91,7 +214,10 @@ function EmpresaEditor({
   const [confirmacao, setConfirmacao] = React.useState("");
   const [excluindo, setExcluindo] = React.useState(false);
 
-  const alterado = nome.trim() !== empresa.nome || emailMaster.trim() !== empresa.emailMaster;
+  const alterado =
+    nome.trim() !== empresa.nome ||
+    emailMaster.trim() !== empresa.emailMaster ||
+    maxUsers !== empresa.maxUsers;
 
   const salvar = async () => {
     setErro(null);
@@ -101,7 +227,7 @@ function EmpresaEditor({
       const res = await fetch(`/api/master/empresas/${empresa.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ nome: nome.trim(), emailMaster: emailMaster.trim() }),
+        body: JSON.stringify({ nome: nome.trim(), emailMaster: emailMaster.trim(), maxUsers }),
       });
       const data = (await res.json()) as { ok?: boolean; empresa?: Empresa; error?: string };
       if (!res.ok || !data.ok || !data.empresa) {
@@ -156,12 +282,26 @@ function EmpresaEditor({
             disabled={saving}
           />
         </div>
+        <div>
+          <label className="block text-sm font-medium text-foreground mb-1.5">
+            Máximo de usuários (licenças)
+          </label>
+          <Input
+            type="number"
+            min={1}
+            value={maxUsers}
+            onChange={(e) => setMaxUsers(Math.max(1, Number(e.target.value) || 1))}
+            disabled={saving}
+          />
+        </div>
       </div>
 
       <p className="mt-3 text-xs text-muted-foreground">
         O CNPJ/RUC (<span className="font-mono">{empresa.cnpjRuc}</span>) não pode ser alterado — ele
         define o nome da database da empresa e é usado como credencial de login.
       </p>
+
+      <IntegrationTokenPanel empresaId={empresa.id} />
 
       {erro && (
         <p className="mt-3 rounded-lg border border-red-200 bg-red-50 px-4 py-2.5 text-sm text-red-700">
@@ -248,7 +388,7 @@ function EmpresaEditor({
 export function EmpresasManager() {
   const [empresas, setEmpresas] = React.useState<Empresa[]>([]);
   const [loadingList, setLoadingList] = React.useState(true);
-  const [form, setForm] = React.useState({ nome: "", cnpjRuc: "", emailMaster: "" });
+  const [form, setForm] = React.useState({ nome: "", cnpjRuc: "", emailMaster: "", maxUsers: 5 });
   const [creating, setCreating] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
   const [lastCreated, setLastCreated] = React.useState<CreateResult | null>(null);
@@ -313,7 +453,7 @@ export function EmpresasManager() {
         return;
       }
       setLastCreated(data);
-      setForm({ nome: "", cnpjRuc: "", emailMaster: "" });
+      setForm({ nome: "", cnpjRuc: "", emailMaster: "", maxUsers: 5 });
       await loadEmpresas();
     } catch (err) {
       setError((err as Error).message);
@@ -363,6 +503,21 @@ export function EmpresasManager() {
                 value={form.emailMaster}
                 onChange={(e) => setForm((f) => ({ ...f, emailMaster: e.target.value }))}
                 placeholder="admin@clienteexemplo.com"
+                required
+                disabled={creating}
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-1.5">
+                Máximo de usuários (licenças)
+              </label>
+              <Input
+                type="number"
+                min={1}
+                value={form.maxUsers}
+                onChange={(e) =>
+                  setForm((f) => ({ ...f, maxUsers: Math.max(1, Number(e.target.value) || 1) }))
+                }
                 required
                 disabled={creating}
               />
@@ -446,7 +601,8 @@ export function EmpresasManager() {
                       <div className="min-w-0">
                         <p className="text-sm font-medium truncate">{emp.nome}</p>
                         <p className="text-xs text-muted-foreground truncate">
-                          <span className="font-mono">{emp.cnpjRuc}</span> · {emp.emailMaster}
+                          <span className="font-mono">{emp.cnpjRuc}</span> · {emp.emailMaster} ·{" "}
+                          {emp.maxUsers} licença{emp.maxUsers === 1 ? "" : "s"}
                         </p>
                       </div>
                       <div className="flex items-center gap-2 shrink-0">
