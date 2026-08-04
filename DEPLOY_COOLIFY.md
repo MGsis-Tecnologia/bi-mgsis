@@ -113,9 +113,11 @@ idempotente põe o schema em dia) e rode `npm run migrate:all` de novo.
 
 ## Primeiro acesso
 
-Não há usuário pré-cadastrado. Ao abrir o app pela primeira vez, use a tela de
-cadastro (`/register`) para criar o **primeiro admin** — depois o login normal
-fica em `/login`.
+Catalog vazio (nenhuma empresa nem master cadastrado). Ao abrir o app pela
+primeira vez, a raiz (`/`) redireciona sozinha para `/master/bootstrap` —
+cadastra a empresa atual (nome, CNPJ/RUC) e cria o usuário **master** do
+sistema. Depois disso, o login normal fica em `/login` (CNPJ/RUC + e-mail +
+senha) e `/master/bootstrap` se autobloqueia — não dá pra rodar de novo.
 
 ## Rotas
 

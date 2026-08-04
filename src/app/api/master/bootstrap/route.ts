@@ -9,8 +9,11 @@ export const dynamic = "force-dynamic";
 
 // Configuração inicial do catalog: registra a empresa atual (a que já roda
 // nesta DATABASE_URL) e cria o primeiro usuário master do sistema. Só
-// funciona uma vez — enquanto não existir nenhuma Empresa nem MasterUser —
-// mesmo padrão de auto-bloqueio já usado em /api/auth/register pro tenant.
+// funciona uma vez — enquanto não existir nenhuma Empresa nem MasterUser.
+// É o único ponto de entrada de instalação nova agora: o antigo /register
+// (bootstrap do 1º admin de tenant, anterior ao catalog) foi removido —
+// criava um usuário sem nenhuma empresa vinculada, inutilizável no login
+// atual (que sempre resolve a empresa por CNPJ/RUC antes de tudo).
 export async function POST(req: NextRequest) {
   let cnpjRucRaw: string, nomeEmpresa: string, masterName: string, email: string, password: string;
   try {
