@@ -48,14 +48,19 @@ function prismaCli() {
   return found;
 }
 
-/** Nome da migration mais antiga = o baseline usado pra adotar bancos legados. */
-function baselineName(migrationsDir) {
+/** Nomes de todas as migrations, em ordem cronológica. */
+function migrationNames(migrationsDir) {
   const dirs = readdirSync(migrationsDir, { withFileTypes: true })
     .filter((d) => d.isDirectory())
     .map((d) => d.name)
     .sort();
   if (!dirs.length) throw new Error(`Nenhuma migration em ${migrationsDir}`);
-  return dirs[0];
+  return dirs;
+}
+
+/** Nome da migration mais antiga = o baseline usado pra adotar bancos legados. */
+function baselineName(migrationsDir) {
+  return migrationNames(migrationsDir)[0];
 }
 
 const CLI = prismaCli();
@@ -205,6 +210,31 @@ function adopt({ schema, migrations, urlEnv }, url, real) {
   if (res.code !== 0) throw new Error(`falha ao marcar baseline: ${res.out}`);
 }
 
+/**
+ * Aplica cada migration do alvo na mão (`db execute` + `migrate resolve
+ * --applied`), pulando o `migrate deploy` de propósito.
+ *
+ * Precisa disto quando o alvo não tem NENHUMA tabela própria ainda, mas a
+ * database (compartilhada entre catalog e tenant) já não está vazia — o
+ * outro schema já rodou e criou as tabelas dele. O `prisma migrate deploy`
+ * decide se pode aplicar olhando a database inteira, não só as tabelas do
+ * seu schema: vendo tabelas de outro schema sem nenhum registro em
+ * `_prisma_migrations` pras SUAS migrations, ele recusa com P3005 achando
+ * que é um banco de produção não-vazio e desconhecido — mesmo o alvo em si
+ * estando genuinamente vazio. Aplicar e registrar migration por migration
+ * contorna essa checagem sem abrir mão do histórico correto.
+ */
+function applyFresh(target, url) {
+  console.log(`   ↳ database compartilhada já não está vazia (outro schema) — aplicando na mão`);
+  for (const name of migrationNames(target.migrations)) {
+    const sqlFile = join(target.migrations, name, "migration.sql");
+    const exec = runPrisma(["db", "execute", `--file=${sqlFile}`, `--schema=${target.schema}`], url, target.urlEnv);
+    if (exec.code !== 0) throw new Error(`falha ao aplicar ${name}: ${exec.out}`);
+    const resolve = runPrisma(["migrate", "resolve", "--applied", name, `--schema=${target.schema}`], url, target.urlEnv);
+    if (resolve.code !== 0) throw new Error(`falha ao registrar ${name}: ${resolve.out}`);
+  }
+}
+
 async function migrateOne(target, url, label) {
   console.log(`\n▶ ${label}`);
   const state = await inspect(url, baselineName(target.migrations));
@@ -219,7 +249,11 @@ async function migrateOne(target, url, label) {
   const esperado = baselineShape(target.migrations);
   const temTabelaPropria = [...esperado.keys()].some((tabela) => state.real.has(tabela));
 
-  if (!state.adopted && temTabelaPropria) adopt(target, url, state.real);
+  if (!state.adopted && temTabelaPropria) {
+    adopt(target, url, state.real);
+  } else if (!state.adopted && !temTabelaPropria && state.real.size > 0 && !CHECK_ONLY) {
+    applyFresh(target, url);
+  }
 
   const cmd = CHECK_ONLY ? "status" : "deploy";
   const res = runPrisma(["migrate", cmd, `--schema=${target.schema}`], url, target.urlEnv);
