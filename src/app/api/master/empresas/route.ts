@@ -7,6 +7,7 @@ import { deployTenantMigrations } from "@/lib/server/migrate";
 import { getTenantPrisma } from "@/lib/server/tenant";
 import { generateToken } from "@/lib/server/tokens";
 import { sendMail } from "@/lib/server/mailer";
+import { getAppUrl } from "@/lib/server/app-url";
 import type { SessionPayload } from "@/lib/server/auth-core";
 
 export const runtime = "nodejs";
@@ -123,7 +124,7 @@ export async function POST(req: NextRequest) {
     },
   });
 
-  const activationLink = `${req.nextUrl.origin}/ativar?token=${invite.token}`;
+  const activationLink = `${getAppUrl(req)}/ativar?token=${invite.token}`;
 
   let emailSent = false;
   let emailError: string | undefined;

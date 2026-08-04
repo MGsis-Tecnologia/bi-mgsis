@@ -4,6 +4,7 @@ import { getTenantPrisma } from "@/lib/server/tenant";
 import { getCatalogPrisma } from "@/lib/server/catalog-db";
 import { generateToken } from "@/lib/server/tokens";
 import { sendMail } from "@/lib/server/mailer";
+import { getAppUrl } from "@/lib/server/app-url";
 import type { SessionPayload } from "@/lib/server/auth-core";
 
 export const runtime = "nodejs";
@@ -26,7 +27,7 @@ async function requireAdmin(): Promise<SessionPayload | null> {
 // tentativas erradas ou inativado à mão): a conta só volta a ficar ativa
 // quando o link for de fato usado em /api/ativar, nunca por um toggle direto
 // de isActive — por isso PATCH /api/users/[id] não aceita mais isActive:true.
-export async function POST(_req: NextRequest, ctx: Ctx) {
+export async function POST(req: NextRequest, ctx: Ctx) {
   const session = await requireAdmin();
   if (!session) return NextResponse.json({ error: "Não autorizado" }, { status: 403 });
 
@@ -52,7 +53,7 @@ export async function POST(_req: NextRequest, ctx: Ctx) {
     },
   });
 
-  const activationLink = `${_req.nextUrl.origin}/ativar?token=${reset.token}`;
+  const activationLink = `${getAppUrl(req)}/ativar?token=${reset.token}`;
 
   let emailSent = false;
   let emailError: string | undefined;

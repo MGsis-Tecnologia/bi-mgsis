@@ -39,6 +39,7 @@ gerenciado pelo Coolify. Não usa `docker-compose`.
    |---|---|---|
    | `DATABASE_URL` | `postgresql://postgres:senha@host:5432/postgres?schema=public` | **Sim** |
    | `AUTH_SECRET` | saída de `openssl rand -base64 32` | **Sim (obrigatória)** — sem ela o app recusa subir em produção |
+   | `APP_URL` | `https://bi.seudominio.com` | **Sim (recomendada)** — sem ela, os links de e-mail (convite, redefinição de senha) saem com o endereço interno do container (`http://0.0.0.0:3000`) em vez do domínio público |
    | `NEXT_PUBLIC_APP_NAME` | `Dash BI` | Não (tem default) |
    | `NEXT_PUBLIC_DEFAULT_CURRENCY` | `BRL` | Não (tem default) |
    | `SETTINGS_ENCRYPTION_KEY` | saída de `openssl rand -base64 32` | Recomendada — criptografa a senha SMTP salva em Configurações > E-mail (cai no `AUTH_SECRET` se ausente) |
