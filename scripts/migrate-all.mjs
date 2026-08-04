@@ -155,7 +155,7 @@ async function inspect(url, baseline) {
       real.get(l.table_name).add(l.column_name);
     }
 
-    return { adopted, hasTables: real.size > 0, real };
+    return { adopted, real };
   } finally {
     await client.$disconnect();
   }
@@ -209,7 +209,17 @@ async function migrateOne(target, url, label) {
   console.log(`\n▶ ${label}`);
   const state = await inspect(url, baselineName(target.migrations));
 
-  if (!state.adopted && state.hasTables) adopt(target, url, state.real);
+  // "Tem tabela pra adotar?" precisa olhar só as tabelas DESTE alvo (catalog
+  // OU tenant) — não a database toda. Catalog e tenant dividem a mesma
+  // database por padrão; se o catalog já rodou e criou `empresas` etc., a
+  // database "tem tabelas", mas nenhuma delas é do tenant. Checar genérico
+  // fazia o tenant entrar no fluxo de adoção de banco legado e abortar,
+  // porque nenhuma tabela SUA (users, sale_items...) existia ainda — a
+  // migration nunca chegava a rodar de verdade num banco novo compartilhado.
+  const esperado = baselineShape(target.migrations);
+  const temTabelaPropria = [...esperado.keys()].some((tabela) => state.real.has(tabela));
+
+  if (!state.adopted && temTabelaPropria) adopt(target, url, state.real);
 
   const cmd = CHECK_ONLY ? "status" : "deploy";
   const res = runPrisma(["migrate", cmd, `--schema=${target.schema}`], url, target.urlEnv);
