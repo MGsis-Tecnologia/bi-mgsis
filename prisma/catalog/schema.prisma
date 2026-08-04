@@ -7,6 +7,10 @@
 // DATABASE_URL do banco atual (útil enquanto só existe uma database — quando
 // as empresas forem provisionadas em databases próprias, basta apontar
 // CATALOG_DATABASE_URL pra uma database dedicada no mesmo servidor Postgres).
+//
+// Como no schema de tenant, os `@default(...)`, `@db.Timestamptz(6)` e `map:`
+// espelham o que os bancos criados antes das migrations já têm — ver a nota
+// em prisma/schema.prisma.
 generator client {
   provider      = "prisma-client-js"
   binaryTargets = ["native", "linux-musl-openssl-3.0.x"]
@@ -21,11 +25,11 @@ datasource db {
 model Empresa {
   id          Int      @id @default(autoincrement())
   cnpjRuc     String   @unique @map("cnpj_ruc") // normalizado: só dígitos
-  nome        String
+  nome        String   @default("")
   dbName      String   @unique @map("db_name") // nome da database do tenant, ex: empresa_12345678000199
   status      String   @default("pendente") // pendente | ativa | suspensa
-  emailMaster String   @map("email_master") // e-mail do admin da empresa, recebe o convite
-  createdAt   DateTime @default(now()) @map("created_at")
+  emailMaster String   @default("") @map("email_master") // e-mail do admin da empresa, recebe o convite
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
 
   inviteTokens      InviteToken[]
   integrationTokens IntegrationToken[]
@@ -33,12 +37,35 @@ model Empresa {
   @@map("empresas")
 }
 
+// Conta SMTP ÚNICA do sistema — é dela que saem todos os e-mails (convites de
+// empresa, convites de usuário, testes), independente de qual empresa originou
+// a ação. Vive no catalog, não no banco de cada tenant, justamente porque não é
+// configuração de empresa: só o master edita.
+//
+// A tabela se chama `system_smtp_config` e não `smtp_config` de propósito: por
+// padrão CATALOG_DATABASE_URL cai na mesma database do tenant, onde já existe
+// uma `smtp_config` do schema de tenant — nomes iguais colidiriam na mesma
+// database. A `smtp_config` do tenant virou legado a partir daqui.
+model SystemSmtpConfig {
+  id          Int      @id @default(1)
+  host        String   @default("")
+  port        Int      @default(587)
+  secure      Boolean  @default(false)
+  user        String   @default("")
+  passwordEnc String   @default("") @map("password_enc")
+  fromName    String   @default("MGSIS Analytics") @map("from_name")
+  fromEmail   String   @default("") @map("from_email")
+  updatedAt   DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@map("system_smtp_config")
+}
+
 model MasterUser {
   id           Int      @id @default(autoincrement())
   email        String   @unique
-  passwordHash String   @map("password_hash")
+  passwordHash String   @default("") @map("password_hash")
   name         String   @default("")
-  createdAt    DateTime @default(now()) @map("created_at")
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
 
   @@map("master_users")
 }
@@ -47,15 +74,17 @@ model InviteToken {
   id        Int       @id @default(autoincrement())
   empresaId Int       @map("empresa_id")
   tokenHash String    @unique @map("token_hash") // nunca guardar o token em texto puro
-  email     String
+  email     String    @default("")
   role      String    @default("admin") // papel do usuário criado na ativação: "admin" | "user"
-  expiresAt DateTime  @map("expires_at")
-  usedAt    DateTime? @map("used_at")
-  createdAt DateTime  @default(now()) @map("created_at")
+  // O default NOW() aqui é herança do SQL legado e não tem uso prático (todo
+  // convite passa expiresAt explícito); está no datamodel só pra refletir o banco.
+  expiresAt DateTime  @default(now()) @map("expires_at") @db.Timestamptz(6)
+  usedAt    DateTime? @map("used_at") @db.Timestamptz(6)
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
 
-  empresa Empresa @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  empresa Empresa @relation(fields: [empresaId], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
-  @@index([empresaId])
+  @@index([empresaId], map: "idx_invite_tokens_empresa")
   @@map("invite_tokens")
 }
 
@@ -63,11 +92,11 @@ model IntegrationToken {
   id         Int       @id @default(autoincrement())
   empresaId  Int       @map("empresa_id")
   tokenHash  String    @unique @map("token_hash")
-  createdAt  DateTime  @default(now()) @map("created_at")
-  revokedAt  DateTime? @map("revoked_at")
+  createdAt  DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  revokedAt  DateTime? @map("revoked_at") @db.Timestamptz(6)
 
-  empresa Empresa @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  empresa Empresa @relation(fields: [empresaId], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
-  @@index([empresaId])
+  @@index([empresaId], map: "idx_integration_tokens_empresa")
   @@map("integration_tokens")
 }

@@ -2,6 +2,11 @@ import { PrismaClient } from "../../../node_modules/.prisma/catalog-client";
 
 // SQL executado na primeira conexão para criar as tabelas do catalog se ainda
 // não existirem. Mesmo padrão idempotente usado em db.ts para o banco de tenant.
+//
+// ⚠️ CONGELADO NA FASE 7 — igual ao MIGRATION_SQL de db.ts: espelha a migration
+// baseline (prisma/catalog/migrations/20260803120001_init_catalog), é pulado em
+// bancos que já têm `_prisma_migrations`, e mudança de schema entra por
+// `npm run migrate:dev:catalog`, não aqui.
 const CATALOG_MIGRATION_SQL = `
 CREATE TABLE IF NOT EXISTS empresas (
   id           SERIAL PRIMARY KEY,
@@ -63,7 +68,31 @@ function getCatalogDatabaseUrl(): string | undefined {
   return process.env.CATALOG_DATABASE_URL || process.env.DATABASE_URL || undefined;
 }
 
+// Baseline do schema de CATALOG (prisma/catalog/migrations/). Ver a nota em
+// db.ts sobre por que a checagem é pelo nome da migration, e não pela simples
+// existência de `_prisma_migrations`: as duas linhagens dividem a tabela de
+// histórico quando catalog e tenant apontam pra mesma database.
+const CATALOG_BASELINE = "20260803120001_init_catalog";
+
+async function isUnderMigrationControl(prisma: PrismaClient): Promise<boolean> {
+  const [table] = await prisma.$queryRawUnsafe<{ present: boolean }[]>(
+    "SELECT to_regclass('public._prisma_migrations') IS NOT NULL AS present"
+  );
+  if (!table?.present) return false;
+
+  const [row] = await prisma.$queryRawUnsafe<{ adopted: boolean }[]>(
+    `SELECT EXISTS (
+       SELECT 1 FROM _prisma_migrations
+       WHERE migration_name = $1 AND finished_at IS NOT NULL
+     ) AS adopted`,
+    CATALOG_BASELINE
+  );
+  return row?.adopted ?? false;
+}
+
 async function runCatalogMigration(prisma: PrismaClient): Promise<void> {
+  if (await isUnderMigrationControl(prisma)) return;
+
   const statements = CATALOG_MIGRATION_SQL.split(";")
     .map((s) => s.trim())
     .filter((s) => s.length > 0);

@@ -3,6 +3,7 @@ import { getSession } from "@/lib/server/auth";
 import { getCatalogPrisma } from "@/lib/server/catalog-db";
 import { getPrisma } from "@/lib/server/db";
 import { buildTenantUrl } from "@/lib/server/db-config";
+import { deployTenantMigrations } from "@/lib/server/migrate";
 import { getTenantPrisma } from "@/lib/server/tenant";
 import { generateToken } from "@/lib/server/tokens";
 import { sendMail } from "@/lib/server/mailer";
@@ -76,9 +77,22 @@ export async function POST(req: NextRequest) {
   const adminDb = await getPrisma();
   await adminDb.$executeRawUnsafe(`CREATE DATABASE "${dbName}"`);
 
-  // 2. Conectar na database nova já dispara a migração preguiçosa (db.ts) —
-  //    cria todas as tabelas do tenant automaticamente.
-  await getPrisma(buildTenantUrl(dbName));
+  // 2. Aplica as migrations versionadas na database nova (fase 7). Antes isso
+  //    dependia da migração preguiçosa disparada pela primeira conexão; agora o
+  //    tenant já nasce registrado em `_prisma_migrations`, no mesmo histórico
+  //    auditável dos demais.
+  try {
+    await deployTenantMigrations(buildTenantUrl(dbName));
+  } catch (err) {
+    // A database acabou de ser criada nesta requisição e está vazia: derrubá-la
+    // deixa o cadastro repetível. Sem isso, o CNPJ ficaria travado por uma
+    // database órfã que faria o próximo CREATE DATABASE falhar.
+    await adminDb.$executeRawUnsafe(`DROP DATABASE IF EXISTS "${dbName}"`).catch(() => {});
+    return NextResponse.json(
+      { error: `Falha ao criar o schema da empresa: ${(err as Error).message}` },
+      { status: 500 }
+    );
+  }
 
   // 3. Registra a empresa e os tokens no catalog.
   const empresa = await catalog.empresa.create({
@@ -105,10 +119,9 @@ export async function POST(req: NextRequest) {
   let emailSent = false;
   let emailError: string | undefined;
   try {
-    // Envia usando o SMTP configurado na PRÓPRIA empresa do master logado
-    // (não a empresa recém-criada, que ainda nem tem smtp_config preenchido).
-    const masterTenantDb = await getTenantPrisma(session);
-    await sendMail(masterTenantDb, {
+    // SMTP do sistema (catalog) — conta de envio única, não depende de qual
+    // empresa o master está usando na sessão nem da empresa recém-criada.
+    await sendMail({
       to: emailMaster,
       subject: `Ative sua conta — ${nome}`,
       html: `<p>Você foi cadastrado como administrador de <b>${nome}</b> no MGSIS Analytics.</p>

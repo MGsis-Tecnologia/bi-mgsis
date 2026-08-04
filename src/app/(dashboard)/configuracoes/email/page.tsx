@@ -8,9 +8,10 @@ export const dynamic = "force-dynamic";
 export default async function EmailSettingsPage() {
   const session = await getSession();
   if (!session) redirect("/login");
-  // Tela restrita ao admin — hoje o único papel existente; quando o cadastro
-  // multi-empresa entrar, isso passa a valer só para o master do sistema.
-  if (session.role !== "admin") redirect("/dashboard");
+  // Exclusiva do master: a conta SMTP é ÚNICA para todo o sistema (é dela que
+  // saem convites e notificações de todas as empresas), então admin de empresa
+  // não configura nem enxerga. Mesmo critério em /api/settings/smtp e .../test.
+  if (!session.isMaster) redirect("/dashboard");
 
   return (
     <div>

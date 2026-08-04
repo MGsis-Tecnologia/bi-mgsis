@@ -1,6 +1,12 @@
-import type { PrismaClient } from "@prisma/client";
 import nodemailer from "nodemailer";
+import { getCatalogPrisma } from "./catalog-db";
 import { encryptSecret, decryptSecret } from "./crypto";
+
+// A conta SMTP é ÚNICA para todo o sistema e vive no catalog
+// (SystemSmtpConfig), não no banco de cada empresa. Por isso nenhuma função
+// aqui recebe um PrismaClient: antes recebiam, e cada chamador acabava
+// passando o banco do próprio tenant — o convite de usuário de uma empresa
+// tentava usar um SMTP que só o master havia preenchido, e falhava.
 
 export interface SmtpConfigInput {
   host: string;
@@ -25,8 +31,9 @@ export interface SmtpConfigSafe {
 }
 
 /** Config sem o segredo — o único formato que pode voltar para o client. */
-export async function getSmtpConfigSafe(db: PrismaClient): Promise<SmtpConfigSafe | null> {
-  const row = await db.smtpConfig.findUnique({ where: { id: 1 } });
+export async function getSmtpConfigSafe(): Promise<SmtpConfigSafe | null> {
+  const catalog = await getCatalogPrisma();
+  const row = await catalog.systemSmtpConfig.findUnique({ where: { id: 1 } });
   if (!row || !row.host) return null;
   return {
     host: row.host,
@@ -40,14 +47,15 @@ export async function getSmtpConfigSafe(db: PrismaClient): Promise<SmtpConfigSaf
   };
 }
 
-export async function saveSmtpConfig(db: PrismaClient, input: SmtpConfigInput): Promise<void> {
-  const existing = await db.smtpConfig.findUnique({ where: { id: 1 } });
+export async function saveSmtpConfig(input: SmtpConfigInput): Promise<void> {
+  const catalog = await getCatalogPrisma();
+  const existing = await catalog.systemSmtpConfig.findUnique({ where: { id: 1 } });
 
   const passwordEnc = input.password
     ? encryptSecret(input.password)
     : existing?.passwordEnc ?? "";
 
-  await db.smtpConfig.upsert({
+  await catalog.systemSmtpConfig.upsert({
     where: { id: 1 },
     create: {
       id: 1,
@@ -71,10 +79,13 @@ export async function saveSmtpConfig(db: PrismaClient, input: SmtpConfigInput): 
   });
 }
 
-async function getTransporter(db: PrismaClient) {
-  const row = await db.smtpConfig.findUnique({ where: { id: 1 } });
+async function getTransporter() {
+  const catalog = await getCatalogPrisma();
+  const row = await catalog.systemSmtpConfig.findUnique({ where: { id: 1 } });
   if (!row || !row.host || !row.passwordEnc) {
-    throw new Error("Conta SMTP não configurada. Preencha em Configurações > E-mail.");
+    throw new Error(
+      "Conta SMTP do sistema não configurada. O master precisa preenchê-la em Configurações > E-mail."
+    );
   }
 
   return {
@@ -88,16 +99,17 @@ async function getTransporter(db: PrismaClient) {
   };
 }
 
-export async function sendMail(
-  db: PrismaClient,
-  opts: { to: string; subject: string; html: string }
-): Promise<void> {
-  const { transporter, from } = await getTransporter(db);
+export async function sendMail(opts: {
+  to: string;
+  subject: string;
+  html: string;
+}): Promise<void> {
+  const { transporter, from } = await getTransporter();
   await transporter.sendMail({ from, to: opts.to, subject: opts.subject, html: opts.html });
 }
 
-export async function sendTestEmail(db: PrismaClient, to: string): Promise<void> {
-  await sendMail(db, {
+export async function sendTestEmail(to: string): Promise<void> {
+  await sendMail({
     to,
     subject: "MGSIS Analytics — e-mail de teste",
     html: `<p>Este é um e-mail de teste da configuração SMTP do MGSIS Analytics.</p>

@@ -9,6 +9,10 @@
     "lint": "next lint",
     "type-check": "tsc --noEmit",
     "generate:catalog": "prisma generate --schema=prisma/catalog/schema.prisma",
+    "migrate:all": "node scripts/migrate-all.mjs",
+    "migrate:check": "node scripts/migrate-all.mjs --check",
+    "migrate:dev": "prisma migrate dev",
+    "migrate:dev:catalog": "prisma migrate dev --schema=prisma/catalog/schema.prisma",
     "postinstall": "prisma generate && npm run generate:catalog"
   },
   "dependencies": {

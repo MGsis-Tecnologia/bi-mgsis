@@ -8,14 +8,22 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// NOTA (fase 7 — migrations versionadas):
+// Os `@default(...)`, `@db.Timestamptz(6)` e `map:` deste arquivo descrevem o que
+// os bancos criados antes das migrations realmente têm (o SQL idempotente que
+// ainda vive em src/lib/server/db.ts). Isso é proposital: com o datamodel igual
+// ao banco legado, adotar um tenant existente é só `prisma migrate resolve
+// --applied` — nenhum ALTER TABLE roda em produção. Confira com
+// `npm run migrate:check -- <url>` antes de mudar qualquer coisa aqui.
+
 model User {
   id           Int      @id @default(autoincrement())
   email        String   @unique
-  passwordHash String   @map("password_hash")
-  name         String
+  passwordHash String   @default("") @map("password_hash")
+  name         String   @default("")
   role         String   @default("admin") // "admin" | "user"
   isActive     Boolean  @default(true) @map("is_active")
-  createdAt    DateTime @default(now()) @map("created_at")
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
 
   menuAccess MenuPermission[]
 
@@ -29,9 +37,10 @@ model MenuPermission {
   userId  Int    @map("user_id")
   menuKey String @map("menu_key") // mesma chave usada em src/lib/menu-catalog.ts (o href da página)
 
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
   @@unique([userId, menuKey])
+  @@index([userId], map: "idx_menu_permissions_user")
   @@map("menu_permissions")
 }
 
@@ -39,140 +48,140 @@ model MenuPermission {
 // Linha única (id fixo = 1) preenchida pelo master nas Configurações.
 model SmtpConfig {
   id          Int      @id @default(1)
-  host        String
+  host        String   @default("")
   port        Int      @default(587)
   secure      Boolean  @default(false)
-  user        String
-  passwordEnc String   @map("password_enc")
+  user        String   @default("")
+  passwordEnc String   @default("") @map("password_enc")
   fromName    String   @default("MGSIS Analytics") @map("from_name")
-  fromEmail   String   @map("from_email")
-  updatedAt   DateTime @updatedAt @map("updated_at")
+  fromEmail   String   @default("") @map("from_email")
+  updatedAt   DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   @@map("smtp_config")
 }
 
 model DatasetMeta {
   kind       String @id
-  filename   String
-  rowCount   Int    @map("row_count")
-  importedAt String @map("imported_at")
+  filename   String @default("")
+  rowCount   Int    @default(0) @map("row_count")
+  importedAt String @default("") @map("imported_at")
 
   @@map("dataset_meta")
 }
 
 model SaleItem {
   id           Int    @id @default(autoincrement())
-  date         String
-  orderId      String @map("order_id")
+  date         String @default("")
+  orderId      String @default("") @map("order_id")
   orderType    String @default("VENDA") @map("order_type")
-  channel      String
-  clientId     String @map("client_id")
-  clientName   String @map("client_name")
+  channel      String @default("")
+  clientId     String @default("") @map("client_id")
+  clientName   String @default("") @map("client_name")
   clientCity   String @default("") @map("client_city")
-  productId    String @map("product_id")
-  productName  String @map("product_name")
-  quantity     Float
-  totalOrig    Float  @map("total_orig")
-  costOrig     Float  @map("cost_orig")
+  productId    String @default("") @map("product_id")
+  productName  String @default("") @map("product_name")
+  quantity     Float  @default(0)
+  totalOrig    Float  @default(0) @map("total_orig")
+  costOrig     Float  @default(0) @map("cost_orig")
   discountOrig Float  @default(0) @map("discount_orig")
-  subgroupId   String @map("subgroup_id")
-  subgroupName String @map("subgroup_name")
-  sellerId     String @map("seller_id")
-  sellerName   String @map("seller_name")
-  currencyId   String @map("currency_id")
-  currencyCode String @map("currency_code")
+  subgroupId   String @default("") @map("subgroup_id")
+  subgroupName String @default("") @map("subgroup_name")
+  sellerId     String @default("") @map("seller_id")
+  sellerName   String @default("") @map("seller_name")
+  currencyId   String @default("1") @map("currency_id")
+  currencyCode String @default("R$") @map("currency_code")
   empresaId    String @default("") @map("empresa_id")
 
-  @@index([date])
-  @@index([clientId])
-  @@index([productId])
-  @@index([sellerId])
-  @@index([empresaId])
+  @@index([date], map: "idx_sale_items_date")
+  @@index([clientId], map: "idx_sale_items_client_id")
+  @@index([productId], map: "idx_sale_items_product_id")
+  @@index([sellerId], map: "idx_sale_items_seller_id")
+  @@index([empresaId], map: "idx_sale_items_empresa_id")
   @@map("sale_items")
 }
 
 model ReceivableItem {
   id           Int     @id @default(autoincrement())
-  documentId   String  @map("document_id")
-  clientId     String  @map("client_id")
-  clientName   String  @map("client_name")
+  documentId   String  @default("") @map("document_id")
+  clientId     String  @default("") @map("client_id")
+  clientName   String  @default("") @map("client_name")
   clientCity   String  @default("") @map("client_city")
-  issueDate    String  @map("issue_date")
-  dueDate      String  @map("due_date")
-  receivedDate String  @map("received_date")
-  isPaid       Boolean @map("is_paid")
-  entryType    String  @map("entry_type")
-  amountOrig   Float   @map("amount_orig")
-  sellerId     String  @map("seller_id")
-  sellerName   String  @map("seller_name")
-  currencyId   String  @map("currency_id")
-  currencyCode String  @map("currency_code")
+  issueDate    String  @default("") @map("issue_date")
+  dueDate      String  @default("") @map("due_date")
+  receivedDate String  @default("") @map("received_date")
+  isPaid       Boolean @default(false) @map("is_paid")
+  entryType    String  @default("") @map("entry_type")
+  amountOrig   Float   @default(0) @map("amount_orig")
+  sellerId     String  @default("") @map("seller_id")
+  sellerName   String  @default("") @map("seller_name")
+  currencyId   String  @default("1") @map("currency_id")
+  currencyCode String  @default("R$") @map("currency_code")
   empresaId    String  @default("") @map("empresa_id")
 
-  @@index([dueDate])
-  @@index([clientId])
-  @@index([isPaid])
-  @@index([empresaId])
+  @@index([dueDate], map: "idx_receivable_due_date")
+  @@index([clientId], map: "idx_receivable_client_id")
+  @@index([isPaid], map: "idx_receivable_is_paid")
+  @@index([empresaId], map: "idx_receivable_empresa")
   @@map("receivable_items")
 }
 
 model PayableItem {
   id           Int     @id @default(autoincrement())
-  documentId   String  @map("document_id")
-  supplierId   String  @map("supplier_id")
-  supplierName String  @map("supplier_name")
-  issueDate    String  @map("issue_date")
-  dueDate      String  @map("due_date")
-  paidDate     String  @map("paid_date")
-  isPaid       Boolean @map("is_paid")
-  entryType    String  @map("entry_type")
-  amountOrig   Float   @map("amount_orig")
-  currencyId   String  @map("currency_id")
-  currencyCode String  @map("currency_code")
+  documentId   String  @default("") @map("document_id")
+  supplierId   String  @default("") @map("supplier_id")
+  supplierName String  @default("") @map("supplier_name")
+  issueDate    String  @default("") @map("issue_date")
+  dueDate      String  @default("") @map("due_date")
+  paidDate     String  @default("") @map("paid_date")
+  isPaid       Boolean @default(false) @map("is_paid")
+  entryType    String  @default("") @map("entry_type")
+  amountOrig   Float   @default(0) @map("amount_orig")
+  currencyId   String  @default("1") @map("currency_id")
+  currencyCode String  @default("R$") @map("currency_code")
   empresaId    String  @default("") @map("empresa_id")
 
-  @@index([dueDate])
-  @@index([supplierId])
-  @@index([isPaid])
-  @@index([empresaId])
+  @@index([dueDate], map: "idx_payable_due_date")
+  @@index([supplierId], map: "idx_payable_supplier")
+  @@index([isPaid], map: "idx_payable_is_paid")
+  @@index([empresaId], map: "idx_payable_empresa")
   @@map("payable_items")
 }
 
 model InventoryItem {
   id               Int    @id @default(autoincrement())
-  productId        String @map("product_id")
-  description      String
-  manufacturerCode String @map("manufacturer_code")
-  stock            Float
-  costTotalUSD     Float  @map("cost_total_usd")
-  minStock         Float  @map("min_stock")
+  productId        String @default("") @map("product_id")
+  description      String @default("")
+  manufacturerCode String @default("") @map("manufacturer_code")
+  stock            Float  @default(0)
+  costTotalUSD     Float  @default(0) @map("cost_total_usd")
+  minStock         Float  @default(0) @map("min_stock")
   currencyId       String @default("1") @map("currency_id")
   currencyCode     String @default("R$") @map("currency_code")
   empresaId        String @default("") @map("empresa_id")
 
-  @@index([productId])
-  @@index([empresaId])
+  @@index([productId], map: "idx_inventory_product_id")
+  @@index([empresaId], map: "idx_inventory_empresa")
   @@map("inventory_items")
 }
 
 model CaixaItem {
   id                   Int    @id @default(autoincrement())
-  date                 String
-  centroCustoId        String @map("centro_custo_id")
-  centroCustoDescricao String @map("centro_custo_descricao")
-  planoContaId         String @map("plano_conta_id")
-  planoContaCodigo     String @map("plano_conta_codigo")
-  planoContaDescricao  String @map("plano_conta_descricao")
-  caixaId              String @map("caixa_id")
-  caixaDescricao       String @map("caixa_descricao")
-  valorDocumento       Float  @map("valor_documento")
-  moedaId              String @map("moeda_id")
-  moedaSigla           String @map("moeda_sigla")
+  date                 String @default("")
+  centroCustoId        String @default("") @map("centro_custo_id")
+  centroCustoDescricao String @default("") @map("centro_custo_descricao")
+  planoContaId         String @default("") @map("plano_conta_id")
+  planoContaCodigo     String @default("") @map("plano_conta_codigo")
+  planoContaDescricao  String @default("") @map("plano_conta_descricao")
+  caixaId              String @default("") @map("caixa_id")
+  caixaDescricao       String @default("") @map("caixa_descricao")
+  valorDocumento       Float  @default(0) @map("valor_documento")
+  moedaId              String @default("1") @map("moeda_id")
+  moedaSigla           String @default("R$") @map("moeda_sigla")
   empresaId            String @default("") @map("empresa_id")
 
-  @@index([date])
-  @@index([planoContaCodigo])
-  @@index([empresaId])
+  @@index([date], map: "idx_caixa_date")
+  @@index([planoContaCodigo], map: "idx_caixa_plano")
+  @@index([empresaId], map: "idx_caixa_empresa")
   @@map("caixa_items")
 }
 
@@ -180,8 +189,8 @@ model CaixaItem {
 // Nomes de cliente/vendedor/produto já vêm embutidos, sem depender de tabelas do ERP.
 model OrcamentoItem {
   id                       Int     @id @default(autoincrement())
-  orcamentoId              String  @map("orcamento_id")
-  orcamentoData            String  @map("orcamento_data")
+  orcamentoId              String  @default("") @map("orcamento_id")
+  orcamentoData            String  @default("") @map("orcamento_data")
   orcamentoConfirmado      Boolean @default(false) @map("orcamento_confirmado")
   orcamentoDataConfirmacao String  @default("") @map("orcamento_data_confirmacao")
   clienteId                String  @default("") @map("cliente_id")
@@ -199,8 +208,8 @@ model OrcamentoItem {
   itemQuantidadeConfirmada Float   @default(0) @map("item_quantidade_confirmada")
   itemTotal                Float   @default(0) @map("item_total")
 
-  @@index([orcamentoData])
-  @@index([empresaId])
-  @@index([vendedorId])
+  @@index([orcamentoData], map: "idx_orcamento_data")
+  @@index([empresaId], map: "idx_orcamento_empresa")
+  @@index([vendedorId], map: "idx_orcamento_vendedor")
   @@map("orcamento_items")
 }

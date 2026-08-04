@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { getSession } from "@/lib/server/auth";
-import { getTenantPrisma } from "@/lib/server/tenant";
 import { getSmtpConfigSafe, saveSmtpConfig } from "@/lib/server/mailer";
 import type { SessionPayload } from "@/lib/server/auth-core";
 
@@ -18,24 +17,25 @@ const bodySchema = z.object({
   fromEmail: z.string().trim().email(),
 });
 
-async function requireAdmin(): Promise<SessionPayload | null> {
+// Só o master: a conta SMTP é única para todo o sistema, não uma configuração
+// por empresa. Admin de empresa não lê nem grava (nem o host, nem o remetente).
+async function requireMaster(): Promise<SessionPayload | null> {
   const session = await getSession();
-  if (!session || (session.role !== "admin" && !session.isMaster)) return null;
+  if (!session || !session.isMaster) return null;
   return session;
 }
 
 export async function GET() {
-  const session = await requireAdmin();
+  const session = await requireMaster();
   if (!session) {
     return NextResponse.json({ error: "Não autorizado" }, { status: 403 });
   }
-  const db = await getTenantPrisma(session);
-  const config = await getSmtpConfigSafe(db);
+  const config = await getSmtpConfigSafe();
   return NextResponse.json({ config });
 }
 
 export async function PUT(req: NextRequest) {
-  const session = await requireAdmin();
+  const session = await requireMaster();
   if (!session) {
     return NextResponse.json({ error: "Não autorizado" }, { status: 403 });
   }
@@ -47,7 +47,6 @@ export async function PUT(req: NextRequest) {
     return NextResponse.json({ error: "Dados inválidos. Confira servidor, porta e e-mails." }, { status: 400 });
   }
 
-  const db = await getTenantPrisma(session);
-  await saveSmtpConfig(db, parsed);
+  await saveSmtpConfig(parsed);
   return NextResponse.json({ ok: true });
 }

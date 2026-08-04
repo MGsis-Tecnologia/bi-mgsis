@@ -132,13 +132,15 @@ export function Sidebar({ isMaster = false, role, allowedMenus }: SidebarProps) 
 
   const isAdmin = role === "admin";
   const navGroups = React.useMemo(() => {
-    let groups = NAV;
+    // Configurações hoje só tem o SMTP, que é uma conta de envio ÚNICA do
+    // sistema inteiro — por isso a seção é exclusiva do master. Admin de
+    // empresa não deve nem ver que ela existe.
+    let groups = isMaster ? NAV : NAV.filter((g) => g.sectionKey !== SETTINGS_SECTION_KEY);
 
-    // role "user": só enxerga os menus liberados (allow-list) e nunca a
-    // seção de Configurações (é exclusiva de admin/master).
+    // role "user": além disso, só enxerga os menus liberados (allow-list).
     if (!isMaster && !isAdmin) {
       const allowed = new Set(allowedMenus ?? []);
-      groups = NAV.filter((g) => g.sectionKey !== SETTINGS_SECTION_KEY)
+      groups = groups
         .map((g) => ({ ...g, items: g.items.filter((i) => allowed.has(i.href)) }))
         .filter((g) => g.items.length > 0);
     }

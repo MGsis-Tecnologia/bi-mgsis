@@ -85,7 +85,10 @@ export async function POST(req: NextRequest) {
   let emailSent = false;
   let emailError: string | undefined;
   try {
-    await sendMail(tenantDb, {
+    // SMTP do sistema (catalog), não o do tenant: a empresa não configura conta
+    // de envio — antes isto passava `tenantDb` e o convite falhava em qualquer
+    // empresa que não fosse a do master.
+    await sendMail({
       to: email,
       subject: "Você foi convidado — MGSIS Analytics",
       html: `<p>Você foi convidado para acessar o MGSIS Analytics.</p>

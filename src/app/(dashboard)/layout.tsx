@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { getDatabaseUrl } from "@/lib/server/db-config";
 import { testConnection } from "@/lib/server/db";
 import { getSession } from "@/lib/server/auth";
+import { getCatalogPrisma } from "@/lib/server/catalog-db";
 import { Sidebar } from "@/components/layout/sidebar";
 import { Topbar } from "@/components/layout/topbar";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -24,6 +25,16 @@ export default async function DashboardLayout({
 
   const session = await getSession();
   if (!session) redirect("/login");
+
+  // Empresa suspensa derruba a sessão já aberta. O proxy roda no Edge e não
+  // consulta banco, então sem esta checagem quem já estava logado continuaria
+  // com o app na tela até o JWT expirar (30 dias). O master é exceção: precisa
+  // conseguir entrar pra reativar a empresa.
+  if (!session.isMaster) {
+    const catalog = await getCatalogPrisma();
+    const empresa = await catalog.empresa.findUnique({ where: { id: session.empresaId } });
+    if (!empresa || empresa.status !== "ativa") redirect("/login");
+  }
 
   const initials = session.name
     .split(" ")

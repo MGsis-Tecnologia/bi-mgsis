@@ -3,6 +3,13 @@ import { getDatabaseUrl } from "./db-config";
 
 // SQL executado na primeira conexão para criar as tabelas se ainda não existirem.
 // Usar CREATE TABLE IF NOT EXISTS garante idempotência.
+//
+// ⚠️ CONGELADO NA FASE 7. Este bloco descreve o estado da migration baseline
+// (prisma/migrations/20260803120000_init) e existe só como rede de segurança pra
+// bancos provisionados fora do fluxo normal — ele é PULADO em qualquer banco que
+// já tenha `_prisma_migrations` (ver runMigration abaixo). Mudança de schema
+// agora entra por `npm run migrate:dev`, nunca aqui: editar este SQL sem uma
+// migration correspondente recria exatamente o drift que a fase 7 eliminou.
 const MIGRATION_SQL = `
 CREATE TABLE IF NOT EXISTS users (
   id            SERIAL PRIMARY KEY,
@@ -236,7 +243,45 @@ function scheduleEviction(): void {
 // Chave arbitrária (mas fixa) para o advisory lock do Postgres.
 const MIGRATION_LOCK_KEY = 727272;
 
+// Baseline do schema de TENANT (prisma/migrations/). Nome fixo: uma vez criada, a
+// migration inicial nunca é renomeada. Checar por ela — e não só pela existência
+// de `_prisma_migrations` — importa porque catalog e tenant podem dividir a mesma
+// database (CATALOG_DATABASE_URL cai em DATABASE_URL por padrão): lá as duas
+// linhagens convivem na mesma tabela de histórico, e olhar só a tabela faria o
+// tenant se achar migrado por causa do baseline do catalog, ou vice-versa.
+const TENANT_BASELINE = "20260803120000_init";
+
+/**
+ * Bancos sob controle das migrations versionadas (fase 7) têm o baseline de
+ * tenant registrado em `_prisma_migrations`. Neles o schema é responsabilidade
+ * do `prisma migrate deploy` (scripts/migrate-all.mjs, rodado no start do
+ * container) e o app não deve mais emitir DDL nenhum.
+ */
+async function isUnderMigrationControl(prisma: PrismaClient): Promise<boolean> {
+  // Em duas etapas de propósito: o Postgres valida a tabela no parse, então
+  // referenciar `_prisma_migrations` numa query condicional estouraria 42P01
+  // justamente no caso que interessa (banco ainda não adotado).
+  const [table] = await prisma.$queryRawUnsafe<{ present: boolean }[]>(
+    "SELECT to_regclass('public._prisma_migrations') IS NOT NULL AS present"
+  );
+  if (!table?.present) return false;
+
+  const [row] = await prisma.$queryRawUnsafe<{ adopted: boolean }[]>(
+    `SELECT EXISTS (
+       SELECT 1 FROM _prisma_migrations
+       WHERE migration_name = $1 AND finished_at IS NOT NULL
+     ) AS adopted`,
+    TENANT_BASELINE
+  );
+  return row?.adopted ?? false;
+}
+
 async function runMigration(prisma: PrismaClient): Promise<void> {
+  if (await isUnderMigrationControl(prisma)) {
+    console.log("⏭️  Banco sob migrations versionadas — SQL preguiçoso ignorado");
+    return;
+  }
+
   const statements = MIGRATION_SQL.split(";")
     .map((s) => s.trim())
     .filter((s) => s.length > 0);

@@ -1,0 +1,9 @@
+# O repo é editado no Windows (core.autocrlf=true), mas estes arquivos são
+# executados dentro da imagem Alpine. Com CRLF, o shell falha no shebang com um
+# "not found" enigmático — fixar LF evita isso no checkout.
+*.sh text eol=lf
+Dockerfile text eol=lf
+
+# SQL das migrations: o Prisma valida o checksum do arquivo, então o conteúdo
+# precisa ser byte-a-byte igual em qualquer sistema operacional.
+*.sql text eol=lf

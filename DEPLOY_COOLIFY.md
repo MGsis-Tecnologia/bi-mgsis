@@ -9,7 +9,8 @@ gerenciado pelo Coolify. Não usa `docker-compose`.
   tudo numa imagem só: as rotas de página, os Server Components e a API em
   `/api/*` saem do mesmo processo Node (`server.js`).
 - `/health` é a única rota fora desse padrão — existe para o healthcheck do
-  Docker/Coolify e, de quebra, dispara a criação das tabelas no primeiro boot.
+  Docker/Coolify. As tabelas já vêm criadas pelas migrations que o entrypoint
+  aplica antes do server subir (ver abaixo).
 - O Postgres roda **fora** da imagem, como recurso separado (Postgres do
   Coolify, ou qualquer Postgres acessível por `DATABASE_URL`).
 
@@ -57,18 +58,58 @@ gerenciado pelo Coolify. Não usa `docker-compose`.
 
 ## O que acontece sozinho no boot
 
-- O app **não** roda migration no boot; as tabelas são criadas de forma
-  **preguiçosa e idempotente** (`CREATE TABLE IF NOT EXISTS`, com advisory lock
-  do Postgres) na primeira vez que uma conexão é aberta — ver
-  `src/lib/server/db.ts`.
-- O healthcheck (`GET /health`) abre essa primeira conexão, então as tabelas
-  já são criadas assim que o container sobe, antes de qualquer usuário acessar.
+- O entrypoint (`scripts/docker-entrypoint.sh`) roda `scripts/migrate-all.mjs`
+  **antes** de subir o server: aplica `prisma migrate deploy` no banco `catalog`
+  e depois em **cada** database de tenant (uma por empresa cadastrada, mais a
+  `DATABASE_URL` padrão).
+- Falha em um tenant **não** derruba o boot nem impede os outros: o script
+  isola cada banco, imprime um relatório no log do container e o app sobe
+  mesmo assim. Audite depois com `npm run migrate:check`.
 - `/health` responde `200 {"status":"ok","databaseReachable":true}` quando o
   banco está acessível — é o sinal que o Coolify usa pra marcar o deploy como
   saudável. Se o banco estiver fora, responde `503`.
-- **Mudanças destrutivas** de schema (remover/renomear coluna, mudar tipo) não
-  aplicam sozinhas — `CREATE TABLE IF NOT EXISTS` é aditivo. Para isso, altere
-  o SQL em `db.ts` / rode um `ALTER TABLE` manual no Postgres.
+- O `HEALTHCHECK` tem `start-period` de 120s porque esse passo de migração
+  acontece antes do server atender a primeira requisição, e o tempo cresce
+  junto com o número de empresas.
+
+## Mudanças de schema (migrations versionadas)
+
+O schema é versionado em `prisma/migrations/` (tenant) e
+`prisma/catalog/migrations/` (catalog). Fluxo pra alterar qualquer tabela:
+
+```bash
+# 1. edite prisma/schema.prisma (ou prisma/catalog/schema.prisma)
+npm run migrate:dev           # gera a migration do tenant e aplica no banco local
+npm run migrate:dev:catalog   # idem, para o catalog
+
+# 2. commite a pasta da migration junto com o schema
+# 3. o deploy aplica em produção sozinho, no boot do container
+```
+
+Comandos úteis:
+
+| Comando | O que faz |
+|---|---|
+| `npm run migrate:all` | Aplica as migrations pendentes no catalog e em todos os tenants |
+| `npm run migrate:check` | Só audita: mostra o estado de cada banco, sem alterar nada |
+
+- **Mudanças destrutivas** (remover/renomear coluna, mudar tipo) agora são
+  suportadas — é só escrever na migration. A limitação antiga do
+  `CREATE TABLE IF NOT EXISTS` não vale mais.
+- O SQL idempotente em `src/lib/server/db.ts` / `catalog-db.ts` continua ali,
+  mas **congelado** no estado da migration inicial e como rede de segurança:
+  ele é ignorado em qualquer banco que já tenha o baseline registrado em
+  `_prisma_migrations`. Não edite esse SQL — mudança de schema entra por
+  migration, senão o drift que as migrations eliminaram volta.
+
+### Adoção de bancos criados antes das migrations
+
+Bancos que já existiam são "adotados" automaticamente pelo `migrate-all`: ele
+confere que o schema real bate com o datamodel e, só então, marca a migration
+inicial como aplicada — **nenhum `ALTER TABLE` roda**. Se o banco estiver
+defasado, a adoção é **recusada** e o drift é impresso, em vez de gravar um
+baseline errado. Nesse caso, suba o app uma vez contra aquele banco (o SQL
+idempotente põe o schema em dia) e rode `npm run migrate:all` de novo.
 
 ## Primeiro acesso
 
