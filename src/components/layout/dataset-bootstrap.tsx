@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { usePathname } from "next/navigation";
 import { Loader2 } from "lucide-react";
 import {
   useDatasetStore,
@@ -57,11 +58,21 @@ async function syncOne<T extends { importedAt: string }>(
   }
 }
 
+// Telas já migradas para agregação no servidor (fase B): não dependem do store
+// e portanto não podem pagar o download completo. Enquanto as demais não são
+// migradas, esta lista é o interruptor — quando ela cobrir todas as rotas, este
+// componente inteiro sai junto com o store e o IndexedDB (fase C).
+const ROTAS_SEM_STORE = new Set(["/dashboard", "/vendas"]);
+
 export function DatasetBootstrap() {
+  const pathname = usePathname();
   const isLoaded = useDatasetStore((s) => s.isLoaded);
   const [progress, setProgress] = React.useState("");
+  const dispensado = ROTAS_SEM_STORE.has(pathname);
 
   React.useEffect(() => {
+    if (dispensado) return;
+
     Promise.all([
       syncOne<StoredDataset>("sales", IDB_KEY),
       syncOne<StoredReceivables>("receivable", RECEIVABLES_IDB_KEY),
@@ -83,9 +94,9 @@ export function DatasetBootstrap() {
       .catch(() => {
         useDatasetStore.getState()._setLoaded();
       });
-  }, []);
+  }, [dispensado]);
 
-  if (isLoaded) return null;
+  if (dispensado || isLoaded) return null;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm">

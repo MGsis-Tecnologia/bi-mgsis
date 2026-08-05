@@ -171,11 +171,28 @@ function detectCountry(
   return "PY";
 }
 
-export function aggregateSalesByCity(orders: ImportedOrder[]): Record<string, CityMetrics> {
+/**
+ * Uma "entrada" de venda por cidade. Aceita tanto um pedido individual quanto
+ * um grupo já somado — o que permite alimentar esta função com o resultado
+ * agregado pelo Postgres (centenas de linhas) em vez da lista inteira de
+ * pedidos, sem duplicar a normalização de nome nem a geocodificação.
+ */
+export interface CitySalesInput {
+  /** Pode vir vazia/ausente — entradas sem cidade são ignoradas. */
+  clientCity: string | undefined;
+  currencyId: string;
+  totalBRL: number;
+  /** Quantos pedidos esta entrada representa (1 para um pedido individual). */
+  orderCount: number;
+}
+
+export function aggregateSalesByCityFrom(
+  entradas: CitySalesInput[]
+): Record<string, CityMetrics> {
   const cityData: Record<string, CityMetrics> = {};
   const coordCache: Record<string, { lat: number; lng: number; country: "BR" | "PY" }> = {};
 
-  for (const order of orders) {
+  for (const order of entradas) {
     const cityRaw = order.clientCity?.trim();
     if (!cityRaw) continue; // Ignora se não tem cidade
 
@@ -221,7 +238,7 @@ export function aggregateSalesByCity(orders: ImportedOrder[]): Record<string, Ci
     }
 
     cityData[cityKey].totalSales += order.totalBRL;
-    cityData[cityKey].orderCount += 1;
+    cityData[cityKey].orderCount += order.orderCount;
   }
 
   // Calcula ticket médio
@@ -232,6 +249,18 @@ export function aggregateSalesByCity(orders: ImportedOrder[]): Record<string, Ci
   }
 
   return cityData;
+}
+
+/** Caminho antigo, a partir da lista de pedidos (telas ainda não migradas). */
+export function aggregateSalesByCity(orders: ImportedOrder[]): Record<string, CityMetrics> {
+  return aggregateSalesByCityFrom(
+    orders.map((o) => ({
+      clientCity: o.clientCity,
+      currencyId: o.currencyId,
+      totalBRL: o.totalBRL,
+      orderCount: 1,
+    }))
+  );
 }
 
 export function separateByContinry(

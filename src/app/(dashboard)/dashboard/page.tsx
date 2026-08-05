@@ -15,50 +15,38 @@ import { BarChartH } from "@/components/charts/bar-chart-h";
 import { DonutChart } from "@/components/charts/donut-chart";
 import { Heatmap } from "@/components/charts/heatmap";
 import { Money } from "@/components/dashboard/money";
-import { useDataset, useFilteredOrders } from "@/lib/hooks/use-dataset";
+import { useDashboardAnalytics } from "@/lib/hooks/use-dashboard-analytics";
 import { useFilters } from "@/lib/store/filters";
-import { computeKpisWithComparison, revenueBySubgroup } from "@/lib/analytics/kpis";
 import { comparisonLabel } from "@/lib/utils/dates";
-import { dailySeries, heatmapByDayOfWeek, monthlySeries, yearlySeries } from "@/lib/analytics/timeseries";
-import { generateInsights } from "@/lib/analytics/insights";
-import { sellerMetrics } from "@/lib/analytics/sellers";
-import { productABC } from "@/lib/analytics/abc";
 import { formatCurrency, formatNumber, formatPercent } from "@/lib/utils/format";
 import { useTranslation } from "@/lib/hooks/use-translation";
 
 export default function ExecutiveDashboardPage() {
   const { t } = useTranslation();
-  const ds = useDataset();
-  const orders = useFilteredOrders();
   const currency = useFilters((s) => s.currency);
   const getRange = useFilters((s) => s.getRange);
   const preset = useFilters((s) => s.preset);
   const customRange = useFilters((s) => s.customRange);
 
+  // Tudo agregado no servidor: o navegador recebe números prontos, não linhas.
+  const { data, loading, error } = useDashboardAnalytics();
+
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const range = React.useMemo(() => getRange(), [preset, customRange, getRange]);
-
-  const kpi = React.useMemo(() => computeKpisWithComparison(ds.orders, range, preset), [ds.orders, range, preset]);
-  const monthly = React.useMemo(() => monthlySeries(orders, range), [orders, range]);
-  const daily = React.useMemo(() => dailySeries(orders, range), [orders, range]);
-  const yearly = React.useMemo(() => yearlySeries(orders), [orders]);
-  const insights = React.useMemo(() => generateInsights(ds.orders, range, preset), [ds.orders, range, preset]);
   const cmpLabel = React.useMemo(() => comparisonLabel(preset, range), [preset, range]);
-  const heatmap = React.useMemo(() => heatmapByDayOfWeek(orders), [orders]);
 
-  const rbs = React.useMemo(() => revenueBySubgroup(orders), [orders]);
-  const donutData = Object.values(rbs).sort((a, b) => b.value - a.value).map((v) => ({ key: v.id, label: v.label, value: v.value }));
-
-  const channelRevenue = React.useMemo(() => {
-    const m: Record<string, number> = {};
-    for (const o of orders) m[o.channel] = (m[o.channel] ?? 0) + o.totalBRL;
-    return Object.entries(m).map(([k, v]) => ({ key: k, label: k, value: v })).sort((a, b) => b.value - a.value);
-  }, [orders]);
-
-  const topProducts = React.useMemo(() => productABC(orders, ds.products), [orders, ds.products]);
-  const topSellers = React.useMemo(() => sellerMetrics(orders, ds.sellers), [orders, ds.sellers]);
+  const kpi = data?.kpi;
+  const monthly = data?.monthly ?? [];
+  const daily = data?.daily ?? [];
+  const yearly = data?.yearly ?? [];
+  const insights = data?.insights ?? [];
+  const heatmap = data?.heatmap ?? { matrix: [], max: 0 };
+  const donutData = data?.donutData ?? [];
+  const channelRevenue = data?.channelRevenue ?? [];
+  const topProducts = data?.topProducts ?? [];
+  const topSellers = data?.topSellers ?? [];
   const sparkMonthly = monthly.slice(-12);
-  const goalProgress = Math.min(1.4, kpi.revenue / (kpi.previous.revenue * 1.08 || 1));
+  const goalProgress = kpi ? Math.min(1.4, kpi.revenue / (kpi.previous.revenue * 1.08 || 1)) : 0;
 
   const greeting = React.useMemo(() => {
     const h = new Date().getHours();
@@ -72,11 +60,11 @@ export default function ExecutiveDashboardPage() {
       <PageHeader
         eyebrow={t("dashboard.header.eyebrow")}
         title={`${t(greeting === "Bom dia" ? "dashboard.header.greeting.morning" : greeting === "Boa tarde" ? "dashboard.header.greeting.afternoon" : "dashboard.header.greeting.evening")}, Rogério.`}
-        description={t("dashboard.header.description", { count: formatNumber(orders.length) })}
+        description={t("dashboard.header.description", { count: formatNumber(kpi?.ordersCount ?? 0) })}
       >
-        <Badge variant="positive" className="gap-1.5">
+        <Badge variant={loading ? "warning" : "positive"} className="gap-1.5">
           <span className="relative inline-block h-1.5 w-1.5 rounded-full bg-positive pulse-dot" />
-          {t("dashboard.header.synced")}
+          {loading ? "Carregando…" : t("dashboard.header.synced")}
         </Badge>
       </PageHeader>
 
@@ -89,10 +77,31 @@ export default function ExecutiveDashboardPage() {
         <span className="h-px flex-1 bg-border/60" />
       </div>
 
-      {!ds.hasData ? (
-        <EmptyState />
+      {error ? (
+        <div className="rounded-lg border border-negative/30 bg-negative/10 px-4 py-3 text-sm text-negative">
+          Não foi possível carregar os indicadores: {error}
+        </div>
+      ) : !kpi || !data?.hasData ? (
+        loading ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <div key={i} className="h-[128px] animate-pulse rounded-lg bg-muted/40" />
+            ))}
+          </div>
+        ) : (
+          <EmptyState />
+        )
       ) : (
         <>
+          {/* Período sem movimento, mas a empresa tem dados: sem este aviso a tela
+              zerada parece defeito. Acontece no começo de mês, por exemplo. */}
+          {kpi.ordersCount === 0 && (
+            <div className="rounded-lg border border-border bg-muted/30 px-4 py-3 text-sm text-muted-foreground">
+              Nenhum movimento no período selecionado. Ajuste o filtro de data para ver
+              os indicadores.
+            </div>
+          )}
+
           {/* HERO ROW */}
           <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
             <div className="reveal reveal-1">

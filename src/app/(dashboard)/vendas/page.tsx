@@ -12,11 +12,8 @@ import { RevenueAreaChart } from "@/components/charts/revenue-area-chart";
 import { Heatmap } from "@/components/charts/heatmap";
 import { BarChartH } from "@/components/charts/bar-chart-h";
 import { Money } from "@/components/dashboard/money";
-import { useDataset, useFilteredOrders, useFilteredReturns } from "@/lib/hooks/use-dataset";
+import { useVendasAnalytics, type PedidoRecente } from "@/lib/hooks/use-vendas-analytics";
 import { useFilters } from "@/lib/store/filters";
-import { computeKpis } from "@/lib/analytics/kpis";
-import { aggregateSalesByCity, getMaxSales } from "@/lib/analytics/geo-sales";
-import { dailySeries, heatmapByDayOfWeek, monthlySeries, yearlySeries } from "@/lib/analytics/timeseries";
 import { formatCurrency, formatNumber, formatPercent } from "@/lib/utils/format";
 import { useTranslation } from "@/lib/hooks/use-translation";
 
@@ -27,41 +24,46 @@ const SalesHeatmapGeo = dynamic(() => import("@/components/charts/sales-heatmap-
 
 export default function VendasPage() {
   const { t } = useTranslation();
-  const ds = useDataset();
-  const orders = useFilteredOrders();
   const currency = useFilters((s) => s.currency);
-  const getRange = useFilters((s) => s.getRange);
-  const preset = useFilters((s) => s.preset);
-  const customRange = useFilters((s) => s.customRange);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  const range = React.useMemo(() => getRange(), [preset, customRange, getRange]);
 
-  const kpi = React.useMemo(() => computeKpis(orders), [orders]);
+  // Tudo agregado no servidor: o navegador recebe números prontos, não linhas.
+  const { data, loading, error } = useVendasAnalytics();
 
-  // Devoluções — trilha separada (valores vêm positivos; exibidos negativos/vermelho)
-  const returns = useFilteredReturns();
-  const totalReturns = React.useMemo(() => returns.reduce((s, o) => s + o.totalBRL, 0), [returns]);
-  const returnsPctOfSales = kpi.revenue > 0 ? totalReturns / kpi.revenue : 0;
+  const kpi = data?.kpi;
+  const totalReturns = data?.totalReturns ?? 0;
+  const returnsPctOfSales = data?.returnsPctOfSales ?? 0;
+  const monthly = data?.monthly ?? [];
+  const daily = data?.daily ?? [];
+  const yearly = data?.yearly ?? [];
+  const heatmap = data?.heatmap ?? { matrix: [], max: 0 };
+  const byChannel = data?.channels ?? [];
+  const citiesSales = data?.cities ?? {};
+  const maxSales = data?.maxSales ?? 0;
 
-  const monthly = React.useMemo(() => monthlySeries(orders, range), [orders, range]);
-  const daily = React.useMemo(() => dailySeries(orders, range), [orders, range]);
-  const yearly = React.useMemo(() => yearlySeries(orders), [orders]);
-  const heatmap = React.useMemo(() => heatmapByDayOfWeek(orders), [orders]);
-
-  const byChannel = React.useMemo(() => {
-    const m: Record<string, number> = {};
-    for (const o of orders) m[o.channel] = (m[o.channel] ?? 0) + o.totalBRL;
-    return Object.entries(m).map(([k, v]) => ({ key: k, label: k, value: v })).sort((a, b) => b.value - a.value);
-  }, [orders]);
-
-  const citiesSales = React.useMemo(() => aggregateSalesByCity(orders), [orders]);
-  const maxSales = React.useMemo(() => getMaxSales(citiesSales), [citiesSales]);
-
-  if (!ds.hasData) {
+  if (error) {
     return (
       <div className="space-y-8">
         <PageHeader eyebrow={t("vendas.header.eyebrow")} title={t("vendas.header.title")} description={t("vendas.header.desc")} />
-        <EmptyState />
+        <div className="rounded-lg border border-negative/30 bg-negative/10 px-4 py-3 text-sm text-negative">
+          Não foi possível carregar as vendas: {error}
+        </div>
+      </div>
+    );
+  }
+
+  if (!kpi || !data?.hasData) {
+    return (
+      <div className="space-y-8">
+        <PageHeader eyebrow={t("vendas.header.eyebrow")} title={t("vendas.header.title")} description={t("vendas.header.desc")} />
+        {loading ? (
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            {Array.from({ length: 8 }).map((_, i) => (
+              <div key={i} className="h-[104px] animate-pulse rounded-lg bg-muted/40" />
+            ))}
+          </div>
+        ) : (
+          <EmptyState />
+        )}
       </div>
     );
   }
@@ -155,21 +157,20 @@ export default function VendasPage() {
         <CardHeader>
           <div className="flex items-center justify-between">
             <CardTitle>{t("vendas.orders.title")}</CardTitle>
-            <Badge variant="ghost">{t("vendas.orders.badge", { count: orders.length.toLocaleString("pt-BR") })}</Badge>
+            <Badge variant="ghost">{t("vendas.orders.badge", { count: kpi.ordersCount.toLocaleString("pt-BR") })}</Badge>
           </div>
         </CardHeader>
         <CardContent className="px-0">
-          <RecentOrdersTable />
+          <RecentOrdersTable orders={data.recentOrders} />
         </CardContent>
       </Card>
     </div>
   );
 }
 
-function RecentOrdersTable() {
+// Os 12 pedidos já vêm ordenados e recortados pelo servidor.
+function RecentOrdersTable({ orders: recent }: { orders: PedidoRecente[] }) {
   const { t } = useTranslation();
-  const orders = useFilteredOrders();
-  const recent = React.useMemo(() => [...orders].sort((a, b) => b.date.localeCompare(a.date)).slice(0, 12), [orders]);
 
   return (
     <div className="overflow-x-auto">
@@ -193,8 +194,8 @@ function RecentOrdersTable() {
               <td className="py-2.5 px-5 truncate max-w-[180px]">{o.clientName}</td>
               <td className="py-2.5 px-5 text-muted-foreground">{o.sellerName}</td>
               <td className="py-2.5 px-5 text-muted-foreground">{o.channel}</td>
-              <td className="py-2.5 px-5 text-right tabular">{o.items.reduce((s, it) => s + it.quantity, 0)}</td>
-              <td className="py-2.5 px-5 text-right tabular font-medium"><Money value={o.totalBRL} /></td>
+              <td className="py-2.5 px-5 text-right tabular">{o.items}</td>
+              <td className="py-2.5 px-5 text-right tabular font-medium"><Money value={o.total} /></td>
               <td className="py-2.5 px-5 text-right tabular text-muted-foreground">{formatPercent(o.marginPct, { decimals: 1 })}</td>
               <td className="py-2.5 px-5 text-right tabular text-muted-foreground">{new Date(o.date + "T00:00:00").toLocaleDateString("pt-BR")}</td>
             </tr>
