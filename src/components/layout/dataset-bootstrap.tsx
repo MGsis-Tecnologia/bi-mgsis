@@ -62,7 +62,7 @@ async function syncOne<T extends { importedAt: string }>(
 // e portanto não podem pagar o download completo. Enquanto as demais não são
 // migradas, esta lista é o interruptor — quando ela cobrir todas as rotas, este
 // componente inteiro sai junto com o store e o IndexedDB (fase C).
-const ROTAS_SEM_STORE = new Set(["/dashboard", "/vendas"]);
+const ROTAS_SEM_STORE = new Set(["/dashboard", "/vendas", "/produtos"]);
 
 export function DatasetBootstrap() {
   const pathname = usePathname();

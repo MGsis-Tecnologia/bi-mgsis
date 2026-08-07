@@ -588,21 +588,29 @@ consultas que já existem.
 
 ## 8. Estado atual — onde retomar
 
-*Atualizado em 05/08/2026.*
+*Atualizado em 06/08/2026.*
 
 ### O que já está pronto
 
 | Fase | Situação |
 |---|---|
 | A — preparar o banco | Medida, **não aplicada** (índice rendeu só 18%; ver 4.1) |
-| **B — endpoints de agregação** | **Em andamento: 2 de ~12 telas migradas** |
+| **B — endpoints de agregação** | **Em andamento: 3 de ~12 telas migradas** |
 | C — aposentar o download total | Não iniciada (depende da B terminar) |
 | D — ingestão por API | Desenho fechado (seção 5), **não implementada** |
 | E — importação de CSV no servidor | Não iniciada |
 | F — pré-agregação | Não decidida (depende de medição) |
 
-**Telas migradas:** `/dashboard` e `/vendas`. As demais seguem no caminho antigo,
-sem alteração.
+**Telas migradas:** `/dashboard`, `/vendas` e `/produtos`. As demais seguem no
+caminho antigo, sem alteração.
+
+Payload no mês corrente (preset padrão), contra o que era baixado antes:
+
+| Tela | Payload | Servidor | Antes | Redução |
+|---|---:|---:|---:|---:|
+| `/dashboard` | 22,2 KB | ~0,9 s | 11,0 MB | 505× |
+| `/vendas` | 18,1 KB | ~0,5 s | 11,0 MB | 620× |
+| `/produtos` | 51,5 KB | ~2,3 s | 11,0 MB | 218× |
 
 ### Como a Fase B está estruturada
 
@@ -617,6 +625,26 @@ src/app/api/analytics/<tela>/route.ts   ← valida filtros (zod) e chama o módu
 src/lib/hooks/use-<tela>-analytics.ts   ← busca, preenche séries, formata rótulos
 src/app/(dashboard)/<tela>/page.tsx     ← consome o hook
 ```
+
+### ▶ Retomar por aqui
+
+**Próxima tela: `/clientes`.** Depois dela, `/vendedores` e `/comparativo`.
+
+Antes de começar, o de sempre:
+
+```bash
+git pull
+npm install          # se package.json tiver mudado
+npm run migrate:all  # aplica migrations pendentes no catalog e nos tenants
+npm run dev
+```
+
+Para a validação, os scripts ficam em diretório temporário e podem não existir
+mais — o roteiro para recriá-los está logo abaixo. O de `/produtos` é o modelo
+mais completo (compara curvas ABC, ordem dos ids e totais de rodapé).
+
+Ao abrir o app: o filtro padrão é "mês atual" e os dados terminam em 22/07/2026,
+então o painel aparece zerado. Troque para "Mês anterior" ou "12 meses".
 
 ### Receita para migrar a próxima tela
 
@@ -657,12 +685,40 @@ fallback é `DATABASE_URL.slice(0,64).padEnd(32,"x")`) e mandar no cookie
 > repositório**. Se for retomar em outra máquina, vale recriá-los pelo roteiro
 > acima — ou pedir para transformá-los num script versionado.
 
+### `COUNT(DISTINCT)` — a armadilha que já reapareceu
+
+A regra 4 da receita não é teórica: **eu mesmo a violei ao migrar `/produtos`**,
+e a tela abriu em 20 segundos. Duas ocorrências, ambas corrigidas:
+
+| Consulta | Com `COUNT(DISTINCT)` | Com `GROUP BY` |
+|---|---:|---:|
+| Total de produtos no histórico | 13.294 ms | **545 ms** |
+| SKUs por subgrupo | 2.355 ms | **~250 ms** |
+
+O padrão de correção é sempre o mesmo: **agrupar pela coluna e contar linhas**,
+em vez de pedir distintos.
+
+```sql
+-- ❌ lento
+SELECT COUNT(DISTINCT product_id) FROM sale_items WHERE …
+
+-- ✅ rápido
+SELECT COUNT(*) FROM (SELECT product_id FROM sale_items WHERE … GROUP BY product_id) t
+```
+
+Ao migrar uma tela, vale procurar `COUNT(DISTINCT` no SQL antes de medir — é o
+primeiro suspeito.
+
 ### Pendências conhecidas
 
-1. **Período de 12 meses ainda é lento**: 3,2 s no dashboard, 5,5 s em vendas.
-   O preset padrão ("mês atual") responde em ~550 ms, então não aparece no uso
-   normal. Ainda **não medido** se a solução é índice, menos consultas ou
-   pré-agregação — e duas hipóteses já foram derrubadas por medição (ver 4.1).
+1. **Período de 12 meses ainda é lento**: 3,2 s no dashboard, 5,5 s em vendas,
+   ~8 s em produtos. O preset padrão ("mês atual") responde em 0,5–2,3 s, então
+   não aparece no uso normal. Já é claro que isso é **sistêmico**, não específico
+   de uma tela — mas ainda **não medido** se a solução é índice, menos consultas
+   ou pré-agregação (Fase F). Três hipóteses já foram derrubadas por medição:
+   compartilhar a varredura no nível de linha, no nível de pedido (ver 4.1), e
+   `CTE MATERIALIZED` no ABC de produtos (rendeu 18%, não compensa a dependência
+   de Postgres 12+).
 
 2. **Inconsistência herdada nos filtros do dashboard**: os cartões de KPI ignoram
    canal, vendedor e subgrupo, enquanto os gráficos os aplicam. Foi replicado

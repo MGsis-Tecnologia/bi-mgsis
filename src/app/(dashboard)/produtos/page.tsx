@@ -10,47 +10,55 @@ import { Badge } from "@/components/ui/badge";
 import { BarChartH } from "@/components/charts/bar-chart-h";
 import { DonutChart } from "@/components/charts/donut-chart";
 import { Money } from "@/components/dashboard/money";
-import { useDataset, useFilteredOrders } from "@/lib/hooks/use-dataset";
-import { useDatasetStore } from "@/lib/store/dataset";
-import { productABC, subgroupABC, productProfitRanking } from "@/lib/analytics/abc";
-import { revenueBySubgroup } from "@/lib/analytics/kpis";
+import { useProdutosAnalytics } from "@/lib/hooks/use-produtos-analytics";
 import { formatNumber, formatPercent } from "@/lib/utils/format";
 import { cn } from "@/lib/utils";
 import { useTranslation } from "@/lib/hooks/use-translation";
 
 export default function ProdutosPage() {
   const { t } = useTranslation();
-  const ds = useDataset();
-  const orders = useFilteredOrders();
-  const inventory = useDatasetStore((s) => s.inventory);
 
-  // Código do fabricante (produto_fabricante) só existe no dataset de Estoque —
-  // monta lookup productId → fabricante para exibir ao lado do SKU nas listagens.
-  const mfrByProduct = React.useMemo(() => {
-    const m = new Map<string, string>();
-    for (const it of inventory?.items ?? []) {
-      if (it.manufacturerCode && !m.has(it.productId)) m.set(it.productId, it.manufacturerCode);
-    }
-    return m;
-  }, [inventory?.items]);
+  // Tudo agregado no servidor: curvas ABC, ranking por lucro e categorias já
+  // chegam classificados, com os totais calculados sobre a lista inteira.
+  const { data, loading, error } = useProdutosAnalytics();
 
-  const abc = React.useMemo(() => productABC(orders, ds.products), [orders, ds.products]);
-  const catABC = React.useMemo(() => subgroupABC(orders), [orders]);
-  const profitRanking = React.useMemo(() => productProfitRanking(orders), [orders]);
-  const rbs = React.useMemo(() => revenueBySubgroup(orders), [orders]);
-  const donut = Object.values(rbs).sort((a, b) => b.value - a.value).map((v) => ({ key: v.id, label: v.label, value: v.value }));
+  const abc = data?.topProducts ?? [];
+  const catABC = data?.subgroups ?? [];
+  const profitRanking = data?.profitRanking ?? [];
+  const donut = data?.donut ?? [];
 
-  const aCount = abc.filter((e) => e.curve === "A").length;
-  const bCount = abc.filter((e) => e.curve === "B").length;
-  const cCount = abc.filter((e) => e.curve === "C").length;
-  const totalUnits = abc.reduce((s, e) => s + e.units, 0);
-  const totalRevenue = abc.reduce((s, e) => s + e.revenue, 0);
+  const aCount = data?.curveCounts.A ?? 0;
+  const bCount = data?.curveCounts.B ?? 0;
+  const cCount = data?.curveCounts.C ?? 0;
+  const totalUnits = data?.totals.units ?? 0;
+  const totalRevenue = data?.totals.revenue ?? 0;
+  const produtosComVenda = data?.productsWithSales ?? 0;
+  const totalProdutos = data?.totalProducts ?? 0;
 
-  if (!ds.hasData) {
+  if (error) {
     return (
       <div className="space-y-8">
         <PageHeader eyebrow={t("produtos.header.eyebrow")} title={t("produtos.header.title")} description={t("produtos.header.desc")} />
-        <EmptyState />
+        <div className="rounded-lg border border-negative/30 bg-negative/10 px-4 py-3 text-sm text-negative">
+          Não foi possível carregar os produtos: {error}
+        </div>
+      </div>
+    );
+  }
+
+  if (!data?.hasData) {
+    return (
+      <div className="space-y-8">
+        <PageHeader eyebrow={t("produtos.header.eyebrow")} title={t("produtos.header.title")} description={t("produtos.header.desc")} />
+        {loading ? (
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <div key={i} className="h-[104px] animate-pulse rounded-lg bg-muted/40" />
+            ))}
+          </div>
+        ) : (
+          <EmptyState />
+        )}
       </div>
     );
   }
@@ -64,15 +72,15 @@ export default function ProdutosPage() {
       >
         <Badge variant="ghost" className="gap-1">
           <Package className="h-3 w-3" />
-          {t("produtos.header.badge", { count: ds.products.length })}
+          {t("produtos.header.badge", { count: totalProdutos })}
         </Badge>
       </PageHeader>
 
       <section className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <KpiCard label={t("produtos.kpi.units")} value={formatNumber(totalUnits)} />
         <KpiCard label={t("produtos.kpi.revenue")} value={<><Money value={totalRevenue} compact /></> as never} accent="accent" />
-        <KpiCard label={t("produtos.kpi.curveA")} caption={t("produtos.kpi.curveA.caption", { count: aCount })} value={formatPercent(aCount / Math.max(1, abc.length))} />
-        <KpiCard label={t("produtos.kpi.stuck")} caption={t("produtos.kpi.stuck.caption")} value={formatNumber(ds.products.length - abc.length)} />
+        <KpiCard label={t("produtos.kpi.curveA")} caption={t("produtos.kpi.curveA.caption", { count: aCount })} value={formatPercent(aCount / Math.max(1, produtosComVenda))} />
+        <KpiCard label={t("produtos.kpi.stuck")} caption={t("produtos.kpi.stuck.caption")} value={formatNumber(totalProdutos - produtosComVenda)} />
       </section>
 
       <section className="grid grid-cols-1 lg:grid-cols-3 gap-3">
@@ -87,16 +95,13 @@ export default function ProdutosPage() {
           </CardHeader>
           <CardContent>
             <BarChartH
-              rows={abc.slice(0, 12).map((e) => {
-                const mfr = mfrByProduct.get(e.item.id);
-                return {
-                  key: e.item.id,
-                  label: e.item.name,
-                  value: e.revenue,
-                  secondary: `${formatNumber(e.units)} un · ${e.curve}${mfr ? ` · ${mfr}` : ""}`,
-                  tone: e.curve === "A" ? "accent" : "muted",
-                };
-              })}
+              rows={abc.slice(0, 12).map((e) => ({
+                key: e.id,
+                label: e.name,
+                value: e.revenue,
+                secondary: `${formatNumber(e.units)} un · ${e.curve}${e.manufacturerCode ? ` · ${e.manufacturerCode}` : ""}`,
+                tone: e.curve === "A" ? "accent" : "muted",
+              }))}
               maxRows={12}
             />
           </CardContent>
@@ -146,19 +151,19 @@ export default function ProdutosPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
-                {abc.slice(0, 24).map((e, i) => (
-                  <tr key={e.item.id} className="hover:bg-muted/30 transition-colors">
+                {abc.map((e, i) => (
+                  <tr key={e.id} className="hover:bg-muted/30 transition-colors">
                     <td className="py-2 px-5 font-mono text-xs text-muted-foreground tabular">
                       {(i + 1).toString().padStart(2, "0")}
                     </td>
                     <td className="py-2 px-5 max-w-[260px] truncate">
-                      <div className="font-medium">{e.item.name}</div>
+                      <div className="font-medium">{e.name}</div>
                       <div className="text-xs text-muted-foreground font-mono">
-                        {e.item.id}
-                        {mfrByProduct.get(e.item.id) && <span> · {mfrByProduct.get(e.item.id)}</span>}
+                        {e.id}
+                        {e.manufacturerCode && <span> · {e.manufacturerCode}</span>}
                       </div>
                     </td>
-                    <td className="py-2 px-5 text-muted-foreground">{e.item.subgroupName}</td>
+                    <td className="py-2 px-5 text-muted-foreground">{e.subgroupName}</td>
                     <td className="py-2 px-5 text-right tabular">{formatNumber(e.units)}</td>
                     <td className="py-2 px-5 text-right tabular font-medium">
                       <Money value={e.revenue} />
@@ -190,7 +195,7 @@ export default function ProdutosPage() {
                 Produtos ordenados do maior ao menor lucro (receita − custo) no período.
               </p>
             </div>
-            <Badge variant="ghost">{profitRanking.length} produtos</Badge>
+            <Badge variant="ghost">{data.profitTotals.count} produtos</Badge>
           </div>
         </CardHeader>
         <CardContent className="px-0">
@@ -209,7 +214,7 @@ export default function ProdutosPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
-                {profitRanking.slice(0, 30).map((e, i) => (
+                {profitRanking.map((e, i) => (
                   <tr key={e.productId} className="hover:bg-muted/30 transition-colors">
                     <td className="py-2 px-5 font-mono text-xs text-muted-foreground tabular">
                       {(i + 1).toString().padStart(2, "0")}
@@ -218,7 +223,7 @@ export default function ProdutosPage() {
                       <div className="font-medium">{e.productName}</div>
                       <div className="text-xs text-muted-foreground font-mono">
                         {e.productId}
-                        {mfrByProduct.get(e.productId) && <span> · {mfrByProduct.get(e.productId)}</span>}
+                        {e.manufacturerCode && <span> · {e.manufacturerCode}</span>}
                       </div>
                     </td>
                     <td className="py-2 px-5 text-muted-foreground">{e.subgroupName}</td>
@@ -241,28 +246,27 @@ export default function ProdutosPage() {
               <tfoot className="[&_td]:sticky [&_td]:bottom-0 [&_td]:z-10 [&_td]:bg-surface [&_td]:border-t [&_td]:border-border">
                 <tr className="text-[11px] font-medium">
                   <td className="py-2.5 px-5" />
+                  {/* Totais sobre TODOS os produtos do período, não só os 30 exibidos. */}
                   <td className="py-2.5 px-5 uppercase tracking-[0.1em] text-muted-foreground">
-                    Total · {profitRanking.length} produtos
+                    Total · {data.profitTotals.count} produtos
                   </td>
                   <td className="py-2.5 px-5" />
                   <td className="py-2.5 px-5 text-right tabular">
-                    {formatNumber(profitRanking.reduce((s, e) => s + e.units, 0))}
+                    {formatNumber(data.profitTotals.units)}
                   </td>
                   <td className="py-2.5 px-5 text-right tabular">
-                    <Money value={profitRanking.reduce((s, e) => s + e.revenue, 0)} />
+                    <Money value={data.profitTotals.revenue} />
                   </td>
                   <td className="py-2.5 px-5 text-right tabular text-muted-foreground">
-                    <Money value={profitRanking.reduce((s, e) => s + e.cost, 0)} />
+                    <Money value={data.profitTotals.cost} />
                   </td>
                   <td className="py-2.5 px-5 text-right tabular text-positive font-medium">
-                    <Money value={profitRanking.reduce((s, e) => s + e.profit, 0)} />
+                    <Money value={data.profitTotals.profit} />
                   </td>
                   <td className="py-2.5 px-5 text-right tabular">
-                    {(() => {
-                      const rev = profitRanking.reduce((s, e) => s + e.revenue, 0);
-                      const pft = profitRanking.reduce((s, e) => s + e.profit, 0);
-                      return <MarginBadge pct={rev > 0 ? pft / rev : 0} />;
-                    })()}
+                    <MarginBadge
+                      pct={data.profitTotals.revenue > 0 ? data.profitTotals.profit / data.profitTotals.revenue : 0}
+                    />
                   </td>
                 </tr>
               </tfoot>
