@@ -10,57 +10,51 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Money } from "@/components/dashboard/money";
-import { useDataset, useFilteredOrders, useFilteredReturns } from "@/lib/hooks/use-dataset";
-import { useFilters } from "@/lib/store/filters";
-import { sellerMetrics, sellerProspection, sellerConsistency } from "@/lib/analytics/sellers";
+import { useVendedoresAnalytics } from "@/lib/hooks/use-vendedores-analytics";
 import { formatNumber, formatPercent } from "@/lib/utils/format";
 import { cn } from "@/lib/utils";
 import { useTranslation } from "@/lib/hooks/use-translation";
 
 export default function VendedoresPage() {
   const { t } = useTranslation();
-  const ds = useDataset();
-  const orders = useFilteredOrders();
-  const metrics = React.useMemo(() => sellerMetrics(orders, ds.sellers), [orders, ds.sellers]);
 
-  const getRange = useFilters((s) => s.getRange);
-  const preset = useFilters((s) => s.preset);
-  const customRange = useFilters((s) => s.customRange);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  const range = React.useMemo(() => getRange(), [preset, customRange, getRange]);
+  // Tudo agregado no servidor: desempenho, prospecção (que compara o período
+  // com o histórico completo) e consistência chegam prontos.
+  const { data, loading, error } = useVendedoresAnalytics();
 
-  // Prospecção & carteira: período = filtro atual; base de comparação = histórico completo
-  const prospection = React.useMemo(
-    () => sellerProspection(orders, ds.orders, range.from, ds.sellers),
-    [orders, ds.orders, range, ds.sellers]
-  );
-
-  // Consistência & concentração: como a receita do período foi construída
-  const consistency = React.useMemo(
-    () => sellerConsistency(orders, ds.sellers),
-    [orders, ds.sellers]
-  );
-
-  // Devoluções (DEVOLUCAO VENDA) — trilha separada, não entra em nenhum total de venda.
-  // Valores chegam positivos da importação; são exibidos negativos/vermelho.
-  const returns = useFilteredReturns();
-  const returnsBySeller = React.useMemo(() => {
-    const m = new Map<string, number>();
-    for (const o of returns) m.set(o.sellerId, (m.get(o.sellerId) ?? 0) + o.totalBRL);
-    return m;
-  }, [returns]);
-  const totalReturns = React.useMemo(() => returns.reduce((s, o) => s + o.totalBRL, 0), [returns]);
-
-  const teamRevenue = metrics.reduce((s, m) => s + m.revenue, 0);
-  const avgAchievement = metrics.length > 0 ? metrics.reduce((s, m) => s + m.achievement, 0) / metrics.length : 0;
+  const metrics = data?.metrics ?? [];
+  const prospection = data?.prospection ?? [];
+  const consistency = data?.consistency ?? [];
+  const teamRevenue = data?.teamRevenue ?? 0;
+  const totalReturns = data?.totalReturns ?? 0;
+  const avgAchievement = data?.avgAchievement ?? 0;
   const top = metrics[0];
   const returnsPctOfSales = teamRevenue > 0 ? totalReturns / teamRevenue : 0;
 
-  if (!ds.hasData) {
+  if (error) {
     return (
       <div className="space-y-8">
         <PageHeader eyebrow={t("vendedores.header.eyebrow")} title={t("vendedores.header.title")} description={t("vendedores.header.desc")} />
-        <EmptyState />
+        <div className="rounded-lg border border-negative/30 bg-negative/10 px-4 py-3 text-sm text-negative">
+          Não foi possível carregar os vendedores: {error}
+        </div>
+      </div>
+    );
+  }
+
+  if (!data?.hasData) {
+    return (
+      <div className="space-y-8">
+        <PageHeader eyebrow={t("vendedores.header.eyebrow")} title={t("vendedores.header.title")} description={t("vendedores.header.desc")} />
+        {loading ? (
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <div key={i} className="h-[104px] animate-pulse rounded-lg bg-muted/40" />
+            ))}
+          </div>
+        ) : (
+          <EmptyState />
+        )}
       </div>
     );
   }
@@ -74,7 +68,7 @@ export default function VendedoresPage() {
       >
         <Badge variant="ghost" className="gap-1">
           <Trophy className="h-3 w-3" />
-          {t("vendedores.header.badge", { count: ds.sellers.length })}
+          {t("vendedores.header.badge", { count: data.totalSellers })}
         </Badge>
       </PageHeader>
 
@@ -97,11 +91,11 @@ export default function VendedoresPage() {
         />
         <KpiCard
           label={t("vendedores.kpi.sellers")}
-          value={formatNumber(ds.sellers.length)}
+          value={formatNumber(data.totalSellers)}
         />
         <KpiCard
           label={t("vendedores.kpi.top")}
-          caption={top?.seller.name}
+          caption={top?.name}
           value={<><Money value={top?.revenue ?? 0} compact /></> as never}
           accent="positive"
         />
@@ -130,20 +124,20 @@ export default function VendedoresPage() {
               </thead>
               <tbody className="divide-y divide-border">
                 {metrics.map((m, i) => (
-                  <tr key={m.seller.id} className="hover:bg-muted/30 transition-colors">
+                  <tr key={m.id} className="hover:bg-muted/30 transition-colors">
                     <td className="py-3 px-5 font-mono text-xs text-muted-foreground tabular">
                       {(i + 1).toString().padStart(2, "0")}
                     </td>
                     <td className="py-3 px-5">
                       <div className="flex items-center gap-2.5">
                         <div className="grid h-7 w-7 place-items-center rounded-full bg-muted text-[10px] font-medium text-foreground">
-                          {m.seller.name
+                          {m.name
                             .split(" ")
                             .map((p) => p[0])
                             .slice(0, 2)
                             .join("")}
                         </div>
-                        <div className="font-medium">{m.seller.name}</div>
+                        <div className="font-medium">{m.name}</div>
                       </div>
                     </td>
                     <td className="py-3 px-5 text-right tabular">{formatNumber(m.orders)}</td>
@@ -163,7 +157,7 @@ export default function VendedoresPage() {
                       {formatPercent(m.discountPct, { decimals: 1 })}
                     </td>
                     {(() => {
-                      const ret = returnsBySeller.get(m.seller.id) ?? 0;
+                      const ret = m.returns;
                       const retPct = m.revenue > 0 ? ret / m.revenue : 0;
                       return (
                         <>
@@ -238,11 +232,11 @@ export default function VendedoresPage() {
               </thead>
               <tbody className="divide-y divide-border">
                 {prospection.map((p, i) => (
-                  <tr key={p.seller.id} className="hover:bg-muted/30 transition-colors">
+                  <tr key={p.id} className="hover:bg-muted/30 transition-colors">
                     <td className="py-2.5 px-5 font-mono text-xs text-muted-foreground tabular">
                       {(i + 1).toString().padStart(2, "0")}
                     </td>
-                    <td className="py-2.5 px-5 font-medium max-w-[220px] truncate">{p.seller.name}</td>
+                    <td className="py-2.5 px-5 font-medium max-w-[220px] truncate">{p.name}</td>
                     <td className="py-2.5 px-5 text-right tabular text-muted-foreground">
                       {formatNumber(p.activeClients)}
                     </td>
@@ -341,11 +335,11 @@ export default function VendedoresPage() {
               </thead>
               <tbody className="divide-y divide-border">
                 {consistency.map((c, i) => (
-                  <tr key={c.seller.id} className="hover:bg-muted/30 transition-colors">
+                  <tr key={c.id} className="hover:bg-muted/30 transition-colors">
                     <td className="py-2.5 px-5 font-mono text-xs text-muted-foreground tabular">
                       {(i + 1).toString().padStart(2, "0")}
                     </td>
-                    <td className="py-2.5 px-5 font-medium max-w-[200px] truncate">{c.seller.name}</td>
+                    <td className="py-2.5 px-5 font-medium max-w-[200px] truncate">{c.name}</td>
                     <td className="py-2.5 px-5 text-right tabular">
                       <Money value={c.revenue} compact />
                     </td>

@@ -13,13 +13,8 @@ import { Badge } from "@/components/ui/badge";
 import { BarChartH } from "@/components/charts/bar-chart-h";
 import { ChartDefs } from "@/components/charts/chart-defs";
 import { ChartTooltip } from "@/components/charts/chart-tooltip";
-import { useReceivables, useFilteredReceivables } from "@/lib/hooks/use-receivables";
+import { useReceberAnalytics, type AgingBucketId, type GroupRow } from "@/lib/hooks/use-receber-analytics";
 import { useFilters } from "@/lib/store/filters";
-import {
-  computeReceivablesKpis, agingBreakdown, byClient, bySeller, byCity, dueTimeline,
-  computePaymentStats, monthlyCollectionAnalysis, clientPaymentAnalysis,
-  type AgingBucketId, type GroupRow, type MonthlyCollectionRow, type ClientPaymentRow,
-} from "@/lib/analytics/receivables";
 import { formatCurrency, formatNumber, formatPercent } from "@/lib/utils/format";
 import { useTranslation } from "@/lib/hooks/use-translation";
 import { cn } from "@/lib/utils";
@@ -34,36 +29,23 @@ const AGING_COLORS: Record<AgingBucketId, string> = {
 
 export default function ContasReceberPage() {
   const { t } = useTranslation();
-  const rec = useReceivables();
-  const allRows = useFilteredReceivables();
   const currency = useFilters((s) => s.currency);
 
-  // Split pending vs paid
-  const pendingRows = React.useMemo(() => allRows.filter((r) => !r.isPaid), [allRows]);
-  const hasPaidData  = allRows.some((r) => r.isPaid);
+  // Tudo agregado no servidor a partir de `receivable_items`.
+  const { data, loading, error } = useReceberAnalytics();
 
-  // Existing analytics — operate on pending only
-  const kpi      = React.useMemo(() => computeReceivablesKpis(pendingRows), [pendingRows]);
-  const aging    = React.useMemo(() => agingBreakdown(pendingRows), [pendingRows]);
-  const clients  = React.useMemo(() => byClient(pendingRows), [pendingRows]);
-  const sellers  = React.useMemo(() => bySeller(pendingRows), [pendingRows]);
-  const cities   = React.useMemo(() => byCity(pendingRows), [pendingRows]);
-  const timeline = React.useMemo(() => dueTimeline(pendingRows), [pendingRows]);
-
-  // Payment performance analytics — all rows (paid + pending)
-  const payStats       = React.useMemo(() => computePaymentStats(allRows), [allRows]);
-  const monthlyCol     = React.useMemo(() => monthlyCollectionAnalysis(allRows), [allRows]);
-  const clientPayment  = React.useMemo(() => clientPaymentAnalysis(allRows), [allRows]);
-
-  const detail = React.useMemo(() => {
-    return [...pendingRows]
-      .sort((a, b) => {
-        if (a.status !== b.status) return a.status === "overdue" ? -1 : 1;
-        if (a.status === "overdue") return b.daysOverdue - a.daysOverdue;
-        return a.daysUntilDue - b.daysUntilDue;
-      })
-      .slice(0, 18);
-  }, [pendingRows]);
+  const kpi = data?.kpi;
+  const aging = data?.aging ?? [];
+  const clients = data?.clients ?? [];
+  const sellers = data?.sellers ?? [];
+  const cities = data?.cities ?? [];
+  const timeline = data?.timeline ?? [];
+  const payStats = data?.payStats;
+  const monthlyCol = data?.monthlyCollection ?? [];
+  const clientPayment = data?.clientPayment ?? [];
+  const detail = data?.detail ?? [];
+  const hasPaidData = data?.hasPaidData ?? false;
+  const pendingCount = data?.pendingRowsCount ?? 0;
 
   const agingLabel: Record<AgingBucketId, string> = {
     current: t("receber.aging.current"),
@@ -85,11 +67,30 @@ export default function ContasReceberPage() {
     secondary: t("receber.table.badge", { count: c.count }),
   }));
 
-  if (!rec.hasData) {
+  if (error) {
     return (
       <div className="space-y-8">
         <PageHeader eyebrow={t("receber.header.eyebrow")} title={t("receber.header.title")} description={t("receber.header.desc")} />
-        <EmptyState title={t("receber.empty.title")} description={t("receber.empty.desc")} />
+        <div className="rounded-lg border border-negative/30 bg-negative/10 px-4 py-3 text-sm text-negative">
+          Não foi possível carregar as contas a receber: {error}
+        </div>
+      </div>
+    );
+  }
+
+  if (!kpi || !payStats || !data?.hasData) {
+    return (
+      <div className="space-y-8">
+        <PageHeader eyebrow={t("receber.header.eyebrow")} title={t("receber.header.title")} description={t("receber.header.desc")} />
+        {loading ? (
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <div key={i} className="h-[104px] animate-pulse rounded-lg bg-muted/40" />
+            ))}
+          </div>
+        ) : (
+          <EmptyState title={t("receber.empty.title")} description={t("receber.empty.desc")} />
+        )}
       </div>
     );
   }
@@ -101,17 +102,17 @@ export default function ContasReceberPage() {
         title={t("receber.header.title")}
         description={t("receber.header.desc")}
       >
-        <Badge variant="ghost">{t("receber.table.badge", { count: formatNumber(allRows.length) })}</Badge>
+        <Badge variant="ghost">{t("receber.table.badge", { count: formatNumber(data.allRowsCount) })}</Badge>
       </PageHeader>
 
-      {pendingRows.length === 0 && !hasPaidData && (
+      {pendingCount === 0 && !hasPaidData && (
         <div className="rounded-lg border border-dashed border-border p-6 text-center text-sm text-muted-foreground">
           {t("receber.empty.filtered")}
         </div>
       )}
 
       {/* ── A RECEBER (pending) ─────────────────────────────────────────────── */}
-      {pendingRows.length > 0 && (
+      {pendingCount > 0 && (
         <>
           <section className="grid grid-cols-2 md:grid-cols-4 gap-3">
             <KpiCard
@@ -232,7 +233,7 @@ export default function ContasReceberPage() {
             <CardHeader>
               <div className="flex items-center justify-between">
                 <CardTitle>{t("receber.table.title")}</CardTitle>
-                <Badge variant="ghost">{t("receber.table.badge", { count: formatNumber(pendingRows.length) })}</Badge>
+                <Badge variant="ghost">{t("receber.table.badge", { count: formatNumber(pendingCount) })}</Badge>
               </div>
             </CardHeader>
             <CardContent className="px-0">

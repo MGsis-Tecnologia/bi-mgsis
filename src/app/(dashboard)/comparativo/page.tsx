@@ -9,20 +9,20 @@ import { Money } from "@/components/dashboard/money";
 import { YearComparisonChart } from "@/components/charts/year-comparison-chart";
 import { YearDrilldownChart } from "@/components/charts/year-drilldown-chart";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
-import { useDataset } from "@/lib/hooks/use-dataset";
 import {
-  yearlyByOrder,
-  yearlyByItem,
-  computeProjection,
-  type YearlyRow,
-  type YearlyResult,
-  type YearProjection,
-} from "@/lib/analytics/yearly";
+  useComparativoAnalytics,
+  type ComparativoView,
+  type Dimensao,
+  type LinhaAnual,
+} from "@/lib/hooks/use-comparativo-analytics";
+import { computeProjection, type YearProjection } from "@/lib/analytics/yearly";
 import { cn } from "@/lib/utils";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-type DimTab = "vendedores" | "subgrupos" | "canais" | "clientes" | "produtos";
+type DimTab = Dimensao;
+type YearlyRow = LinhaAnual;
+type YearlyResult = ComparativoView;
 
 const TABS: { id: DimTab; label: string }[] = [
   { id: "vendedores", label: "Vendedores" },
@@ -361,64 +361,26 @@ function OverviewView({ result }: { result: YearlyResult }) {
   );
 }
 
-// ─── Build monthly revenue map for an entity ──────────────────────────────────
-
-function buildMonthlyRevMap(
-  orders: ReturnType<typeof useDataset>["orders"],
-  tab: DimTab,
-  selectedKey: string
-): Record<string, number> {
-  const rev: Record<string, number> = {};
-  const add = (ym: string, v: number) => { rev[ym] = (rev[ym] ?? 0) + v; };
-
-  if (tab === "vendedores") {
-    for (const o of orders) if (o.sellerId === selectedKey) add(o.date.slice(0, 7), o.totalBRL);
-  } else if (tab === "canais") {
-    for (const o of orders) if (o.channel === selectedKey) add(o.date.slice(0, 7), o.totalBRL);
-  } else if (tab === "clientes") {
-    for (const o of orders) if (o.clientId === selectedKey) add(o.date.slice(0, 7), o.totalBRL);
-  } else if (tab === "subgrupos") {
-    for (const o of orders) {
-      const r = o.items.reduce((s, it) => it.subgroupName === selectedKey ? s + it.totalBRL : s, 0);
-      if (r > 0) add(o.date.slice(0, 7), r);
-    }
-  } else if (tab === "produtos") {
-    for (const o of orders) {
-      const r = o.items.reduce((s, it) => it.productId === selectedKey ? s + it.totalBRL : s, 0);
-      if (r > 0) add(o.date.slice(0, 7), r);
-    }
-  }
-  return rev;
-}
-
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function ComparativoPage() {
-  const ds = useDataset();
   const [tab, setTab] = React.useState<DimTab>("vendedores");
   const [selectedKey, setSelectedKey] = React.useState<string | null>(null);
 
   React.useEffect(() => { setSelectedKey(null); }, [tab]);
 
-  const result = React.useMemo((): YearlyResult | null => {
-    if (!ds.hasData) return null;
-    const orders = ds.orders;
-    switch (tab) {
-      case "vendedores": return yearlyByOrder(orders, (o) => o.sellerId, (o) => o.sellerName);
-      case "canais":     return yearlyByOrder(orders, (o) => o.channel, (o) => o.channel);
-      case "clientes":   return yearlyByOrder(orders, (o) => o.clientId, (o) => o.clientName);
-      case "subgrupos":  return yearlyByItem(orders, (_sid, sname) => ({ key: sname, label: sname }));
-      case "produtos":   return yearlyByItem(orders, (_sid, _sn, pid, pname) => ({ key: pid, label: pname }));
-    }
-  }, [ds.hasData, ds.orders, tab]);
+  // Agregado no servidor; trocar a aba refaz a consulta.
+  const { data: result, loading, error } = useComparativoAnalytics(tab);
 
+  // A projeção depende de "hoje" e continua no cliente — a série mensal de cada
+  // item já vem na resposta, então não há consulta extra ao selecionar um item.
   const projection = React.useMemo((): YearProjection | null => {
-    if (!selectedKey || !ds.hasData) return null;
-    const monthlyRev = buildMonthlyRevMap(ds.orders, tab, selectedKey);
-    return computeProjection(monthlyRev);
-  }, [ds.hasData, ds.orders, tab, selectedKey]);
+    if (!selectedKey || !result) return null;
+    const row = result.rows.find((r) => r.key === selectedKey);
+    return row ? computeProjection(row.byMonth) : null;
+  }, [result, selectedKey]);
 
-  if (!ds.hasData) {
+  if (error) {
     return (
       <div className="space-y-8">
         <PageHeader
@@ -426,7 +388,26 @@ export default function ComparativoPage() {
           title="Comparativo anual."
           description="Compare o desempenho ano a ano por vendedor, subgrupo, canal, cliente e produto."
         />
-        <EmptyState />
+        <div className="rounded-lg border border-negative/30 bg-negative/10 px-4 py-3 text-sm text-negative">
+          Não foi possível carregar o comparativo: {error}
+        </div>
+      </div>
+    );
+  }
+
+  if (!result?.hasData) {
+    return (
+      <div className="space-y-8">
+        <PageHeader
+          eyebrow="Análise comparativa"
+          title="Comparativo anual."
+          description="Compare o desempenho ano a ano por vendedor, subgrupo, canal, cliente e produto."
+        />
+        {loading ? (
+          <div className="h-64 animate-pulse rounded-lg bg-muted/40" />
+        ) : (
+          <EmptyState />
+        )}
       </div>
     );
   }

@@ -588,29 +588,56 @@ consultas que já existem.
 
 ## 8. Estado atual — onde retomar
 
-*Atualizado em 06/08/2026.*
+*Atualizado em 07/08/2026.*
 
 ### O que já está pronto
 
 | Fase | Situação |
 |---|---|
 | A — preparar o banco | Medida, **não aplicada** (índice rendeu só 18%; ver 4.1) |
-| **B — endpoints de agregação** | **Em andamento: 3 de ~12 telas migradas** |
+| **B — endpoints de agregação** | **Em andamento: 10 de ~12 telas migradas** |
 | C — aposentar o download total | Não iniciada (depende da B terminar) |
 | D — ingestão por API | Desenho fechado (seção 5), **não implementada** |
 | E — importação de CSV no servidor | Não iniciada |
 | F — pré-agregação | Não decidida (depende de medição) |
 
-**Telas migradas:** `/dashboard`, `/vendas` e `/produtos`. As demais seguem no
-caminho antigo, sem alteração.
+**Telas migradas:** `/dashboard`, `/vendas`, `/produtos`, `/clientes`,
+`/vendedores`, `/comparativo`, `/prospeccao`, `/financeiro/receber`,
+`/financeiro/pagar` e `/financeiro/dre`.
 
-Payload no mês corrente (preset padrão), contra o que era baixado antes:
+**Faltam:** `/estoque` e `/importacao` (esta última usa o store para gravar, não
+para ler — cai na fase E, não na B).
 
-| Tela | Payload | Servidor | Antes | Redução |
-|---|---:|---:|---:|---:|
-| `/dashboard` | 22,2 KB | ~0,9 s | 11,0 MB | 505× |
-| `/vendas` | 18,1 KB | ~0,5 s | 11,0 MB | 620× |
-| `/produtos` | 51,5 KB | ~2,3 s | 11,0 MB | 218× |
+Payload no preset padrão:
+
+| Tela | Payload | Servidor |
+|---|---:|---:|
+| `/dashboard` | 22,2 KB | ~0,3 s |
+| `/vendas` | 18,1 KB | ~0,3 s |
+| `/produtos` | 51,5 KB | 0,6–2,4 s |
+| `/clientes` | 10,0 KB | ~0,8 s |
+| `/vendedores` | 26,6 KB | 2,4–9,7 s |
+| `/comparativo` | 24,6 KB | 2,2–9,1 s |
+| `/prospeccao` | **1.393 KB** | 1,4–3,7 s |
+| `/financeiro/receber` | 20,0 KB | ~0,2 s |
+| `/financeiro/pagar` | 7,5 KB | ~0,02 s |
+| `/financeiro/dre` | 0,2 KB* | ~0,1 s |
+
+\* com `caixa_items` vazia — não dá para medir de verdade enquanto o cliente não
+importar o arquivo de caixa. O payload não cresce com o número de movimentações:
+o que ele carrega é uma linha por conta do plano, uma por centro de custo e uma
+por dia do período (a série diária vem junto com a mensal para o botão
+mensal/diário não disparar nova consulta — num período de 12 meses são ~365
+pontos, na casa de 20 KB).
+
+Os tempos variam bastante com o cache do Postgres — as duas que varrem o
+histórico completo chegam a 9 s a frio e caem para ~2,4 s a quente.
+
+As mais lentas são as que **varrem o histórico completo**, não só o período:
+`/vendedores` precisa da primeira compra de cada par (vendedor, cliente), e
+`/comparativo` compara ano a ano por definição.
+
+`/prospeccao` é a exceção no payload — ver a pendência 5.
 
 ### Como a Fase B está estruturada
 
@@ -628,7 +655,21 @@ src/app/(dashboard)/<tela>/page.tsx     ← consome o hook
 
 ### ▶ Retomar por aqui
 
-**Próxima tela: `/clientes`.** Depois dela, `/vendedores` e `/comparativo`.
+**Próxima tela: `/estoque`** — a última da fase B.
+
+Como a DRE foi validada com a tabela vazia: `caixa_items` tinha 0 linhas, então
+comparar JS × SQL ali não provaria nada (tudo bate em zero). O script semeou
+3.390 linhas com um plano de contas hierárquico de propósito — pai sem movimento
+próprio (`1`), pai com movimento próprio (`2`), netos (`2.1.01`), folha sem
+filhos (`3`), código vazio e valores zerados — comparou 6 cenários e **apagou
+tudo no fim**, devolvendo a tabela às 0 linhas originais. O script aborta se
+encontrar a tabela não-vazia, para nunca destruir dado real. Vale repetir a
+validação com o arquivo do cliente quando ele existir.
+
+Para tabelas fora de `sale_items`, o caminho já testado (em `/prospeccao` e
+`/financeiro/receber`) é escrever a CTE dentro do próprio módulo e reaproveitar
+de `base.ts` só o contrato de filtros (`AnalyticsFilters`) e o acumulador
+`Params`. O `cteLinhas`/`CTE_PEDIDOS` é específico de vendas.
 
 Antes de começar, o de sempre:
 
@@ -709,6 +750,55 @@ SELECT COUNT(*) FROM (SELECT product_id FROM sale_items WHERE … GROUP BY produ
 Ao migrar uma tela, vale procurar `COUNT(DISTINCT` no SQL antes de medir — é o
 primeiro suspeito.
 
+### Cálculo que depende de "agora"
+
+`/clientes` trouxe um caso novo: a segmentação RFM usa a **recência**, que no
+código antigo vinha de `Date.now()` do navegador. Passar a usar `CURRENT_DATE`
+no banco mudaria o resultado conforme o fuso do servidor e a hora de acesso — um
+cliente poderia alternar entre "em risco" e "fiel" sem nada ter mudado.
+
+A solução foi **enviar a data local do navegador como parâmetro** (`hoje`), e o
+SQL calcula `hoje::date - ultima_compra::date`. Isso reproduz exatamente o
+`Math.floor((now - ts) / 86400000)` do original.
+
+Vale o mesmo princípio para qualquer coisa dependente de relógio nas próximas
+telas: **quem decide "agora" é o cliente, não o servidor**.
+
+### Estatística sem materializar a grade
+
+`/vendedores` calcula um coeficiente de variação do faturamento diário em que os
+**dias sem venda contam como zero**. Materializar uma grade de (vendedor × dia
+operacional) para isso seria caro e desnecessário — a soma dos desvios se reduz
+a uma identidade que só precisa da soma dos quadrados dos dias COM venda:
+
+```
+Σ(v_d − média)²  =  Σv_d²  −  receita² / n        (n = dias operacionais)
+```
+
+Os dias zerados contribuem apenas com `média²` cada, e esse termo já está
+embutido no resultado. Conferido nos 32 vendedores, não só no primeiro.
+
+Vale procurar simplificações assim antes de gerar linhas artificiais no SQL.
+
+### Quando o pedido não precisa ser reconstruído
+
+Vendedor, canal e cliente são atributos do PEDIDO, e o código antigo somava o
+total dele. Mas como cada pedido tem exatamente um de cada, somar as LINHAS
+agrupadas por vendedor dá o mesmo número — sem precisar do `GROUP BY order_id`.
+
+Em `/comparativo`, que varre o histórico inteiro, essa troca sozinha levou a
+série mensal de **7.283 ms para 1.401 ms** (5,2×), com resultado idêntico.
+
+Regra prática: só use a CTE `pe` quando precisar **contar pedidos** ou de algo
+que dependa do valor do pedido inteiro (maior pedido, pedido com desconto). Para
+somar receita por um atributo do pedido, `l` basta.
+
+### Uma quarta hipótese derrubada
+
+Achei que a CTE `cteLinhas`, que seleciona 17 colunas, fosse cara numa varredura
+completa. Medido: **1.144 ms** com as 17 colunas contra 1.334 ms com 4. Não faz
+diferença — os 5.837 ms que eu tinha visto antes eram cache frio, não largura.
+
 ### Pendências conhecidas
 
 1. **Período de 12 meses ainda é lento**: 3,2 s no dashboard, 5,5 s em vendas,
@@ -731,6 +821,56 @@ primeiro suspeito.
 
 4. **`next.config.ts` linha 10**: a chave `eslint` virou no-op no Next 16 e é o
    único erro do `npm run type-check`. Não removida.
+
+5. **`/prospeccao` devolve 1,4 MB** — 50× mais que as outras telas. A causa é a
+   tabela de conversão por produto, que o original renderiza **inteira**: 13.561
+   produtos num bimestre, 29.696 num ano. Ainda é 8× menos que os 11 MB de
+   antes, mas destoa. Recortar (top N por menor taxa) resolveria, e a tabela é
+   rolável com 420px de altura — ninguém percorre 30 mil linhas. **É decisão de
+   produto, não foi alterado.**
+
+### Filtro de período nem sempre é `BETWEEN`
+
+`/financeiro/receber` filtra por **vencimento** e aplica **só o limite
+inferior** — os presets de data terminam "hoje", e usar o limite superior
+esconderia todo título a vencer. O limite superior só vale no período
+personalizado.
+
+Isso não está no SQL: quem decide é o cliente, que envia
+`aplicarLimiteSuperior`. Vale conferir a lógica de filtro de cada tela antes de
+assumir `BETWEEN from AND to` — `/comparativo` ignora o período inteiro, e as
+telas financeiras têm essa assimetria.
+
+### Ordenação com empate
+
+`/prospeccao` expôs algo que vale para todas as telas: a ordem entre itens
+empatados, no código antigo, dependia da ordem das linhas no dataset —
+arbitrária e não reproduzível. Em SQL ela muda de novo, e a validação acusa
+divergência mesmo com todos os valores corretos.
+
+O caso extremo estava nos produtos, ordenados por taxa de conversão: **7.486
+produtos empatados em 100%** e 2.282 em 0%. E nos "15 orçamentos mais antigos",
+com 372 candidatos na mesma data.
+
+A saída foi **acrescentar um desempate explícito** (id ou nome) no SQL e na
+referência de validação. Isso é melhor que o comportamento antigo, que podia
+mudar entre execuções. Ao migrar uma tela, procure `sort` ou `ORDER BY` sem
+critério único e defina um.
+
+### Migrar a leitura revela quem nunca gravou no servidor
+
+A DRE tinha um importador embutido (aparece quando não há dados de caixa) que
+gravava **só no IndexedDB do navegador** — nunca no Postgres, diferente da tela
+`/importacao`, que chama `serverImport`. Por isso `caixa_items` estava vazia
+apesar de a funcionalidade existir há tempo: quem importasse por ali perdia o
+arquivo ao trocar de máquina ou limpar o navegador.
+
+Passar a leitura para o servidor tornaria esse importador inútil (gravaria num
+lugar que a tela não lê mais), então ele foi corrigido junto, para `serverImport`.
+
+Ao migrar uma tela, procure caminhos de **escrita** escondidos nela, não só os de
+leitura. Se houver um que só toca o store, ou ele vira `serverImport` ou a tela
+quebra em silêncio.
 
 Em paralelo, a Fase D (ingestão por API) já está com o desenho fechado e é
 independente da parte de consulta — pode ser construída ao mesmo tempo.

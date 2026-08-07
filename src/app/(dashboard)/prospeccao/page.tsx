@@ -25,8 +25,7 @@ export default function ProspeccaoPage() {
 
   React.useEffect(() => { fetchRates(); }, [fetchRates]);
 
-  // Todo o resumo sai do dataset já carregado no boot e é recalculado por memo
-  // quando os filtros mudam — igual às demais páginas, sem consulta ao servidor.
+  // Resumo agregado no servidor a partir de `orcamento_items`.
   const data = useProspeccao();
 
   const displayCurrencyId: AppCurrencyId = currency === "ALL" ? "1" : currency;
@@ -60,17 +59,27 @@ export default function ProspeccaoPage() {
     <div className="space-y-8">
       <PageHeader eyebrow={t("prospeccao.header.eyebrow")} title={t("prospeccao.header.title")} description={t("prospeccao.header.desc")} />
 
-      {!hasData ? (
+      {data.error ? (
+        <div className="rounded-lg border border-negative/30 bg-negative/10 px-4 py-3 text-sm text-negative">
+          Não foi possível carregar a prospecção: {data.error}
+        </div>
+      ) : !hasData ? (
         <Card>
           <CardContent className="py-16 text-center">
-            <Package className="mx-auto h-12 w-12 text-muted-foreground/30 mb-4" />
-            <p className="text-sm text-muted-foreground">
-              {/* Há orçamentos importados, mas nenhum passa nos filtros atuais —
-                  o caso mais comum é o período padrão (mês atual). */}
-              {data.totalGeral > 0
-                ? t("prospeccao.empty.filtered", { count: formatNumber(data.totalGeral) })
-                : t("prospeccao.empty")}
-            </p>
+            {data.loading ? (
+              <div className="mx-auto h-24 w-full max-w-md animate-pulse rounded-lg bg-muted/40" />
+            ) : (
+              <>
+                <Package className="mx-auto h-12 w-12 text-muted-foreground/30 mb-4" />
+                <p className="text-sm text-muted-foreground">
+                  {/* Há orçamentos importados, mas nenhum passa nos filtros atuais —
+                      o caso mais comum é o período padrão (mês atual). */}
+                  {data.totalGeral > 0
+                    ? t("prospeccao.empty.filtered", { count: formatNumber(data.totalGeral) })
+                    : t("prospeccao.empty")}
+                </p>
+              </>
+            )}
           </CardContent>
         </Card>
       ) : (

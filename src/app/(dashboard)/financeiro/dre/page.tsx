@@ -20,21 +20,13 @@ import { KpiCard } from "@/components/dashboard/kpi-card";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ChartTooltip } from "@/components/charts/chart-tooltip";
-import { useCaixa, useFilteredCaixa } from "@/lib/hooks/use-cashflow";
+import { useDreAnalytics } from "@/lib/hooks/use-dre-analytics";
 import { useFilters } from "@/lib/store/filters";
-import {
-  buildDre,
-  byCentroCusto,
-  cashflowTimeSeries,
-  computeCashflowKpis,
-  expenseBreakdown,
-  type DreRow,
-} from "@/lib/analytics/cashflow";
+import type { DreRow } from "@/lib/analytics/cashflow";
 import { formatCurrency, formatPercent, formatNumber } from "@/lib/utils/format";
 import { cn } from "@/lib/utils";
 import { parseFile } from "@/lib/parsers/csv-parser";
-import { useDatasetStore, CAIXA_IDB_KEY } from "@/lib/store/dataset";
-import { idbSet } from "@/lib/store/idb";
+import { serverImport } from "@/lib/server/dataset-client";
 
 const PIE_COLORS = [
   "hsl(var(--chart-1))",
@@ -49,29 +41,56 @@ const PIE_COLORS = [
 type ChartMode = "monthly" | "daily";
 
 export default function DrePage() {
-  const caixa = useCaixa();
-  const items = useFilteredCaixa();
+  const { data, loading, error, recarregar } = useDreAnalytics();
   const currency = useFilters((s) => s.currency);
   const [chartMode, setChartMode] = React.useState<ChartMode>("monthly");
   const [dreExpanded, setDreExpanded] = React.useState<Set<string>>(new Set());
 
-  const kpis       = React.useMemo(() => computeCashflowKpis(items), [items]);
-  const series     = React.useMemo(() => cashflowTimeSeries(items, chartMode), [items, chartMode]);
-  const dreRows    = React.useMemo(() => buildDre(items), [items]);
-  const pieData    = React.useMemo(() => expenseBreakdown(items), [items]);
-  const ccRows     = React.useMemo(() => byCentroCusto(items).slice(0, 10), [items]);
+  const kpis    = data?.kpis ?? { ingressos: 0, gastos: 0, saldo: 0, margem: 0, count: 0 };
+  const series  = React.useMemo(() => data?.series(chartMode) ?? [], [data, chartMode]);
+  const dreRows = data?.dre ?? [];
+  const pieData = data?.expenses ?? [];
+  const ccRows  = React.useMemo(() => (data?.centrosCusto ?? []).slice(0, 10), [data]);
 
   const fmt = (v: number) => formatCurrency(v, currency, { compact: true });
 
-  if (!caixa.hasData) {
+  const cabecalho = (
+    <PageHeader
+      eyebrow="Financeiro · Caixa & DRE"
+      title="Ingressos & DRE"
+      description="Fluxo de caixa, demonstrativo de resultado e análise de despesas."
+    />
+  );
+
+  if (error) {
     return (
       <div className="space-y-8">
-        <PageHeader
-          eyebrow="Financeiro · Caixa & DRE"
-          title="Ingressos & DRE"
-          description="Fluxo de caixa, demonstrativo de resultado e análise de despesas."
-        />
-        <InlineImport />
+        {cabecalho}
+        <Card>
+          <CardContent className="py-16 text-center text-sm text-destructive">
+            Erro ao carregar: {error}
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  if (loading && !data) {
+    return (
+      <div className="space-y-8">
+        {cabecalho}
+        <div className="flex justify-center py-24">
+          <Loader2 className="h-6 w-6 animate-spin text-accent" />
+        </div>
+      </div>
+    );
+  }
+
+  if (!data?.hasData) {
+    return (
+      <div className="space-y-8">
+        {cabecalho}
+        <InlineImport onImportado={recarregar} />
       </div>
     );
   }
@@ -83,7 +102,7 @@ export default function DrePage() {
         title="Ingressos & DRE"
         description="Fluxo de caixa, demonstrativo de resultado e análise de despesas."
       >
-        <Badge variant="ghost">{formatNumber(items.length)} movimentações</Badge>
+        <Badge variant="ghost">{formatNumber(kpis.count)} movimentações</Badge>
       </PageHeader>
 
       {/* ── KPI Cards ──────────────────────────────────────────────────────── */}
@@ -405,8 +424,7 @@ function DreTableRow({
 
 type ImportStatus = "idle" | "parsing" | "success" | "error";
 
-function InlineImport() {
-  const setCaixa = useDatasetStore((s) => s.setCaixa);
+function InlineImport({ onImportado }: { onImportado: () => void }) {
   const [drag, setDrag] = React.useState(false);
   const [status, setStatus] = React.useState<ImportStatus>("idle");
   const [message, setMessage] = React.useState("");
@@ -422,10 +440,19 @@ function InlineImport() {
     setMessage("");
     const result = await parseFile(file);
     if (result.kind === "caixa" && result.caixa) {
-      await idbSet(CAIXA_IDB_KEY, result.caixa);
-      setCaixa(result.caixa);
+      // Grava no Postgres, como faz a tela de Importação. Antes isto só ia para
+      // o IndexedDB, então o arquivo se perdia ao trocar de máquina.
+      const { items, filename, rowCount, importedAt } = result.caixa;
+      try {
+        await serverImport("caixa", items, { filename, rowCount, importedAt });
+      } catch (err) {
+        setStatus("error");
+        setMessage(err instanceof Error ? err.message : "Falha ao gravar no servidor.");
+        return;
+      }
       setStatus("success");
-      setMessage(`${formatNumber(result.caixa.rowCount)} movimentações carregadas.`);
+      setMessage(`${formatNumber(rowCount)} movimentações carregadas.`);
+      onImportado();
     } else {
       const errMsg = result.errors.join(" | ") ||
         `Leiaute não reconhecido como Caixa (kind=${result.kind ?? "null"}). Abra o DevTools (F12 → Console) para ver as colunas detectadas.`;

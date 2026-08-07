@@ -10,9 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { BarChartH } from "@/components/charts/bar-chart-h";
 import { DonutChart } from "@/components/charts/donut-chart";
 import { Money } from "@/components/dashboard/money";
-import { useDataset, useFilteredOrders } from "@/lib/hooks/use-dataset";
-import { customerMetrics, segmentBreakdown, customerProfitRanking } from "@/lib/analytics/customers";
-import { customerABC } from "@/lib/analytics/abc";
+import { useClientesAnalytics } from "@/lib/hooks/use-clientes-analytics";
 import { formatNumber, formatPercent } from "@/lib/utils/format";
 import { cn } from "@/lib/utils";
 import { useTranslation } from "@/lib/hooks/use-translation";
@@ -37,31 +35,50 @@ const SEGMENT_TONE: Record<string, "positive" | "accent" | "warning" | "negative
 
 export default function ClientesPage() {
   const { t } = useTranslation();
-  const ds = useDataset();
-  const orders = useFilteredOrders();
 
-  const metrics = React.useMemo(() => customerMetrics(orders, ds.clients), [orders, ds.clients]);
-  const abc = React.useMemo(() => customerABC(orders, ds.clients), [orders, ds.clients]);
-  const segments = React.useMemo(() => segmentBreakdown(metrics), [metrics]);
+  // Tudo agregado no servidor: segmentação RFM, curvas ABC e ranking por lucro
+  // chegam prontos, com as contagens calculadas sobre a base inteira.
+  const { data, loading, error } = useClientesAnalytics();
+
+  const abc = data?.topClients ?? [];
+  const segments = data?.segments ?? {};
   const segmentsArr = Object.entries(segments).map(([k, v]) => ({
     key: k,
     label: SEGMENT_LABELS[k] ?? k,
     value: v,
   }));
 
-  const activeCustomers = metrics.filter((m) => m.orders > 0);
-  const totalRevenue = metrics.reduce((s, m) => s + m.revenue, 0);
-  const avgLTV = activeCustomers.length > 0 ? totalRevenue / activeCustomers.length : 0;
-  const churnRisk = metrics.filter((m) => m.segment === "em-risco").length;
+  const activeCustomers = data?.activeCustomers ?? 0;
+  const avgLTV = data?.avgLTV ?? 0;
+  const churnRisk = data?.churnRisk ?? 0;
+  // O gráfico de LTV usa os 10 primeiros do mesmo ranking por receita.
+  const topByLTV = abc.slice(0, 10);
+  const profitRanking = data?.profitRanking ?? [];
 
-  const topByLTV = [...activeCustomers].sort((a, b) => b.ltv - a.ltv).slice(0, 10);
-  const profitRanking = React.useMemo(() => customerProfitRanking(orders), [orders]);
-
-  if (!ds.hasData) {
+  if (error) {
     return (
       <div className="space-y-8">
         <PageHeader eyebrow={t("clientes.header.eyebrow")} title={t("clientes.header.title")} description={t("clientes.header.desc")} />
-        <EmptyState />
+        <div className="rounded-lg border border-negative/30 bg-negative/10 px-4 py-3 text-sm text-negative">
+          Não foi possível carregar os clientes: {error}
+        </div>
+      </div>
+    );
+  }
+
+  if (!data?.hasData) {
+    return (
+      <div className="space-y-8">
+        <PageHeader eyebrow={t("clientes.header.eyebrow")} title={t("clientes.header.title")} description={t("clientes.header.desc")} />
+        {loading ? (
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <div key={i} className="h-[104px] animate-pulse rounded-lg bg-muted/40" />
+            ))}
+          </div>
+        ) : (
+          <EmptyState />
+        )}
       </div>
     );
   }
@@ -75,12 +92,12 @@ export default function ClientesPage() {
       >
         <Badge variant="ghost" className="gap-1">
           <Users className="h-3 w-3" />
-          {t("clientes.header.badge", { count: formatNumber(ds.clients.length) })}
+          {t("clientes.header.badge", { count: formatNumber(data.totalClients) })}
         </Badge>
       </PageHeader>
 
       <section className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <KpiCard label={t("clientes.kpi.active")} value={formatNumber(activeCustomers.length)} caption={t("clientes.kpi.active.caption")} accent="accent" />
+        <KpiCard label={t("clientes.kpi.active")} value={formatNumber(activeCustomers)} caption={t("clientes.kpi.active.caption")} accent="accent" />
         <KpiCard label={t("clientes.kpi.ltv")} value={<><Money value={avgLTV} compact /></> as never} />
         <KpiCard label={t("clientes.kpi.vip")} caption={t("clientes.kpi.vip.caption")} value={formatNumber(segments.vip ?? 0)} accent="positive" />
         <KpiCard label={t("clientes.kpi.risk")} caption={t("clientes.kpi.risk.caption")} value={formatNumber(churnRisk)} accent="negative" />
@@ -94,8 +111,8 @@ export default function ClientesPage() {
           <CardContent>
             <BarChartH
               rows={topByLTV.map((m) => ({
-                key: m.client.id,
-                label: m.client.name,
+                key: m.id,
+                label: m.name,
                 value: m.ltv,
                 secondary: `${m.orders} pedidos · ${SEGMENT_LABELS[m.segment] ?? m.segment}`,
               }))}
@@ -139,45 +156,41 @@ export default function ClientesPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
-                {abc.slice(0, 18).map((e) => {
-                  const m = metrics.find((mm) => mm.client.id === e.item.id);
-                  if (!m) return null;
-                  return (
-                    <tr key={e.item.id} className="hover:bg-muted/30 transition-colors">
-                      <td className="py-2.5 px-5">
-                        <div className="font-medium truncate max-w-[220px]">{e.item.name}</div>
-                        <div className="text-xs text-muted-foreground font-mono">{e.item.id}</div>
-                      </td>
-                      <td className="py-2.5 px-5 text-right tabular">{m.orders}</td>
-                      <td className="py-2.5 px-5 text-right tabular font-medium">
-                        <Money value={m.ltv} />
-                      </td>
-                      <td className="py-2.5 px-5 text-right tabular text-muted-foreground">
-                        <Money value={m.averageTicket} />
-                      </td>
-                      <td className="py-2.5 px-5 text-right tabular text-muted-foreground">
-                        {m.recencyDays === Infinity ? "—" : `${m.recencyDays}d`}
-                      </td>
-                      <td className="py-2.5 px-5">
-                        <Badge variant={SEGMENT_TONE[m.segment]} className="capitalize">
-                          {SEGMENT_LABELS[m.segment] ?? m.segment}
-                        </Badge>
-                      </td>
-                      <td className="py-2.5 px-5">
-                        <span
-                          className={cn(
-                            "inline-flex h-5 w-5 items-center justify-center rounded font-mono text-[11px] font-medium",
-                            e.curve === "A" && "bg-positive/15 text-positive border border-positive/30",
-                            e.curve === "B" && "bg-warning/15 text-warning border border-warning/30",
-                            e.curve === "C" && "bg-muted text-muted-foreground border border-border"
-                          )}
-                        >
-                          {e.curve}
-                        </span>
-                      </td>
-                    </tr>
-                  );
-                })}
+                {abc.map((e) => (
+                  <tr key={e.id} className="hover:bg-muted/30 transition-colors">
+                    <td className="py-2.5 px-5">
+                      <div className="font-medium truncate max-w-[220px]">{e.name}</div>
+                      <div className="text-xs text-muted-foreground font-mono">{e.id}</div>
+                    </td>
+                    <td className="py-2.5 px-5 text-right tabular">{e.orders}</td>
+                    <td className="py-2.5 px-5 text-right tabular font-medium">
+                      <Money value={e.ltv} />
+                    </td>
+                    <td className="py-2.5 px-5 text-right tabular text-muted-foreground">
+                      <Money value={e.averageTicket} />
+                    </td>
+                    <td className="py-2.5 px-5 text-right tabular text-muted-foreground">
+                      {e.lastPurchaseDate === null ? "—" : `${e.recencyDays}d`}
+                    </td>
+                    <td className="py-2.5 px-5">
+                      <Badge variant={SEGMENT_TONE[e.segment]} className="capitalize">
+                        {SEGMENT_LABELS[e.segment] ?? e.segment}
+                      </Badge>
+                    </td>
+                    <td className="py-2.5 px-5">
+                      <span
+                        className={cn(
+                          "inline-flex h-5 w-5 items-center justify-center rounded font-mono text-[11px] font-medium",
+                          e.curve === "A" && "bg-positive/15 text-positive border border-positive/30",
+                          e.curve === "B" && "bg-warning/15 text-warning border border-warning/30",
+                          e.curve === "C" && "bg-muted text-muted-foreground border border-border"
+                        )}
+                      >
+                        {e.curve}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
               </tbody>
             </table>
           </div>
@@ -192,7 +205,7 @@ export default function ClientesPage() {
                 Ordenado por lucro total (receita − custo) no período.
               </p>
             </div>
-            <Badge variant="ghost">{profitRanking.length} clientes</Badge>
+            <Badge variant="ghost">{data.profitTotals.count} clientes</Badge>
           </div>
         </CardHeader>
         <CardContent className="px-0">
@@ -211,7 +224,7 @@ export default function ClientesPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
-                {profitRanking.slice(0, 25).map((e, i) => (
+                {profitRanking.map((e, i) => (
                   <tr key={e.clientId} className="hover:bg-muted/30 transition-colors">
                     <td className="py-2.5 px-5 font-mono text-xs text-muted-foreground tabular">
                       {(i + 1).toString().padStart(2, "0")}
@@ -245,25 +258,26 @@ export default function ClientesPage() {
               <tfoot>
                 <tr className="border-t border-border text-[11px] font-medium">
                   <td className="py-2.5 px-5" />
+                  {/* Totais sobre TODOS os clientes do período, não só os 25 exibidos. */}
                   <td className="py-2.5 px-5 uppercase tracking-[0.1em] text-muted-foreground">
-                    Total · {profitRanking.length} clientes
+                    Total · {data.profitTotals.count} clientes
                   </td>
                   <td className="py-2.5 px-5 text-right tabular text-muted-foreground">
-                    {formatNumber(profitRanking.reduce((s, e) => s + e.orders, 0))}
+                    {formatNumber(data.profitTotals.orders)}
                   </td>
                   <td className="py-2.5 px-5 text-right tabular">
-                    <Money value={profitRanking.reduce((s, e) => s + e.revenue, 0)} />
+                    <Money value={data.profitTotals.revenue} />
                   </td>
                   <td className="py-2.5 px-5 text-right tabular text-muted-foreground">
-                    <Money value={profitRanking.reduce((s, e) => s + e.cost, 0)} />
+                    <Money value={data.profitTotals.cost} />
                   </td>
                   <td className="py-2.5 px-5 text-right tabular text-positive font-medium">
-                    <Money value={profitRanking.reduce((s, e) => s + e.profit, 0)} />
+                    <Money value={data.profitTotals.profit} />
                   </td>
                   <td className="py-2.5 px-5 text-right tabular">
                     {(() => {
-                      const rev = profitRanking.reduce((s, e) => s + e.revenue, 0);
-                      const pft = profitRanking.reduce((s, e) => s + e.profit, 0);
+                      const rev = data.profitTotals.revenue;
+                      const pft = data.profitTotals.profit;
                       const pct = rev > 0 ? pft / rev : 0;
                       return (
                         <span className={cn(

@@ -12,13 +12,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ChartDefs } from "@/components/charts/chart-defs";
 import { ChartTooltip } from "@/components/charts/chart-tooltip";
-import { usePayables, useFilteredPayables } from "@/lib/hooks/use-payables";
+import { usePagarAnalytics, type AgingBucketId, type GroupRow } from "@/lib/hooks/use-pagar-analytics";
 import { useFilters } from "@/lib/store/filters";
-import {
-  computePayablesKpis, agingBreakdown, bySupplier, dueTimeline,
-  computePaymentStats, monthlyPaymentAnalysis, supplierPaymentAnalysis,
-  type AgingBucketId, type GroupRow, type MonthlyPaymentRow, type SupplierPaymentRow,
-} from "@/lib/analytics/payables";
 import { formatCurrency, formatNumber, formatPercent } from "@/lib/utils/format";
 import { useTranslation } from "@/lib/hooks/use-translation";
 import { cn } from "@/lib/utils";
@@ -33,31 +28,21 @@ const AGING_COLORS: Record<AgingBucketId, string> = {
 
 export default function ContasPagarPage() {
   const { t } = useTranslation();
-  const pay = usePayables();
-  const allRows = useFilteredPayables();
   const currency = useFilters((s) => s.currency);
 
-  const pendingRows = React.useMemo(() => allRows.filter((r) => !r.isPaid), [allRows]);
-  const hasPaidData  = allRows.some((r) => r.isPaid);
+  // Tudo agregado no servidor a partir de `payable_items`.
+  const { data, loading, error } = usePagarAnalytics();
 
-  const kpi       = React.useMemo(() => computePayablesKpis(pendingRows), [pendingRows]);
-  const aging     = React.useMemo(() => agingBreakdown(pendingRows), [pendingRows]);
-  const suppliers = React.useMemo(() => bySupplier(pendingRows), [pendingRows]);
-  const timeline  = React.useMemo(() => dueTimeline(pendingRows), [pendingRows]);
-
-  const payStats    = React.useMemo(() => computePaymentStats(allRows), [allRows]);
-  const monthlyPay  = React.useMemo(() => monthlyPaymentAnalysis(allRows), [allRows]);
-  const supplierPay = React.useMemo(() => supplierPaymentAnalysis(allRows), [allRows]);
-
-  const detail = React.useMemo(() => {
-    return [...pendingRows]
-      .sort((a, b) => {
-        if (a.status !== b.status) return a.status === "overdue" ? -1 : 1;
-        if (a.status === "overdue") return b.daysOverdue - a.daysOverdue;
-        return a.daysUntilDue - b.daysUntilDue;
-      })
-      .slice(0, 18);
-  }, [pendingRows]);
+  const kpi = data?.kpi;
+  const aging = data?.aging ?? [];
+  const suppliers = data?.suppliers ?? [];
+  const timeline = data?.timeline ?? [];
+  const payStats = data?.payStats;
+  const monthlyPay = data?.monthlyPayment ?? [];
+  const supplierPay = data?.supplierPayment ?? [];
+  const detail = data?.detail ?? [];
+  const hasPaidData = data?.hasPaidData ?? false;
+  const pendingCount = data?.pendingRowsCount ?? 0;
 
   const agingLabel: Record<AgingBucketId, string> = {
     current: t("pagar.aging.current"),
@@ -72,11 +57,30 @@ export default function ContasPagarPage() {
     fill: AGING_COLORS[a.id],
   }));
 
-  if (!pay.hasData) {
+  if (error) {
     return (
       <div className="space-y-8">
         <PageHeader eyebrow={t("pagar.header.eyebrow")} title={t("pagar.header.title")} description={t("pagar.header.desc")} />
-        <EmptyState title={t("pagar.empty.title")} description={t("pagar.empty.desc")} />
+        <div className="rounded-lg border border-negative/30 bg-negative/10 px-4 py-3 text-sm text-negative">
+          Não foi possível carregar as contas a pagar: {error}
+        </div>
+      </div>
+    );
+  }
+
+  if (!kpi || !payStats || !data?.hasData) {
+    return (
+      <div className="space-y-8">
+        <PageHeader eyebrow={t("pagar.header.eyebrow")} title={t("pagar.header.title")} description={t("pagar.header.desc")} />
+        {loading ? (
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <div key={i} className="h-[104px] animate-pulse rounded-lg bg-muted/40" />
+            ))}
+          </div>
+        ) : (
+          <EmptyState title={t("pagar.empty.title")} description={t("pagar.empty.desc")} />
+        )}
       </div>
     );
   }
@@ -88,17 +92,17 @@ export default function ContasPagarPage() {
         title={t("pagar.header.title")}
         description={t("pagar.header.desc")}
       >
-        <Badge variant="ghost">{t("pagar.table.badge", { count: formatNumber(allRows.length) })}</Badge>
+        <Badge variant="ghost">{t("pagar.table.badge", { count: formatNumber(data.allRowsCount) })}</Badge>
       </PageHeader>
 
-      {pendingRows.length === 0 && !hasPaidData && (
+      {pendingCount === 0 && !hasPaidData && (
         <div className="rounded-lg border border-dashed border-border p-6 text-center text-sm text-muted-foreground">
           {t("pagar.empty.filtered")}
         </div>
       )}
 
       {/* ── A PAGAR (pending) ───────────────────────────────────────────────── */}
-      {pendingRows.length > 0 && (
+      {pendingCount > 0 && (
         <>
           <section className="grid grid-cols-2 md:grid-cols-4 gap-3">
             <KpiCard
@@ -202,7 +206,7 @@ export default function ContasPagarPage() {
             <CardHeader>
               <div className="flex items-center justify-between">
                 <CardTitle>{t("pagar.table.title")}</CardTitle>
-                <Badge variant="ghost">{t("pagar.table.badge", { count: formatNumber(pendingRows.length) })}</Badge>
+                <Badge variant="ghost">{t("pagar.table.badge", { count: formatNumber(pendingCount) })}</Badge>
               </div>
             </CardHeader>
             <CardContent className="px-0">

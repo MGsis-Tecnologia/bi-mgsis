@@ -1,21 +1,36 @@
 "use client";
 
 import * as React from "react";
-import { useDatasetStore } from "@/lib/store/dataset";
 import { useExchangeRates } from "@/lib/store/exchange-rates";
 import { useFilters } from "@/lib/store/filters";
-import { buildProspeccao, EMPTY_RESUMO } from "@/lib/analytics/prospeccao";
+import { EMPTY_RESUMO } from "@/lib/analytics/prospeccao";
 import type { ProspeccaoResumo } from "@/lib/analytics/prospeccao";
-import type { OrcamentoLineItem } from "@/lib/types/dataset";
 
-const EMPTY_ITEMS: OrcamentoLineItem[] = [];
+/**
+ * Resumo de Prospecção, agregado no servidor a partir de `orcamento_items`.
+ *
+ * Antes o cálculo era feito no navegador sobre o dataset inteiro carregado no
+ * boot. Agora chega pronto — só duas coisas ficam aqui, porque dependem do
+ * relógio do navegador (mesma decisão da segmentação RFM em /clientes):
+ *
+ *  - `limitePerdido`: a data a partir da qual um orçamento em aberto conta como
+ *    perdido (30 dias). Vai no pedido para o SQL classificar.
+ *  - `dias` de cada pendente: calculado aqui a partir da data do orçamento.
+ */
 
-// Espelha useDataset/useFilteredOrders: lê o dataset já carregado no boot e
-// recalcula por memo quando período, moeda, empresa ou câmbio mudam. Sem fetch,
-// sem estado de loading — ao entrar na página os números já estão prontos.
-export function useProspeccao(): ProspeccaoResumo {
-  const items = useDatasetStore((s) => s.orcamento?.items ?? EMPTY_ITEMS);
-  const inventory = useDatasetStore((s) => s.inventory);
+const DIAS_PARA_PERDIDO = 30;
+const MS_DIA = 86_400_000;
+
+interface RespostaApi extends Omit<ProspeccaoResumo, "pendentes"> {
+  pendentes: { orcamento_id: string; cliente_nome: string; valor: number; data: string }[];
+  ms: number;
+}
+
+function iso(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+export function useProspeccao(): ProspeccaoResumo & { loading: boolean; error: string | null } {
   const currency = useFilters((s) => s.currency);
   const empresaId = useFilters((s) => s.empresaId);
   const preset = useFilters((s) => s.preset);
@@ -23,22 +38,70 @@ export function useProspeccao(): ProspeccaoResumo {
   const getRange = useFilters((s) => s.getRange);
   const rates = useExchangeRates((s) => s.rates);
 
+  const [resposta, setResposta] = React.useState<RespostaApi | null>(null);
+  const [loading, setLoading] = React.useState(true);
+  const [error, setError] = React.useState<string | null>(null);
+
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const range = React.useMemo(() => getRange(), [preset, customRange, getRange]);
 
-  // Código do fabricante só existe no dataset de Estoque — mesmo lookup usado na
-  // página de Produtos, aplicado aqui quando o arquivo de orçamentos não traz
-  // a coluna produto_fabricante.
-  const mfrByProduct = React.useMemo(() => {
-    const m = new Map<string, string>();
-    for (const it of inventory?.items ?? []) {
-      if (it.manufacturerCode && !m.has(it.productId)) m.set(it.productId, it.manufacturerCode);
-    }
-    return m;
-  }, [inventory?.items]);
+  const corpo = React.useMemo(() => {
+    // O original comparava `new Date(orcamentoData)` (meia-noite UTC) com
+    // `Date.now() - 30 dias`. A data-limite equivalente é a data UTC desse
+    // instante, e a comparação vira `data <= limite`.
+    const limitePerdido = new Date(Date.now() - DIAS_PARA_PERDIDO * MS_DIA)
+      .toISOString()
+      .slice(0, 10);
+    return {
+      from: iso(range.from),
+      to: iso(range.to),
+      currency,
+      rates,
+      empresaId,
+      limitePerdido,
+    };
+  }, [range, currency, rates, empresaId]);
+
+  React.useEffect(() => {
+    const ctrl = new AbortController();
+    setLoading(true);
+    setError(null);
+
+    fetch("/api/analytics/prospeccao", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(corpo),
+      signal: ctrl.signal,
+    })
+      .then(async (res) => {
+        const json = await res.json();
+        if (!res.ok) throw new Error(json.error ?? `Erro ${res.status}`);
+        setResposta(json as RespostaApi);
+      })
+      .catch((err: Error) => {
+        if (err.name !== "AbortError") setError(err.message);
+      })
+      .finally(() => {
+        if (!ctrl.signal.aborted) setLoading(false);
+      });
+
+    return () => ctrl.abort();
+  }, [corpo]);
 
   return React.useMemo(() => {
-    if (items.length === 0) return EMPTY_RESUMO;
-    return buildProspeccao(items, { range, currency, empresaId, rates, mfrByProduct });
-  }, [items, range, currency, empresaId, rates, mfrByProduct]);
+    if (!resposta) return { ...EMPTY_RESUMO, loading, error };
+    const agora = Date.now();
+    return {
+      ...resposta,
+      pendentes: resposta.pendentes.map((q) => ({
+        orcamento_id: q.orcamento_id,
+        cliente_nome: q.cliente_nome,
+        valor: q.valor,
+        // Mesma fórmula do original: `new Date("YYYY-MM-DD")` é meia-noite UTC.
+        dias: Math.floor((agora - new Date(q.data).getTime()) / MS_DIA),
+      })),
+      loading,
+      error,
+    };
+  }, [resposta, loading, error]);
 }
