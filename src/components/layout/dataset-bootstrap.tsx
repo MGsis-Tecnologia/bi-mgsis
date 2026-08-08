@@ -73,6 +73,7 @@ const ROTAS_SEM_STORE = new Set([
   "/financeiro/receber",
   "/financeiro/pagar",
   "/financeiro/dre",
+  "/estoque",
 ]);
 
 export function DatasetBootstrap() {

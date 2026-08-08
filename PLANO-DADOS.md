@@ -595,7 +595,7 @@ consultas que já existem.
 | Fase | Situação |
 |---|---|
 | A — preparar o banco | Medida, **não aplicada** (índice rendeu só 18%; ver 4.1) |
-| **B — endpoints de agregação** | **Em andamento: 10 de ~12 telas migradas** |
+| **B — endpoints de agregação** | **Concluída: todas as telas de leitura migradas** |
 | C — aposentar o download total | Não iniciada (depende da B terminar) |
 | D — ingestão por API | Desenho fechado (seção 5), **não implementada** |
 | E — importação de CSV no servidor | Não iniciada |
@@ -603,10 +603,11 @@ consultas que já existem.
 
 **Telas migradas:** `/dashboard`, `/vendas`, `/produtos`, `/clientes`,
 `/vendedores`, `/comparativo`, `/prospeccao`, `/financeiro/receber`,
-`/financeiro/pagar` e `/financeiro/dre`.
+`/financeiro/pagar`, `/financeiro/dre` e `/estoque`.
 
-**Faltam:** `/estoque` e `/importacao` (esta última usa o store para gravar, não
-para ler — cai na fase E, não na B).
+**Falta:** `/importacao`, que usa o store para gravar, não para ler — cai na
+fase E, não na B. Enquanto ela não for migrada, `DatasetBootstrap` continua
+existindo só para essa rota.
 
 Payload no preset padrão:
 
@@ -629,6 +630,9 @@ o que ele carrega é uma linha por conta do plano, uma por centro de custo e uma
 por dia do período (a série diária vem junto com a mensal para o botão
 mensal/diário não disparar nova consulta — num período de 12 meses são ~365
 pontos, na casa de 20 KB).
+
+`/estoque` ficou em **274 KB e ~4,7 s** (12 meses) — é a mais cara da fase B, e
+o motivo está na seção "O que o /estoque ensinou" abaixo.
 
 Os tempos variam bastante com o cache do Postgres — as duas que varrem o
 histórico completo chegam a 9 s a frio e caem para ~2,4 s a quente.
@@ -655,7 +659,57 @@ src/app/(dashboard)/<tela>/page.tsx     ← consome o hook
 
 ### ▶ Retomar por aqui
 
-**Próxima tela: `/estoque`** — a última da fase B.
+**A fase B acabou.** As próximas frentes, em ordem de retorno:
+
+1. **Fase C** — apagar `DatasetBootstrap`, o store e o IndexedDB. Depende de
+   migrar `/importacao` (fase E), que é a única rota que ainda usa o store.
+2. **Fase D** — ingestão por API. Desenho fechado na seção 5, independente de
+   tudo isto, pode ser construída em paralelo.
+3. **`/estoque` a ~4,7 s** — a única tela que ainda incomoda. Ver abaixo o que
+   já foi medido para não refazer o caminho.
+
+### O que o /estoque ensinou
+
+É a tela mais cara da fase B, e o que a segura **não é uma coisa só**. Depois de
+otimizada ela ficou em ~4,7 s (12 meses), assim distribuída:
+
+| Passo | Tempo |
+|---|---:|
+| `e_l` — linhas do período (340 mil) | ~550 ms |
+| `e_mov` — movimento por produto | ~1.200 ms |
+| `e_cat` — catálogo (primeira ocorrência de cada produto) | ~1.050 ms |
+| `e_fin` — junção snapshot × movimento (112 mil linhas) | ~760 ms |
+| SELECT final — as 9 agregações | ~800 ms |
+| os 5 `ANALYZE` | ~270 ms |
+
+Não há um gargalo dominante para atacar; o próximo ganho real é pré-agregação
+(fase F), não mais ajuste de SQL.
+
+**A lição que vale para todas as telas: o Postgres não tem estatística de CTE.**
+Num `WITH` de sete etapas ele estimava **8,3 milhões** de linhas onde havia 112
+mil e escolhia merge joins que ordenavam tudo. E o erro não é só de grau: ao
+melhorar uma sub-consulta, a estimativa de `mov` caiu para *3 linhas*, o
+anti-join virou nested loop e a consulta foi de 6,9 s para **578 segundos**.
+
+A saída foi materializar cada etapa em `CREATE TEMP TABLE … ON COMMIT DROP` e
+rodar `ANALYZE`, tudo dentro de uma transação. Com números reais o planejador
+acerta. Detalhe que importa: `SET LOCAL default_statistics_target = 10` antes dos
+`ANALYZE` — o que falta ao planejador é a cardinalidade, não histograma fino, e
+isso derrubou o custo dos cinco `ANALYZE` de 2.475 ms para 271 ms sem mudar
+nenhum plano.
+
+Se outra tela apresentar lentidão desproporcional ao volume, **suspeite da
+estimativa antes de suspeitar do SQL**: rode `EXPLAIN ANALYZE` e compare
+`rows=` estimado com o real.
+
+Duas hipóteses foram testadas e descartadas aqui, para não repetir:
+
+- **Índice `(order_type, product_id, id)`** para o catálogo: rendeu 260 ms de
+  4,8 s e custa 43 MB por tenant numa tabela de 318 MB. Não compensa.
+- **Agregar por (produto, pedido) antes de somar** no `e_mov`, para trocar três
+  passadas por duas: ficou *pior* (mediana 5.309 ms contra 5.044 ms), porque
+  carregar nome e subgrupo em `e_l` engorda a temporária mais do que a passada
+  extra custa.
 
 Como a DRE foi validada com a tabela vazia: `caixa_items` tinha 0 linhas, então
 comparar JS × SQL ali não provaria nada (tudo bate em zero). O script semeou
@@ -871,6 +925,34 @@ lugar que a tela não lê mais), então ele foi corrigido junto, para `serverImp
 Ao migrar uma tela, procure caminhos de **escrita** escondidos nela, não só os de
 leitura. Se houver um que só toca o store, ou ele vira `serverImport` ou a tela
 quebra em silêncio.
+
+### Quando a lista não cabe no payload
+
+`/estoque` tem 76.708 SKUs (111.970 linhas de snapshot, porque há uma linha por
+produto **e por empresa**). Diferente das outras telas, não dava para mandar as
+linhas e deixar o navegador filtrar: a **busca por texto e o filtro de situação
+passaram para o servidor**, com a tabela voltando paginada em 200 linhas mais a
+contagem total. O hook adia a busca em 300 ms para não disparar uma consulta por
+tecla.
+
+Vale como regra: se a tela filtra em cima de uma lista que não cabe no payload, o
+filtro vai junto para o servidor — não adianta migrar só a agregação.
+
+Nesse caminho apareceu um comportamento antigo que foi **mantido de propósito**:
+com "todas as empresas", um SKU presente na matriz e na filial vira duas linhas,
+e **cada uma recebe o movimento inteiro do produto** — a demanda aparece em dobro
+nas somas por categoria. Mudar isso mudaria números que o usuário já conhece,
+então ficou como estava e está registrado aqui para decisão futura.
+
+### Ordem das operações em ponto flutuante
+
+Na cobertura de estoque, `stock * periodDays / units_sold` e
+`stock / (units_sold / periodDays)` são a mesma conta na álgebra e contas
+diferentes em `double precision`. Um item caía exatamente nos 15 dias e mudava de
+"em risco" para "normal" — uma divergência real na validação.
+
+Ao traduzir um cálculo para SQL, **copie a ordem das operações do original**, não
+só a fórmula.
 
 Em paralelo, a Fase D (ingestão por API) já está com o desenho fechado e é
 independente da parte de consulta — pode ser construída ao mesmo tempo.

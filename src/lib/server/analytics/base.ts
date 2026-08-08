@@ -41,7 +41,7 @@ export class Params {
  * Em "ALL" cada linha é multiplicada pela taxa da sua moeda (o `?? 1` do código
  * antigo vira COALESCE); com moeda específica não há conversão, só filtro.
  */
-function joinTaxas(f: AnalyticsFilters, p: Params): string {
+export function joinTaxas(f: AnalyticsFilters, p: Params): string {
   if (f.currency !== "ALL") return "";
   const linhas = Object.entries(f.rates);
   if (linhas.length === 0) return "";
@@ -51,7 +51,7 @@ function joinTaxas(f: AnalyticsFilters, p: Params): string {
   return `LEFT JOIN (VALUES ${values}) AS r(cid, taxa) ON r.cid = s.currency_id`;
 }
 
-function exprTaxa(f: AnalyticsFilters): string {
+export function exprTaxa(f: AnalyticsFilters): string {
   return f.currency === "ALL" ? "COALESCE(r.taxa, 1)" : "1";
 }
 

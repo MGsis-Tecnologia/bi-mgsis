@@ -9,6 +9,7 @@ import {
   PackageX,
   Search,
   TrendingUp,
+  Loader2,
 } from "lucide-react";
 import { PageHeader } from "@/components/layout/page-header";
 import { KpiCard } from "@/components/dashboard/kpi-card";
@@ -18,127 +19,71 @@ import { Badge } from "@/components/ui/badge";
 import { BarChartH } from "@/components/charts/bar-chart-h";
 import { LabeledDonut } from "@/components/charts/labeled-donut";
 import { Money } from "@/components/dashboard/money";
-import { useDataset, useFilteredOrders } from "@/lib/hooks/use-dataset";
-import { useDatasetStore } from "@/lib/store/dataset";
 import { useFilters } from "@/lib/store/filters";
-import { useExchangeRates } from "@/lib/store/exchange-rates";
 import type { AppCurrencyId } from "@/lib/types/dataset";
 import {
-  belowMinimumStock,
-  coverageDistribution,
-  inventoryAnalysis,
-  stockByCategory,
-  statusDistribution,
   statusLabel,
-  topDormant,
-  topMovers,
-  topRuptureRisk,
-  type InventoryRow,
+  useEstoqueAnalytics,
+  type EstoqueRow as InventoryRow,
   type StockStatus,
-} from "@/lib/analytics/inventory";
+} from "@/lib/hooks/use-estoque-analytics";
 import { formatCurrency, formatNumber, formatPercent } from "@/lib/utils/format";
 import { cn } from "@/lib/utils";
 
 export default function EstoquePage() {
-  const inventory = useDatasetStore((s) => s.inventory);
-  const ds = useDataset();
-  const orders = useFilteredOrders();
-
-  const getRange = useFilters((s) => s.getRange);
-  const preset = useFilters((s) => s.preset);
-  const customRange = useFilters((s) => s.customRange);
-  const empresaId = useFilters((s) => s.empresaId);
   const currency = useFilters((s) => s.currency);
-  const rates = useExchangeRates((s) => s.rates);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  const range = React.useMemo(() => getRange(), [preset, customRange, getRange]);
+
+  const [statusFilter, setStatusFilter] = React.useState<StockStatus | "all">("all");
+  const [query, setQuery] = React.useState("");
+
+  // Busca e situação vão para o servidor: são 76 mil SKUs, o navegador não tem
+  // mais a lista para filtrar.
+  const { data, loading, error } = useEstoqueAnalytics({
+    status: statusFilter,
+    busca: query,
+  });
 
   // Moeda de exibição do estoque: uma moeda específica exibe nela mesma; "ALL"
   // (Todas) converte tudo para R$.
   const displayCurrencyId: AppCurrencyId = currency === "ALL" ? "1" : currency;
   const displayCode = displayCurrencyId === "2" ? "US$" : displayCurrencyId === "3" ? "G$" : "R$";
 
-  // Filtra o snapshot de estoque por empresa (matriz/filial) e aplica a moeda:
-  // — moeda específica → mantém só os itens naquela moeda (sem conversão);
-  // — "Todas" → converte o custo de cada item para R$ pela taxa da sua moeda.
-  // Espelha o comportamento de Caixa/Vendas/Financeiro.
-  const inventoryItems = React.useMemo(() => {
-    return (inventory?.items ?? [])
-      .filter((it) => empresaId === "all" || it.empresaId === empresaId)
-      .filter((it) => currency === "ALL" || it.currencyId === currency)
-      .map((it) => {
-        const rate = currency === "ALL" ? (rates[it.currencyId] ?? 1) : 1;
-        return rate === 1 ? it : { ...it, costTotalUSD: it.costTotalUSD * rate };
-      });
-  }, [inventory?.items, empresaId, currency, rates]);
-  // Janela de demanda p/ cobertura: dias REAIS com dados dentro do período, até
-  // hoje. Sem isso, "Todos" (intervalo sentinela 2000–2099) diluiria a demanda
-  // em ~100 anos e estouraria a cobertura de todos os itens.
-  const periodDays = React.useMemo(() => {
-    const now = Date.now();
-    const effTo = Math.min(range.to.getTime(), now);
-    let effFrom = range.from.getTime();
-    let firstTs = Infinity;
-    for (const o of orders) {
-      const t = new Date(o.date + "T00:00:00").getTime();
-      if (t < firstTs) firstTs = t;
-    }
-    if (Number.isFinite(firstTs)) effFrom = Math.max(effFrom, firstTs);
-    return Math.max(1, Math.round((effTo - effFrom) / 86400000) + 1);
-  }, [orders, range]);
-
-  const [statusFilter, setStatusFilter] = React.useState<StockStatus | "all">("all");
-  const [query, setQuery] = React.useState("");
-
-  const analysis = React.useMemo(
-    () => inventoryAnalysis(inventoryItems, orders, ds.products, { periodDays }),
-    [inventoryItems, orders, ds.products, periodDays]
+  const cabecalho = (
+    <PageHeader
+      eyebrow="Catálogo · estoque"
+      title="O que está em estoque."
+      description="Cobertura, ruptura, dormência e capital alocado por SKU — cruzando snapshot atual com o movimento de vendas do período."
+    />
   );
-  const rows = analysis.rows;
 
-  const byCategory = React.useMemo(() => stockByCategory(rows), [rows]);
-  const statuses = React.useMemo(() => statusDistribution(rows), [rows]);
-  const movers = React.useMemo(() => topMovers(rows, 10), [rows]);
-  const dormant = React.useMemo(() => topDormant(rows, 10), [rows]);
-  const rupture = React.useMemo(() => topRuptureRisk(rows, 12), [rows]);
-  const minStockRows = React.useMemo(() => belowMinimumStock(rows), [rows]);
-
-  const coverage = React.useMemo(
-    () => coverageDistribution(rows).map((s) => ({
-      key: s.key,
-      label: s.label,
-      value: s.valueUSD,
-      count: s.count,
-      color: COVERAGE_COLORS[s.key] ?? "hsl(var(--muted-foreground))",
-    })),
-    [rows]
-  );
-  const coverageTotal = coverage.reduce((s, b) => s + b.value, 0);
-
-  const filteredRows = React.useMemo(() => {
-    const q = query.trim().toLowerCase();
-    return rows
-      .filter((r) => (statusFilter === "all" ? true : r.status === statusFilter))
-      .filter((r) => {
-        if (!q) return true;
-        return (
-          r.description.toLowerCase().includes(q) ||
-          r.productId.toLowerCase().includes(q) ||
-          r.manufacturerCode.toLowerCase().includes(q) ||
-          r.subgroupName.toLowerCase().includes(q)
-        );
-      })
-      .sort((a, b) => b.costTotalUSD - a.costTotalUSD);
-  }, [rows, statusFilter, query]);
-
-  if (!inventory || inventory.items.length === 0) {
+  if (error) {
     return (
       <div className="space-y-8">
-        <PageHeader
-          eyebrow="Catálogo · estoque"
-          title="O que está em estoque."
-          description="Cobertura, ruptura, dormência e capital alocado por SKU — cruzando snapshot atual com o movimento de vendas do período."
-        />
+        {cabecalho}
+        <Card>
+          <CardContent className="py-16 text-center text-sm text-destructive">
+            Erro ao carregar: {error}
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  if (!data) {
+    return (
+      <div className="space-y-8">
+        {cabecalho}
+        <div className="flex justify-center py-24">
+          <Loader2 className="h-6 w-6 animate-spin text-accent" />
+        </div>
+      </div>
+    );
+  }
+
+  if (!data.hasData) {
+    return (
+      <div className="space-y-8">
+        {cabecalho}
         <EmptyState
           title="Nenhum dado de estoque importado"
           description="Importe um arquivo de estoque (produto_id; produto_descricao; produto_fabricante; estoque_item; valor_estoque) para liberar a análise."
@@ -147,14 +92,29 @@ export default function EstoquePage() {
     );
   }
 
-  const { totals } = analysis;
+  const { totals, periodDays } = data;
+  const byCategory = data.byCategory;
+  const statuses = data.statuses;
+  const movers = data.movers;
+  const dormant = data.dormant;
+  const rupture = data.ruptureRisk;
+  const minStockRows = data.belowMinimum;
+  const filteredRows = data.rows;
+
+  const coverage = data.coverage.map((s) => ({
+    key: s.key,
+    label: s.label,
+    value: s.valueUSD,
+    count: s.count,
+    color: COVERAGE_COLORS[s.key] ?? "hsl(var(--muted-foreground))",
+  }));
+  const coverageTotal = coverage.reduce((s, b) => s + b.value, 0);
+
   const rupturePct = totals.skus > 0 ? totals.rupture / totals.skus : 0;
-  const valueAtRisk = rows
-    .filter((r) => r.status === "risk")
-    .reduce((s, r) => s + r.costTotalUSD, 0);
-  const valueDormant = rows
-    .filter((r) => r.status === "no_movement" || r.status === "excess")
-    .reduce((s, r) => s + r.costTotalUSD, 0);
+  // O valor por situação já vem somado do servidor.
+  const porStatus = (k: StockStatus) => statuses.find((s) => s.key === k)?.valueUSD ?? 0;
+  const valueAtRisk = porStatus("risk");
+  const valueDormant = porStatus("no_movement") + porStatus("excess");
 
   return (
     <div className="space-y-8">
@@ -448,7 +408,7 @@ export default function EstoquePage() {
             <div>
               <CardTitle>Detalhamento por SKU</CardTitle>
               <p className="mt-0.5 text-[11px] text-muted-foreground">
-                {formatNumber(filteredRows.length)} de {formatNumber(rows.length)} itens
+                {formatNumber(data.rowsTotal)} de {formatNumber(totals.skus)} itens
                 {statusFilter !== "all" && ` · filtro: ${statusLabel(statusFilter)}`}
                 {totals.skusMissingFromInventory > 0 && (
                   <>
@@ -467,8 +427,12 @@ export default function EstoquePage() {
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
                   placeholder="Buscar SKU, descrição, fabricante…"
-                  className="h-8 w-64 rounded-md border border-border bg-background pl-8 pr-3 text-xs text-foreground placeholder:text-muted-foreground focus:border-foreground/50 focus:outline-none"
+                  className="h-8 w-64 rounded-md border border-border bg-background pl-8 pr-8 text-xs text-foreground placeholder:text-muted-foreground focus:border-foreground/50 focus:outline-none"
                 />
+                {/* A busca corre no servidor: vale sinalizar que ainda está indo. */}
+                {loading && (
+                  <Loader2 className="absolute right-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 animate-spin text-muted-foreground" />
+                )}
               </div>
             </div>
           </div>
@@ -493,7 +457,7 @@ export default function EstoquePage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
-                {filteredRows.slice(0, 200).map((r) => (
+                {filteredRows.map((r) => (
                   <tr key={r.productId} className="hover:bg-muted/30 transition-colors">
                     <td className="py-2 px-3 font-mono text-xs text-muted-foreground tabular">
                       {r.productId}
@@ -560,9 +524,10 @@ export default function EstoquePage() {
                 Nenhum item para o filtro atual.
               </div>
             )}
-            {filteredRows.length > 200 && (
+            {data.rowsTotal > filteredRows.length && (
               <div className="border-t border-border py-2.5 px-5 text-[11px] text-muted-foreground">
-                Mostrando os 200 primeiros por valor. Use a busca para refinar.
+                Mostrando os {formatNumber(filteredRows.length)} primeiros por valor,
+                de {formatNumber(data.rowsTotal)}. Use a busca para refinar.
               </div>
             )}
           </div>
