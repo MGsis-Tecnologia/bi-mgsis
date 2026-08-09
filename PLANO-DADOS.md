@@ -734,6 +734,12 @@ npm run migrate:all  # aplica migrations pendentes no catalog e nos tenants
 npm run dev
 ```
 
+**Estado do git em 08/08/2026:** a fase B está commitada em três commits
+(`936d5b0` produtos, `ee3b085` as sete telas seguintes, `ea3ad5f` estoque), mas
+**não foi feito push** — `main` está à frente do `origin`. Subir dispara o deploy
+de produção no Coolify, então ficou aguardando decisão. Se o `git pull` acima não
+trouxer essas telas, elas estão na outra máquina, ainda locais.
+
 Para a validação, os scripts ficam em diretório temporário e podem não existir
 mais — o roteiro para recriá-los está logo abaixo. O de `/produtos` é o modelo
 mais completo (compara curvas ABC, ordem dos ids e totais de rodapé).
@@ -857,12 +863,20 @@ diferença — os 5.837 ms que eu tinha visto antes eram cache frio, não largur
 
 1. **Período de 12 meses ainda é lento**: 3,2 s no dashboard, 5,5 s em vendas,
    ~8 s em produtos. O preset padrão ("mês atual") responde em 0,5–2,3 s, então
-   não aparece no uso normal. Já é claro que isso é **sistêmico**, não específico
-   de uma tela — mas ainda **não medido** se a solução é índice, menos consultas
-   ou pré-agregação (Fase F). Três hipóteses já foram derrubadas por medição:
-   compartilhar a varredura no nível de linha, no nível de pedido (ver 4.1), e
-   `CTE MATERIALIZED` no ABC de produtos (rendeu 18%, não compensa a dependência
-   de Postgres 12+).
+   não aparece no uso normal. É **sistêmico**, não específico de uma tela.
+   Três hipóteses já foram derrubadas por medição: compartilhar a varredura no
+   nível de linha, no nível de pedido (ver 4.1), e `CTE MATERIALIZED` no ABC de
+   produtos (rendeu 18%, não compensa a dependência de Postgres 12+).
+
+   **▶ Pista nova, ainda não testada nestas telas:** o `/estoque` mostrou que o
+   Postgres estimava 74× a mais de linhas por não ter estatística de CTE, e que
+   materializar os passos em tabela temporária com `ANALYZE` mudou o plano (ver
+   "O que o /estoque ensinou"). Todas as telas de vendas usam a mesma estrutura
+   — `WITH l AS (…), pe AS (…)` de `base.ts` —, então **vale rodar
+   `EXPLAIN ANALYZE` no dashboard e em vendas e comparar `rows=` estimado com o
+   real antes de tentar qualquer outra coisa.** Se o desvio for grande, a mesma
+   técnica se aplica; se não for, o caminho é a fase F e não adianta insistir em
+   SQL. É o experimento de maior retorno esperado hoje, e é barato.
 
 2. **Inconsistência herdada nos filtros do dashboard**: os cartões de KPI ignoram
    canal, vendedor e subgrupo, enquanto os gráficos os aplicam. Foi replicado
@@ -882,6 +896,20 @@ diferença — os 5.837 ms que eu tinha visto antes eram cache frio, não largur
    antes, mas destoa. Recortar (top N por menor taxa) resolveria, e a tabela é
    rolável com 420px de altura — ninguém percorre 30 mil linhas. **É decisão de
    produto, não foi alterado.**
+
+6. **`/estoque` conta a demanda em dobro** quando o filtro é "todas as
+   empresas": o snapshot tem uma linha por (produto, empresa), e cada uma recebe
+   o movimento **inteiro** do produto. Some duas vezes nas agregações por
+   categoria (`unitsSold`, `revenueSold`); estoque e capital estão certos, porque
+   esses são por linha mesmo. Vem do código antigo e foi **replicado fielmente**
+   para não mudar números conhecidos. Corrigir significa decidir o que a tela
+   deve mostrar: demanda por SKU (uma vez) ou por SKU-empresa (rateada).
+   **Decisão de produto, pendente.**
+
+7. **`/estoque` responde em ~4,7 s** no período de 12 meses. Já otimizada de
+   6,9 s; o que sobra está distribuído, sem gargalo dominante — ver "O que o
+   /estoque ensinou". Duas otimizações foram medidas e descartadas ali, não vale
+   refazê-las.
 
 ### Filtro de período nem sempre é `BETWEEN`
 
