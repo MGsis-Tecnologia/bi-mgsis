@@ -588,7 +588,7 @@ consultas que já existem.
 
 ## 8. Estado atual — onde retomar
 
-*Atualizado em 07/08/2026.*
+*Atualizado em 08/08/2026.*
 
 ### O que já está pronto
 
@@ -920,12 +920,17 @@ diferença — os 5.837 ms que eu tinha visto antes eram cache frio, não largur
 
 ### Pendências conhecidas
 
-1. **Período de 12 meses ainda é lento**: 3,2 s no dashboard, 5,5 s em vendas,
-   ~8 s em produtos. O preset padrão ("mês atual") responde em 0,5–2,3 s, então
-   não aparece no uso normal. É **sistêmico**, não específico de uma tela.
-   Três hipóteses já foram derrubadas por medição: compartilhar a varredura no
-   nível de linha, no nível de pedido (ver 4.1), e `CTE MATERIALIZED` no ABC de
-   produtos (rendeu 18%, não compensa a dependência de Postgres 12+).
+1. **Período de 12 meses ainda é lento — causa encontrada, correção não
+   aplicada.** É o `work_mem` de 4 MB fazendo o banco derramar 229 MB em disco a
+   cada painel; com 64 MB o tempo cai 27%. Está tudo medido em "O `work_mem`
+   padrão está derrubando todas as telas", **inclusive a armadilha dos 32 MB**.
+   **Falta você decidir** entre 64 MB global, 16 MB global ou 64 MB só nas rotas
+   de análise — é dimensionamento de VPS, não código.
+
+   Para referência, cinco hipóteses já foram derrubadas por medição:
+   compartilhar a varredura no nível de linha e no nível de pedido (ver 4.1),
+   `CTE MATERIALIZED` no ABC de produtos (18%, não compensa), e enxugar a
+   projeção dos CTEs de pedido e de linha (zero efeito).
 
    **▶ Medido em 08/08/2026 — a causa é configuração, não SQL.** Ver
    "O `work_mem` padrão está derrubando todas as telas", logo abaixo. A pista da
