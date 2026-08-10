@@ -7,7 +7,28 @@
       "Bash(git commit *)",
       "Bash(git push *)",
       "Bash(git rev-list *)",
-      "PowerShell(npx tsc --noEmit -p tsconfig.json 2>&1)"
+      "PowerShell(npx tsc --noEmit -p tsconfig.json 2>&1)",
+      "PowerShell(node --env-file=.env $s create fase7_cat catalog)",
+      "PowerShell(node --env-file=.env $s create empresa_11111111000111)",
+      "PowerShell(node --env-file=.env $s create empresa_22222222000122)",
+      "PowerShell(node --env-file=.env $s create-empty empresa_33333333000133)",
+      "PowerShell(node --env-file=.env $s create fase7_base)",
+      "PowerShell($s=\"C:\\\\Users\\\\rogerio\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\c--bi-mgsis\\\\7487b5d1-23d0-4029-8dac-8f2252369540\\\\scratchpad\\\\legacy-db.mjs\")",
+      "PowerShell(node --env-file=.env \"C:\\\\Users\\\\rogerio\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\c--bi-mgsis\\\\7487b5d1-23d0-4029-8dac-8f2252369540\\\\scratchpad\\\\tables.mjs\" fase7_cat fase7_base empresa_11111111000111 empresa_33333333000133)",
+      "PowerShell(npx prisma generate)",
+      "PowerShell(npm run generate:catalog)",
+      "PowerShell(npm run type-check)",
+      "PowerShell(npm run dev)",
+      "PowerShell(git fetch origin -q)",
+      "PowerShell(npm run type-check 2>&1)",
+      "PowerShell(node --env-file=.env --max-old-space-size=8192 \"C:\\\\Users\\\\rogerio\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\c--bi-mgsis\\\\7487b5d1-23d0-4029-8dac-8f2252369540\\\\scratchpad\\\\validar-comparativo.mjs\" 2>&1)",
+      "PowerShell(node --env-file=.env \"C:\\\\Users\\\\rogerio\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\c--bi-mgsis\\\\7487b5d1-23d0-4029-8dac-8f2252369540\\\\scratchpad\\\\diag-prospeccao.mjs\")",
+      "PowerShell(node --env-file=.env \"C:\\\\Users\\\\rogerio\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\c--bi-mgsis\\\\7487b5d1-23d0-4029-8dac-8f2252369540\\\\scratchpad\\\\final-7telas.mjs\")",
+      "PowerShell(node --env-file=.env \"C:\\\\Users\\\\rogerio\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\c--bi-mgsis\\\\7487b5d1-23d0-4029-8dac-8f2252369540\\\\scratchpad\\\\premissas-receber.mjs\")",
+      "PowerShell(node --env-file=.env \"C:\\\\Users\\\\rogerio\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\c--bi-mgsis\\\\7487b5d1-23d0-4029-8dac-8f2252369540\\\\scratchpad\\\\final-8telas.mjs\")",
+      "Bash(npx tsc *)",
+      "Bash(npx tsx *)",
+      "Bash(curl -s -o /dev/null -w \"servidor: %{http_code}\\\\n\" http://localhost:3000/)"
     ]
   }
 }
