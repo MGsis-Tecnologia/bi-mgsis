@@ -597,7 +597,7 @@ consultas que já existem.
 | A — preparar o banco | Medida, **não aplicada** (índice rendeu só 18%; ver 4.1) |
 | **B — endpoints de agregação** | **Concluída: todas as telas de leitura migradas** |
 | C — aposentar o download total | Não iniciada (depende da B terminar) |
-| D — ingestão por API | Desenho fechado (seção 5), **não implementada** |
+| **D — ingestão por API** | **Implementada e testada** — ver [INGESTAO-API.md](INGESTAO-API.md) |
 | E — importação de CSV no servidor | Não iniciada |
 | F — pré-agregação | Não decidida (depende de medição) |
 
@@ -659,14 +659,27 @@ src/app/(dashboard)/<tela>/page.tsx     ← consome o hook
 
 ### ▶ Retomar por aqui
 
-**A fase B acabou.** As próximas frentes, em ordem de retorno:
+**Fases B e D concluídas.** As próximas frentes, em ordem de retorno:
 
-1. **Fase C** — apagar `DatasetBootstrap`, o store e o IndexedDB. Depende de
-   migrar `/importacao` (fase E), que é a única rota que ainda usa o store.
-2. **Fase D** — ingestão por API. Desenho fechado na seção 5, independente de
-   tudo isto, pode ser construída em paralelo.
-3. **`/estoque` a ~4,7 s** — a única tela que ainda incomoda. Ver abaixo o que
-   já foi medido para não refazer o caminho.
+1. **Fase E → C** — migrar `/importacao` para gravar no servidor e então apagar
+   `DatasetBootstrap`, o store e o IndexedDB. Ficou **mais urgente** depois da
+   fase D: ver "A ingestão pressiona a fase E", logo abaixo.
+2. **`work_mem`** — a correção está medida e espera só a decisão de
+   dimensionamento (pendência 1).
+3. **`/estoque` a ~4,7 s** — ver "O que o /estoque ensinou" antes de mexer.
+
+### A ingestão pressiona a fase E
+
+Cada envio da API atualiza `dataset_meta.importedAt`, que é justamente o campo
+que o `DatasetBootstrap` usa para decidir se precisa rebaixar o dataset inteiro.
+
+Com o ciclo de 2 horas rodando, **quem estiver na tela `/importacao` volta a
+baixar 1,5 GB depois de cada envio** — é a única rota que ainda depende do
+store. As telas de leitura não sofrem: todas já estão em `ROTAS_SEM_STORE`.
+
+Não é regressão (o comportamento é o mesmo de antes da fase B), mas a fase D
+transforma um download eventual em um download a cada 2 horas. Isso torna a
+fase E mais urgente do que parecia quando foi ordenada.
 
 ### O `work_mem` padrão está derrubando todas as telas
 

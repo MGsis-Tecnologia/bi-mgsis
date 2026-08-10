@@ -6,8 +6,20 @@ import { isMenuKey } from "@/lib/menu-catalog";
 // por regra de negócio própria (só funcionam com o catalog vazio); "/ativar"
 // se autoprotege pelo próprio token de convite (single-use, expira). Aqui só
 // precisam ficar fora do bloqueio genérico de sessão.
+//
+// "/api/ingest/" entra pelo mesmo motivo, e não por ser aberta: quem chama é o
+// servidor do ERP do cliente, que não tem cookie de sessão. Ela se autoprotege
+// com `Authorization: Bearer <integration_token>`, conferido em
+// `lib/server/ingest/auth.ts` — e é o token que decide em qual banco escrever,
+// então não há como um cliente alcançar os dados de outro.
 const PUBLIC_EXACT = new Set(["/", "/login", "/health", "/master/bootstrap", "/ativar"]);
-const PUBLIC_PREFIXES = ["/api/auth/", "/api/db/status", "/api/master/bootstrap", "/api/ativar"];
+const PUBLIC_PREFIXES = [
+  "/api/auth/",
+  "/api/db/status",
+  "/api/master/bootstrap",
+  "/api/ativar",
+  "/api/ingest/",
+];
 
 function isPublic(pathname: string): boolean {
   if (PUBLIC_EXACT.has(pathname)) return true;
@@ -44,6 +56,15 @@ export async function proxy(req: NextRequest) {
   return NextResponse.next();
 }
 
+// `/api/ingest/` fica FORA do matcher, não só na lista de públicas. O motivo é
+// tamanho: quando há proxy configurado, o Next bufferiza o corpo da requisição
+// e aplica `proxyClientMaxBodySize` (10 MB por padrão) — a foto de estoque tem
+// 21 MB e um mês de vendas, 12 MB, então ambos eram recusados com um erro de
+// JSON enganoso. Sem passar pelo proxy, não há buffer nem limite.
+// A entrada em PUBLIC_PREFIXES continua ali de propósito, para o dia em que
+// alguém mexer neste matcher.
 export const config = {
-  matcher: ["/((?!_next/static|_next/image|favicon.ico|logo-mgsis.png|teste_mgsis.csv).*)"],
+  matcher: [
+    "/((?!api/ingest/|_next/static|_next/image|favicon.ico|logo-mgsis.png|teste_mgsis.csv).*)",
+  ],
 };
