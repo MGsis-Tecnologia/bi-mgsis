@@ -668,6 +668,65 @@ src/app/(dashboard)/<tela>/page.tsx     ← consome o hook
 3. **`/estoque` a ~4,7 s** — a única tela que ainda incomoda. Ver abaixo o que
    já foi medido para não refazer o caminho.
 
+### O `work_mem` padrão está derrubando todas as telas
+
+**Este é o achado mais importante desde o começo da fase B, e não custa uma
+linha de código: é configuração do Postgres.**
+
+O `work_mem` do banco está no padrão de fábrica, **4 MB**. Agregar 119 mil
+pedidos não cabe nisso, então o hash aggregate **derrama para disco**. Medido no
+dashboard de 12 meses, com `EXPLAIN ANALYZE` somando todos os nós:
+
+| `work_mem` | Derrame em disco | Plano | Tempo |
+|---|---:|---|---:|
+| **4 MB** *(atual)* | 229 MB | 15 hash | 2.223 ms |
+| 8 MB | 144 MB | 15 hash | 2.094 ms |
+| 16 MB | 58 MB | 15 hash | 2.012 ms |
+| **32 MB** | 144 MB | 8 hash / **7 sort** | **4.865 ms** ⚠ |
+| **64 MB** | **0 MB** | 15 hash | **1.616 ms** |
+| 128 MB | 0 MB | 15 hash | 1.614 ms |
+
+Duas leituras:
+
+1. **64 MB elimina o derrame e é 27% mais rápido.** Acima disso não muda nada.
+2. **32 MB é uma armadilha.** O planejador troca hash aggregate por
+   `GroupAggregate` + ordenação externa e o tempo *dobra* — pior que o padrão de
+   4 MB. É a estimativa errada (155× no dashboard) distorcendo o modelo de custo
+   justamente na faixa em que ordenar "parece" barato. Ou seja: **não dá para
+   afinar esse número por tentativa; sem medir, um palpite intermediário piora.**
+
+**O que isso custa em memória, e por que a decisão é sua:** `work_mem` é por
+operação, por conexão. O dashboard dispara ~10 consultas em paralelo, então
+64 MB podem virar ~640 MB de pico **por usuário carregando o painel**. Com vários
+usuários simultâneos na mesma VPS, isso escala rápido. As opções:
+
+- **64 MB global** — o melhor tempo, e o maior risco de memória. Pede VPS com
+  folga e um teto de conexões.
+- **16 MB global** — ganho pequeno (~9%), pico de ~160 MB por painel, sem risco.
+- **64 MB só nas rotas de análise**, via `SET LOCAL` numa transação — melhor
+  relação, mas exige envolver cada endpoint numa transação (é o que o `/estoque`
+  já faz).
+
+**Nada disso foi aplicado.** É decisão de dimensionamento da VPS, não de código.
+
+De passagem: `shared_buffers` também está no padrão (128 MB) para ~800 MB de
+dados por tenant. Não foi medido, mas é candidato óbvio à mesma revisão.
+
+#### Duas hipóteses testadas e descartadas aqui
+
+Ambas partiam de "o hash derrama porque a linha é larga demais":
+
+- **Pedir do CTE de pedidos só as colunas usadas** (de 13 para 5): a largura caiu
+  de 294 para 70 bytes e o derrame ficou **exatamente igual** — 229 MB. Porque o
+  que vai para disco é a *entrada* do agregado, não a saída.
+- **Estreitar o CTE de linhas** (de 17 para 6 colunas): idem, zero diferença. O
+  Postgres já poda colunas não usadas sozinho; escrever a poda na mão não
+  acrescenta nada.
+
+Foram revertidas. A lição: **antes de reescrever SQL para "carregar menos
+dados", confirme no `EXPLAIN` que o dado largo é mesmo o que está indo para
+disco.**
+
 ### O que o /estoque ensinou
 
 É a tela mais cara da fase B, e o que a segura **não é uma coisa só**. Depois de
@@ -868,15 +927,11 @@ diferença — os 5.837 ms que eu tinha visto antes eram cache frio, não largur
    nível de linha, no nível de pedido (ver 4.1), e `CTE MATERIALIZED` no ABC de
    produtos (rendeu 18%, não compensa a dependência de Postgres 12+).
 
-   **▶ Pista nova, ainda não testada nestas telas:** o `/estoque` mostrou que o
-   Postgres estimava 74× a mais de linhas por não ter estatística de CTE, e que
-   materializar os passos em tabela temporária com `ANALYZE` mudou o plano (ver
-   "O que o /estoque ensinou"). Todas as telas de vendas usam a mesma estrutura
-   — `WITH l AS (…), pe AS (…)` de `base.ts` —, então **vale rodar
-   `EXPLAIN ANALYZE` no dashboard e em vendas e comparar `rows=` estimado com o
-   real antes de tentar qualquer outra coisa.** Se o desvio for grande, a mesma
-   técnica se aplica; se não for, o caminho é a fase F e não adianta insistir em
-   SQL. É o experimento de maior retorno esperado hoje, e é barato.
+   **▶ Medido em 08/08/2026 — a causa é configuração, não SQL.** Ver
+   "O `work_mem` padrão está derrubando todas as telas", logo abaixo. A pista da
+   estimativa de CTE foi verificada e é real (desvios de até 155× no dashboard),
+   mas o efeito prático dela é indireto: ela desestabiliza a escolha de plano
+   quando o `work_mem` muda.
 
 2. **Inconsistência herdada nos filtros do dashboard**: os cartões de KPI ignoram
    canal, vendedor e subgrupo, enquanto os gráficos os aplicam. Foi replicado
@@ -971,6 +1026,19 @@ com "todas as empresas", um SKU presente na matriz e na filial vira duas linhas,
 e **cada uma recebe o movimento inteiro do produto** — a demanda aparece em dobro
 nas somas por categoria. Mudar isso mudaria números que o usuário já conhece,
 então ficou como estava e está registrado aqui para decisão futura.
+
+### Comparar float com `===` dá falso alarme
+
+Ao validar uma mudança no dashboard, a comparação por `JSON.stringify` acusou
+divergência: `2109.8962500000002` contra `2109.89625`. Parecia erro.
+
+Não era. **O código antigo já diferia de si mesmo entre duas execuções**, no
+mesmo grau (desvio relativo de 1,6e-15, o limite do `double`). A soma paralela do
+Postgres não tem ordem garantida, e adição de ponto flutuante não é associativa.
+
+Ao validar, compare com **tolerância relativa** (1e-9 é folgado e ainda pega
+qualquer erro real) e, quando aparecer diferença minúscula, **rode a versão
+antiga duas vezes antes de culpar a nova**.
 
 ### Ordem das operações em ponto flutuante
 
