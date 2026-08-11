@@ -193,9 +193,13 @@ envia() {
   local ds="$1" periodo="$2" de="${3:-}" ate="${4:-}"
   local corpo="$TMP/$ds.json"
 
+  # Pela ENTRADA PADRÃO, não por -c: `psql -c` manda a string direto ao
+  # servidor e não expande variável do psql — a documentação exige que ela seja
+  # "completamente analisável pelo servidor, sem recursos específicos do psql".
+  # Com -c, o `:'de'` chegaria literal e o Postgres devolveria erro de sintaxe.
   local n
-  n="$(psql -X -A -t -q -v ON_ERROR_STOP=1 -v de="$de" -v ate="$ate" \
-        -c "$(conta_sql "$ds")" | tr -d '[:space:]')" || {
+  n="$(conta_sql "$ds" | psql -X -A -t -q -v ON_ERROR_STOP=1 \
+        -v de="$de" -v ate="$ate" -f - | tr -d '[:space:]')" || {
     erro "$ds $periodo: falha ao consultar o ERP"
     return 1
   }
@@ -212,8 +216,10 @@ envia() {
     fi
   fi
 
-  psql -X -A -t -q -v ON_ERROR_STOP=1 -v periodo="$periodo" -v de="$de" -v ate="$ate" \
-       -f <("sql_$ds") > "$corpo" || {
+  # Idem: pela entrada padrão. Também evita depender de `<(...)`, que precisa de
+  # /dev/fd — um a menos para dar errado em ambiente enxuto.
+  "sql_$ds" | psql -X -A -t -q -v ON_ERROR_STOP=1 \
+       -v periodo="$periodo" -v de="$de" -v ate="$ate" -f - > "$corpo" || {
     erro "$ds $periodo: falha ao montar o corpo"
     return 1
   }
@@ -226,9 +232,14 @@ envia() {
     return 0
   fi
 
-  local tentativa=1 http resposta
+  local tentativa=1 http resposta detalhe
+  resposta="$TMP/resposta.txt"
+  # Quando o curl nem conecta, ele não cria o arquivo de saída — ler direto
+  # encheria o log de "No such file or directory" no lugar do erro de verdade.
+  corpo_da_resposta() { [[ -s "$resposta" ]] && head -c 500 "$resposta" || echo "(sem resposta do servidor)"; }
+
   while true; do
-    resposta="$TMP/resposta.txt"
+    : > "$resposta"
     http="$(curl -sS -o "$resposta" -w '%{http_code}' \
       --max-time "$TIMEOUT" \
       -X POST "$API_URL/api/ingest/$ds" \
@@ -243,12 +254,12 @@ envia() {
 
     # 4xx é defeito do que mandamos: repetir dá o mesmo erro.
     if [[ "$http" =~ ^4 ]]; then
-      erro "$ds $periodo: HTTP $http — $(head -c 500 "$resposta")"
+      erro "$ds $periodo: HTTP $http — $(corpo_da_resposta)"
       return 1
     fi
 
     if (( tentativa >= TENTATIVAS )); then
-      erro "$ds $periodo: HTTP $http após $TENTATIVAS tentativas — $(head -c 300 "$resposta")"
+      erro "$ds $periodo: HTTP $http após $TENTATIVAS tentativas — $(corpo_da_resposta)"
       [[ -s "$TMP/curl.err" ]] && erro "curl: $(tail -1 "$TMP/curl.err")"
       return 1
     fi
@@ -303,8 +314,17 @@ fi
 # Duas execuções ao mesmo tempo mandariam o mesmo período duas vezes. É
 # idempotente, então não corrompe — mas dobra a carga à toa, e uma carga
 # inicial longa cruzaria com o ciclo de 2 h.
-exec 9>"${LOCK_FILE:-/var/lock/mgsis-ingest.lock}"
-flock -n 9 || { log "outra execução em andamento — saindo"; exit 0; }
+#
+# Sem `flock` na máquina, o agente SEGUE sem trava, avisando. A alternativa —
+# tratar a ausência do comando como "já tem outra execução" — faria o cron
+# sair com sucesso e não enviar nada, para sempre, sem sinal nenhum.
+if command -v flock >/dev/null 2>&1; then
+  exec 9>"${LOCK_FILE:-/var/lock/mgsis-ingest.lock}"
+  flock -n 9 || { log "outra execução em andamento — saindo"; exit 0; }
+else
+  log "AVISO: 'flock' não encontrado — seguindo SEM trava contra execução simultânea."
+  log "       Instale util-linux para evitar que duas execuções se cruzem."
+fi
 
 INICIO=$SECONDS
 FALHAS=0
