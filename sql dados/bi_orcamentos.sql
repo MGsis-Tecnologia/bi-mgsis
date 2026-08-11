@@ -31,7 +31,6 @@ SELECT
     COALESCE(o.empresa_id::text, '')                AS empresa_id,
     COALESCE(o.moeda_id::text, '')                  AS moeda_id,
     COALESCE(m.moeda_sigla, '')                     AS moeda_sigla,
-
     -- Dados do item
     COALESCE(io.item_orcamento_id::text, '')        AS item_orcamento_id,
     COALESCE(io.produto_id::text, '')               AS produto_id,
@@ -42,7 +41,6 @@ SELECT
     COALESCE(io.item_quantidade, 0)                 AS item_quantidade,
     COALESCE(io.item_quantidade_confirmada, 0)      AS item_quantidade_confirmada,
     COALESCE(io.item_total, 0)                      AS item_total
-
 FROM orcamento o
     -- INNER: orçamento sem item não tem o que analisar, e viraria uma linha
     -- fantasma com produto vazio e quantidade zero.
@@ -52,6 +50,6 @@ FROM orcamento o
     LEFT JOIN moeda    m        ON m.moeda_id = o.moeda_id
     LEFT JOIN produto  pr       ON pr.produto_id = io.produto_id
     LEFT JOIN subgrupo sg       ON sg.subgrupo_id = pr.subgrupo_id
-
 WHERE o.orcamento_tipo = 'ORCAMENTO'
   AND o.orcamento_data IS NOT NULL;
+

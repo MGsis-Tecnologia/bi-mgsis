@@ -27,14 +27,11 @@ SELECT
                                                     AS valor_estoque,
     -- MIN, não SUM: é atributo do cadastro do produto, não da linha de estoque.
     COALESCE(MIN(p.produto_estoque_minimo), 0)      AS estoque_minimo
-
 FROM estoque e
     JOIN      produto p ON p.produto_id = e.produto_id
     LEFT JOIN moeda   m ON m.moeda_id = p.moeda_id
-
 WHERE p.produto_inativo = false
   AND p.produto_revenda = true
-
 GROUP BY e.produto_id, p.produto_descricao, p.produto_fabricante,
          e.empresa_id, p.moeda_id, m.moeda_sigla;
 
@@ -54,3 +51,4 @@ GROUP BY e.produto_id, p.produto_descricao, p.produto_fabricante,
 --   b) o mínimo é POR LOJA → está certo como está, e quem precisa mudar é o BI,
 --      que não deveria somar;
 --   c) o mínimo deveria ser cadastrado por (produto, empresa) no ERP.
+

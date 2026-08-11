@@ -44,10 +44,9 @@ SELECT
     COALESCE(r.moeda_id::text, '')               AS moeda_id,
     COALESCE(moeda.moeda_sigla, '')              AS moeda_sigla,
     COALESCE(r.empresa_id::text, '')             AS empresa_id
-
 FROM receber r
     LEFT JOIN pessoa c    ON c.pessoa_id = r.pessoa_cliente_id
     LEFT JOIN pessoa v    ON v.pessoa_id = r.pessoa_vendedor_id
     LEFT JOIN moeda       ON moeda.moeda_id = r.moeda_id
-
 WHERE r.receber_data_emissao IS NOT NULL;
+

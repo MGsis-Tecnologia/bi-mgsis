@@ -25,10 +25,9 @@ SELECT
     COALESCE(r.moeda_id::text, '')              AS moeda_id,
     COALESCE(moeda.moeda_sigla, '')             AS moeda_sigla,
     COALESCE(r.empresa_id::text, '')            AS empresa_id
-
 FROM pagar r
     LEFT JOIN pessoa c ON c.pessoa_id = r.pessoa_fornecedor_id
     LEFT JOIN moeda    ON moeda.moeda_id = r.moeda_id
-
 WHERE (COALESCE(r.pagar_valor_pago, 0) + COALESCE(r.pagar_valor_documento, 0)) > 0
   AND r.pagar_data_emissao IS NOT NULL;
+

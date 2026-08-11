@@ -22,11 +22,10 @@ SELECT
     COALESCE(m.moeda_id::text, '')                     AS moeda_id,
     COALESCE(m.moeda_sigla, '')                        AS moeda_sigla,
     COALESCE(cm.empresa_id::text, '')                  AS empresa_id
-
 FROM caixa_movimento cm
     LEFT JOIN caixa        cx ON cx.caixa_id = cm.caixa_id
     LEFT JOIN moeda        m  ON m.moeda_id = cx.moeda_id
     LEFT JOIN plano_conta  pc ON pc.plano_conta_id = cm.plano_conta_id
     LEFT JOIN centro_custo cc ON cc.centro_custo_id = cm.centro_custo_id
-
 WHERE cm.caixa_data_emissao IS NOT NULL;
+
