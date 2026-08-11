@@ -186,6 +186,8 @@ export const dictionaries = {
     "prospeccao.chart.taxa": "Taxa %",
     "prospeccao.vendedores.title": "Conversão por vendedor",
     "prospeccao.produtos.title": "Conversão por produto",
+    "prospeccao.produtos.recorte":
+      "{{top}} produtos mais orçados no período (mín. {{min}} propostas) — no empate, pior conversão primeiro. Valor = total orçado, confirmado ou não.",
     "prospeccao.clientes.title": "Top clientes por valor proposto",
     "prospeccao.pendentes.title": "Orçamentos pendentes (> 30 dias)",
     "prospeccao.col.seller": "Vendedor",
@@ -196,6 +198,8 @@ export const dictionaries = {
     "prospeccao.col.confirmed": "Confirmados",
     "prospeccao.col.rate": "Taxa",
     "prospeccao.col.value": "Valor",
+    // Só da tabela de produtos: ali o valor é o orçado, não o convertido.
+    "prospeccao.col.valueQuoted": "Valor orçado",
     "prospeccao.col.proposed": "Propostos",
     "prospeccao.col.quotes": "Orçamentos",
     "prospeccao.col.days": "dias pendente",
@@ -700,6 +704,8 @@ export const dictionaries = {
     "prospeccao.chart.taxa": "Tasa %",
     "prospeccao.vendedores.title": "Conversión por vendedor",
     "prospeccao.produtos.title": "Conversión por producto",
+    "prospeccao.produtos.recorte":
+      "{{top}} productos más presupuestados en el período (mín. {{min}} propuestas) — en el empate, peor conversión primero. Valor = total presupuestado, confirmado o no.",
     "prospeccao.clientes.title": "Top clientes por valor propuesto",
     "prospeccao.pendentes.title": "Presupuestos pendientes (> 30 días)",
     "prospeccao.col.seller": "Vendedor",
@@ -710,6 +716,7 @@ export const dictionaries = {
     "prospeccao.col.confirmed": "Confirmados",
     "prospeccao.col.rate": "Tasa",
     "prospeccao.col.value": "Valor",
+    "prospeccao.col.valueQuoted": "Valor presupuestado",
     "prospeccao.col.proposed": "Propuestos",
     "prospeccao.col.quotes": "Presupuestos",
     "prospeccao.col.days": "días pendiente",

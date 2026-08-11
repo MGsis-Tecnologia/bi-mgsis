@@ -13,6 +13,7 @@ import { LabeledDonut } from "@/components/charts/labeled-donut";
 import { useFilters } from "@/lib/store/filters";
 import { useExchangeRates } from "@/lib/store/exchange-rates";
 import { useProspeccao } from "@/lib/hooks/use-prospeccao";
+import { MIN_PROPOSTAS, TOP_PRODUTOS } from "@/lib/analytics/prospeccao";
 import { useTranslation } from "@/lib/hooks/use-translation";
 import { formatCurrency, formatNumber, formatPercent } from "@/lib/utils/format";
 import type { AppCurrencyId } from "@/lib/types/dataset";
@@ -181,7 +182,17 @@ export default function ProspeccaoPage() {
               Ordenado por taxa (menor para maior) para ver os produtos com menor conversão. */}
           {produtos.length > 0 && (
             <Card>
-              <CardHeader><CardTitle>{t("prospeccao.produtos.title")}</CardTitle></CardHeader>
+              <CardHeader>
+                <CardTitle>{t("prospeccao.produtos.title")}</CardTitle>
+                {/* A tabela é um recorte — sem dizer isso, a lista parece
+                    completa e o usuário conclui que o resto não teve orçamento. */}
+                <p className="text-xs text-muted-foreground">
+                  {t("prospeccao.produtos.recorte", {
+                    top: formatNumber(TOP_PRODUTOS),
+                    min: formatNumber(MIN_PROPOSTAS),
+                  })}
+                </p>
+              </CardHeader>
               <CardContent className="px-0">
                 <ScrollTable
                   head={[
@@ -190,9 +201,9 @@ export default function ProspeccaoPage() {
                     t("prospeccao.col.proposed"),
                     t("prospeccao.col.confirmed"),
                     t("prospeccao.col.rate"),
-                    t("prospeccao.col.value"),
+                    t("prospeccao.col.valueQuoted"),
                   ]}
-                  rows={produtos.map((p: any) => [
+                  rows={produtos.map((p) => [
                     <span className="font-mono text-xs text-muted-foreground whitespace-nowrap" key="f">
                       {p.fabricante || "—"}
                     </span>,

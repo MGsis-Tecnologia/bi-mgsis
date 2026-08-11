@@ -12,6 +12,18 @@ const DIAS_PARA_PERDIDO = 30;
 
 const MS_DIA = 86_400_000;
 
+/**
+ * Recorte da tabela de conversão por produto. O corte é feito no servidor (ver
+ * `src/lib/server/analytics/prospeccao.ts`), mas os números moram aqui porque a
+ * tela precisa dos mesmos valores para dizer ao usuário o que está vendo.
+ *
+ * A lista é ordenada por volume orçado (maior primeiro) e, no empate, pela pior
+ * conversão. `MIN_PROPOSTAS` corta só a cauda: com 1 ou 2 orçamentos a taxa não
+ * significa nada.
+ */
+export const TOP_PRODUTOS = 1000;
+export const MIN_PROPOSTAS = 5;
+
 export type QuoteStatus = "ganho" | "aberto" | "perdido";
 
 export interface ProspeccaoResumo {

@@ -1,5 +1,6 @@
 import type { PrismaClient } from "@prisma/client";
-import { Params, type AnalyticsFilters } from "./base";
+import { MIN_PROPOSTAS, TOP_PRODUTOS } from "@/lib/analytics/prospeccao";
+import { consultaAnalitica, Params, type AnalyticsFilters } from "./base";
 
 /**
  * Agregações da tela de Prospecção.
@@ -44,6 +45,7 @@ export interface ProspeccaoData {
   clientes: { cliente: string; orcamentos: number; confirmados: number; taxa: number; valor: number }[];
   /** `dias` é calculado no cliente, a partir de `data`. */
   pendentes: { orcamento_id: string; cliente_nome: string; valor: number; data: string }[];
+  /** Orçamentos na base toda. Só é preenchido quando o período volta vazio. */
   totalGeral: number;
 }
 
@@ -94,22 +96,34 @@ export async function getProspeccaoData(
   limitePerdido: string
 ): Promise<ProspeccaoData> {
   /**
+   * Linhas do período. Cada consulta pede só as colunas que usa, e nenhuma
+   * carrega CTE que não vai ler: uma CTE referenciada mais de uma vez o
+   * Postgres materializa em disco em vez de embutir no plano. Era o que
+   * acontecia com `produtos`, que arrastava junto `quotes`/`com_status` sem
+   * usá-las — a segunda referência bastava para derrubar a paralelização e
+   * custava 1 s por requisição.
+   */
+  const cteFiltrado = (p: Params, colunas: string) => {
+    const { join, expr } = exprValor(f, p);
+    return `
+      filtrado AS (
+        SELECT ${colunas}, ${expr} AS valor
+        FROM orcamento_items o ${join}
+        WHERE ${whereFiltros(f, p)}
+      )`;
+  };
+
+  /**
    * Orçamentos consolidados. As premissas foram verificadas na base: cada
    * `orcamento_id` tem um único vendedor, cliente, moeda e data (302.444
    * orçamentos), então `MIN()` devolve o valor único, não um arbitrário.
    */
   const cteQuotes = (p: Params) => {
-    const { join, expr } = exprValor(f, p);
-    return `
-      filtrado AS (
-        SELECT o.orcamento_id, o.orcamento_data, o.orcamento_confirmado,
-               o.orcamento_data_confirmacao, o.vendedor_nome, o.cliente_nome,
-               o.item_orcamento_id, o.produto_id, o.produto_descricao,
-               o.produto_fabricante, o.item_quantidade_confirmada,
-               ${expr} AS valor
-        FROM orcamento_items o ${join}
-        WHERE ${whereFiltros(f, p)}
-      ),
+    return `${cteFiltrado(
+      p,
+      `o.orcamento_id, o.orcamento_data, o.orcamento_confirmado,
+               o.orcamento_data_confirmacao, o.vendedor_nome, o.cliente_nome`
+    )},
       quotes AS (
         SELECT orcamento_id AS id,
                MIN(orcamento_data) AS data,
@@ -186,7 +200,7 @@ export async function getProspeccaoData(
              (SELECT COALESCE(json_agg(x), '[]'::json) FROM vend x) AS vendedores,
              (SELECT COALESCE(json_agg(x ORDER BY x.valor DESC, x.cliente), '[]'::json) FROM cli x) AS clientes,
              (SELECT COALESCE(json_agg(x ORDER BY x.data ASC, x.id ASC), '[]'::json) FROM pend x) AS pendentes`;
-    const [row] = await db.$queryRawUnsafe<Record<string, unknown>[]>(sql, ...p.values);
+    const [row] = await consultaAnalitica<Record<string, unknown>>(db, sql, p.values);
     return row ?? {};
   };
 
@@ -197,14 +211,27 @@ export async function getProspeccaoData(
    *
    * O fabricante vem do próprio orçamento; se vier vazio, cai no cadastro de
    * Estoque, como no original.
+   *
+   * `valor` é o total ORÇADO do produto no período (soma de `item_total`,
+   * convertida), não o convertido: entra a linha confirmada e a não confirmada.
+   * É de propósito — a coluna responde "quanto de negócio esse produto
+   * movimenta em proposta", que é o que dá peso à taxa ao lado. Difere da
+   * tabela de vendedores, onde o valor é só o que foi convertido.
+   *
+   * O recorte (ver as constantes) é o que mantém a tela leve: sem ele são
+   * 30.715 produtos e 4,9 MB de resposta num período de 12 meses, todos
+   * renderizados numa tabela de 420 px que ninguém percorre até o fim.
+   * A ordem é por volume orçado primeiro e pior conversão depois, então o
+   * recorte fica com os produtos que mais aparecem em proposta — e o mínimo de
+   * propostas só corta a cauda, onde 1 ou 2 orçamentos não sustentam uma taxa.
    */
   const produtos = async () => {
     const p = new Params();
-    const sql = `WITH ${cteQuotes(p)},
-      inv AS (
-        SELECT product_id, MIN(manufacturer_code) AS mfr
-        FROM inventory_items WHERE manufacturer_code <> '' GROUP BY product_id
-      ),
+    const sql = `WITH ${cteFiltrado(
+      p,
+      `o.produto_id, o.produto_descricao, o.produto_fabricante,
+               o.item_quantidade_confirmada`
+    )},
       agg AS (
         SELECT COALESCE(NULLIF(produto_id, ''), NULLIF(produto_descricao, ''), ${p.add(SEM_NOME)}) AS chave,
                MIN(produto_id) AS produto_id,
@@ -214,32 +241,55 @@ export async function getProspeccaoData(
                COUNT(*) FILTER (WHERE item_quantidade_confirmada > 0)::int AS vezes_confirmado,
                COALESCE(SUM(valor), 0) AS valor
         FROM filtrado GROUP BY 1
+      ),
+      -- Mais orçado primeiro; entre os de mesmo volume, a pior conversão na
+      -- frente. A taxa usa a mesma fórmula de \`taxa()\` para o corte cair nos
+      -- mesmos produtos que a ordenação do cliente escolheria. \`COLLATE "C"\`
+      -- no desempate final: a ordem precisa ser estável entre execuções, e a do
+      -- banco não é a do navegador.
+      recorte AS (
+        SELECT * FROM agg
+        WHERE vezes_proposto >= ${MIN_PROPOSTAS}
+        ORDER BY vezes_proposto DESC,
+                 round((vezes_confirmado::numeric / vezes_proposto) * 1000) / 10 ASC,
+                 produto_id COLLATE "C" ASC
+        LIMIT ${TOP_PRODUTOS}
       )
-      SELECT a.produto_id, a.produto, a.vezes_proposto, a.vezes_confirmado, a.valor,
-             COALESCE(a.fabricante_arquivo, i.mfr, '') AS fabricante
-      FROM agg a LEFT JOIN inv i ON i.product_id = a.produto_id`;
-    return db.$queryRawUnsafe<
-      {
-        produto_id: string; produto: string; vezes_proposto: number;
-        vezes_confirmado: number; valor: unknown; fabricante: string;
-      }[]
-    >(sql, ...p.values);
+      SELECT r.produto_id, r.produto, r.vezes_proposto, r.vezes_confirmado, r.valor,
+             -- Correlacionado, e não um LEFT JOIN com o cadastro inteiro
+             -- agregado: são ${TOP_PRODUTOS} buscas por índice contra o
+             -- agrupamento de 111 mil linhas de \`inventory_items\`.
+             COALESCE(r.fabricante_arquivo,
+                      (SELECT MIN(iv.manufacturer_code) FROM inventory_items iv
+                        WHERE iv.product_id = r.produto_id AND iv.manufacturer_code <> ''),
+                      '') AS fabricante
+      FROM recorte r`;
+    return consultaAnalitica<{
+      produto_id: string; produto: string; vezes_proposto: number;
+      vezes_confirmado: number; valor: unknown; fabricante: string;
+    }>(db, sql, p.values);
   };
 
-  /** Orçamentos existentes ignorando TODOS os filtros — distingue "nada importado". */
+  /**
+   * Orçamentos existentes ignorando TODOS os filtros — distingue "nada
+   * importado" de "nada no período". Varre a tabela inteira (1,4 s em 1,1 mi de
+   * linhas), então só roda quando o período volta vazio, que é o único momento
+   * em que a tela lê o número. Com dados na tela o campo vem 0.
+   */
   const totalGeral = async (): Promise<number> => {
-    const [row] = await db.$queryRawUnsafe<{ n: number }[]>(
+    const [row] = await consultaAnalitica<{ n: number }>(
+      db,
       `SELECT COUNT(*)::int AS n FROM (
          SELECT orcamento_id FROM orcamento_items GROUP BY orcamento_id) t`
     );
     return row?.n ?? 0;
   };
 
-  const [r, prods, total] = await Promise.all([resumo(), produtos(), totalGeral()]);
+  const [r, prods] = await Promise.all([resumo(), produtos()]);
 
   const kpi = (r.kpi ?? {}) as Record<string, number>;
   const totalQuotes = Number(kpi.total ?? 0);
-  if (totalQuotes === 0) return { ...PROSPECCAO_VAZIA, totalGeral: total };
+  if (totalQuotes === 0) return { ...PROSPECCAO_VAZIA, totalGeral: await totalGeral() };
 
   const valorTotal = Number(kpi.valor_total ?? 0);
   const valorGanho = Number(kpi.valor_ganho ?? 0);
@@ -301,9 +351,15 @@ export async function getProspeccaoData(
         taxa: taxa(p.vezes_confirmado, p.vezes_proposto),
         valor: Number(p.valor),
       }))
-      // A taxa é um percentual arredondado, então há muito empate — 7.486
-      // produtos em 100% num período típico. O id define a ordem entre eles.
-      .sort((a, b) => a.taxa - b.taxa || a.produtoId.localeCompare(b.produtoId)),
+      // Mesma ordem do SQL: mais orçado primeiro, pior conversão no empate, id
+      // por último. O SQL já entrega ordenado; isto só reordena os empates pelo
+      // locale, que é o critério que a tela sempre usou.
+      .sort(
+        (a, b) =>
+          b.vezesProposto - a.vezesProposto ||
+          a.taxa - b.taxa ||
+          a.produtoId.localeCompare(b.produtoId)
+      ),
     clientes: ((r.clientes ?? []) as { cliente: string; orcamentos: number; confirmados: number; valor: unknown }[])
       .map((c) => ({
         cliente: c.cliente,
@@ -319,6 +375,7 @@ export async function getProspeccaoData(
         valor: Number(q.valor),
         data: q.data,
       })),
-    totalGeral: total,
+    // Só a tela vazia lê este número — ver `totalGeral()`.
+    totalGeral: 0,
   };
 }
