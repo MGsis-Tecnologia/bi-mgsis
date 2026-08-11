@@ -15,6 +15,46 @@ instalar, nada que quebre numa atualização de runtime.
    *Master → Empresas → (a empresa) → token de integração*.
    Ele aparece **uma única vez**; o servidor guarda apenas o hash.
 
+## O que precisa ir para o servidor
+
+Não é a pasta inteira. Só isto:
+
+| Arquivo | Destino | Obrigatório? |
+|---|---|---|
+| `mgsis-ingest.sh` | `/usr/local/bin/` | **sim** — é o único que executa |
+| `mgsis-ingest.conf.exemplo` | vira `/etc/mgsis-ingest.conf` | é só modelo; pode escrever o conf direto |
+| `systemd/*.service` e `*.timer` | `/etc/systemd/system/` | só se usar systemd (com cron, não precisa) |
+
+Os `.md` são documentação — não vão para o servidor.
+
+### Como levar
+
+**Com git no servidor** (mais simples de atualizar depois):
+
+```bash
+git clone --depth 1 <repo> /tmp/bi && cd /tmp/bi/agente
+```
+
+**Sem git**, copiando da sua máquina:
+
+```bash
+scp agente/mgsis-ingest.sh agente/mgsis-ingest.conf.exemplo usuario@servidor:/tmp/
+scp agente/systemd/mgsis-ingest.* usuario@servidor:/tmp/
+```
+
+> ⚠ **Copiando de uma máquina Windows, confira o fim de linha.** Um CR no
+> script dá `bad interpreter: /bin/bash^M`, e no `.conf` ele entra em silêncio
+> *dentro* da variável — o curl recebe uma URL com um caractere invisível no
+> fim e falha sem dizer por quê.
+>
+> ```bash
+> file /tmp/mgsis-ingest.sh     # não pode dizer "CRLF line terminators"
+> sed -i 's/\r$//' /tmp/mgsis-ingest.sh /tmp/mgsis-ingest.conf.exemplo
+> ```
+>
+> Clonando pelo git no próprio servidor isso não acontece: o `.gitattributes`
+> fixa LF nesses arquivos.
+
 ## Instalação
 
 ```bash

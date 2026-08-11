@@ -7,3 +7,11 @@ Dockerfile text eol=lf
 # SQL das migrations: o Prisma valida o checksum do arquivo, então o conteúdo
 # precisa ser byte-a-byte igual em qualquer sistema operacional.
 *.sql text eol=lf
+
+# O agente é instalado no Linux do cliente, e CR nesses dois formatos falha de
+# um jeito que não parece problema de fim de linha:
+#  - no .conf, o bash põe o \r DENTRO da variável, e o curl recebe uma URL
+#    com um caractere invisível no fim;
+#  - no unit do systemd, o \r entra no ExecStart e vira "arquivo não existe".
+agente/mgsis-ingest.conf.exemplo text eol=lf
+agente/systemd/* text eol=lf
