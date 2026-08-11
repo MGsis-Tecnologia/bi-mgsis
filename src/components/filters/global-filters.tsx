@@ -2,7 +2,7 @@
 
 import { Filter, X } from "lucide-react";
 import { useFilters } from "@/lib/store/filters";
-import { useDataset } from "@/lib/hooks/use-dataset";
+import { useOpcoesFiltro } from "@/lib/hooks/use-opcoes-filtro";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 import { useTranslation } from "@/lib/hooks/use-translation";
@@ -16,7 +16,7 @@ export function GlobalFilters() {
   const setSeller   = useFilters((s) => s.setSeller);
   const setSubgroup = useFilters((s) => s.setSubgroup);
   const reset       = useFilters((s) => s.resetFilters);
-  const ds          = useDataset();
+  const opcoes      = useOpcoesFiltro();
 
   const activeCount =
     (channel !== "all" ? 1 : 0) +
@@ -25,7 +25,7 @@ export function GlobalFilters() {
 
   const channelOptions = [
     { value: "all", label: t("filters.global.all_masc") },
-    ...ds.channels.map((c) => ({ value: c, label: c })),
+    ...opcoes.canais.map((c) => ({ value: c, label: c })),
   ];
 
   return (
@@ -74,7 +74,7 @@ export function GlobalFilters() {
               className="h-9 w-full rounded-md border border-border bg-surface px-3 text-sm"
             >
               <option value="all">{t("filters.global.all_fem")}</option>
-              {ds.subgroups.map((s) => (
+              {opcoes.subgrupos.map((s) => (
                 <option key={s.id} value={s.id}>{s.name}</option>
               ))}
             </select>
@@ -90,7 +90,7 @@ export function GlobalFilters() {
               className="h-9 w-full rounded-md border border-border bg-surface px-3 text-sm"
             >
               <option value="all">{t("filters.global.all_sellers")}</option>
-              {ds.sellers.map((s) => (
+              {opcoes.vendedores.map((s) => (
                 <option key={s.id} value={s.id}>{s.name}</option>
               ))}
             </select>

@@ -32,7 +32,8 @@
       "PowerShell(node \"C:\\\\Users\\\\rogerio\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\c--bi-mgsis\\\\599125bf-6c54-4c28-9af0-6024d8d265d0\\\\scratchpad\\\\comparar.mjs\" 2>&1)",
       "PowerShell(npx --yes eslint src/lib/server/analytics/ \"src/app/\\(dashboard\\)/prospeccao/page.tsx\" src/lib/analytics/prospeccao.ts src/lib/i18n/dictionaries.ts)",
       "PowerShell(npx --yes eslint src/lib/server/analytics/ src/lib/analytics/prospeccao.ts src/lib/i18n/dictionaries.ts \"src/app/\\(dashboard\\)/prospeccao/page.tsx\")",
-      "PowerShell(if \\($?\\) { \"eslint: ok\" })"
+      "PowerShell(if \\($?\\) { \"eslint: ok\" })",
+      "Bash(node -e \"const p=require\\('./package.json'\\);console.log\\('deps:',JSON.stringify\\(p.dependencies,null,1\\)\\);console.log\\('next:',p.dependencies.next\\)\")"
     ]
   }
 }

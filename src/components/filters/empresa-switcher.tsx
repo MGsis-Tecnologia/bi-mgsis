@@ -10,14 +10,14 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useFilters } from "@/lib/store/filters";
-import { useEmpresas } from "@/lib/hooks/use-empresas";
+import { useOpcoesFiltro } from "@/lib/hooks/use-opcoes-filtro";
 import { useTranslation } from "@/lib/hooks/use-translation";
 
 export function EmpresaSwitcher() {
   const { t } = useTranslation();
   const empresaId = useFilters((s) => s.empresaId);
   const setEmpresa = useFilters((s) => s.setEmpresa);
-  const empresas = useEmpresas();
+  const empresas = useOpcoesFiltro().empresas;
 
   // Só faz sentido oferecer o filtro quando há mais de uma empresa nos dados.
   if (empresas.length <= 1) return null;
@@ -47,14 +47,14 @@ export function EmpresaSwitcher() {
           {empresaId === "all" && <Check className="h-3.5 w-3.5 text-foreground" />}
         </DropdownMenuItem>
         <DropdownMenuSeparator />
-        {empresas.map((e) => (
+        {empresas.map((id) => (
           <DropdownMenuItem
-            key={e.id}
-            onClick={() => setEmpresa(e.id)}
+            key={id}
+            onClick={() => setEmpresa(id)}
             className="flex items-center justify-between"
           >
-            <span className="text-foreground">{label(e.id)}</span>
-            {empresaId === e.id && <Check className="h-3.5 w-3.5 text-foreground" />}
+            <span className="text-foreground">{label(id)}</span>
+            {empresaId === id && <Check className="h-3.5 w-3.5 text-foreground" />}
           </DropdownMenuItem>
         ))}
       </DropdownMenuContent>
