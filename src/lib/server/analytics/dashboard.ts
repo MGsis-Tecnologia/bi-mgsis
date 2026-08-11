@@ -4,6 +4,7 @@ import {
   Params,
   SERIE_SELECT,
   comPedidos,
+  consultaAnalitica,
   montaSerie,
   type AnalyticsFilters,
   type HeatmapCelula,
@@ -128,7 +129,7 @@ export async function getDashboardData(
   const kpiAtual = async (): Promise<Kpis> => {
     const p = new Params();
     const sql = `${comPedidos(f, p, SEM_FILTROS_DE_GRAFICO)} SELECT ${KPI_SELECT} FROM pe`;
-    const [row] = await db.$queryRawUnsafe<KpiRow[]>(sql, ...p.values);
+    const [row] = await consultaAnalitica<KpiRow>(db, sql, p.values);
     return montaKpi(row);
   };
 
@@ -140,7 +141,7 @@ export async function getDashboardData(
       from: f.cmpFrom,
       to: f.cmpTo,
     })} SELECT ${KPI_SELECT} FROM pe`;
-    const [row] = await db.$queryRawUnsafe<KpiRow[]>(sql, ...p.values);
+    const [row] = await consultaAnalitica<KpiRow>(db, sql, p.values);
     return montaKpi(row);
   };
 
@@ -148,7 +149,7 @@ export async function getDashboardData(
     const p = new Params();
     const sql = `${comPedidos(f, p, COM_FILTROS_DE_GRAFICO)}
                  SELECT ${expr} AS key, ${SERIE_SELECT} FROM pe GROUP BY 1 ORDER BY 1`;
-    return montaSerie(await db.$queryRawUnsafe<SerieRow[]>(sql, ...p.values));
+    return montaSerie(await consultaAnalitica<SerieRow>(db, sql, p.values));
   };
 
   /**
@@ -166,21 +167,15 @@ export async function getDashboardData(
                  SELECT ${idCol} AS key, MIN(${labelCol}) AS label,
                         COALESCE(SUM(total), 0) AS value
                  FROM ${origem} GROUP BY 1 ORDER BY 3 DESC`;
-    const rows = await db.$queryRawUnsafe<{ key: string; label: string; value: unknown }[]>(
-      sql,
-      ...p.values
-    );
+    const rows = await consultaAnalitica<{ key: string; label: string; value: unknown }>(db, sql, p.values);
     return rows.map((r) => ({ key: r.key, label: r.label, value: Number(r.value) }));
   };
 
   const heatmap = async (): Promise<HeatmapCelula[]> => {
     const p = new Params();
     const sql = `${comPedidos(f, p, COM_FILTROS_DE_GRAFICO)}
-                 SELECT ${HEATMAP_SELECT} FROM pe GROUP BY 1, 2`;
-    const rows = await db.$queryRawUnsafe<{ weekday: number; week: number; value: unknown }[]>(
-      sql,
-      ...p.values
-    );
+                 SELECT ${HEATMAP_SELECT} FROM pe GROUP BY 1, 2 ORDER BY 1, 2`;
+    const rows = await consultaAnalitica<{ weekday: number; week: number; value: unknown }>(db, sql, p.values);
     return rows.map((r) => ({ weekday: r.weekday, week: r.week, value: Number(r.value) }));
   };
 
@@ -207,12 +202,12 @@ export async function getDashboardData(
       SELECT id, name, revenue, units, share, cum,
              CASE WHEN cum <= 0.8 THEN 'A' WHEN cum <= 0.95 THEN 'B' ELSE 'C' END AS curve
       FROM acc ORDER BY revenue DESC LIMIT ${limite}`;
-    const rows = await db.$queryRawUnsafe<
+    const rows = await consultaAnalitica<
       {
         id: string; name: string; revenue: unknown; units: unknown;
         share: unknown; cum: unknown; curve: string;
-      }[]
-    >(sql, ...p.values);
+      }
+    >(db, sql, p.values);
     return rows.map((r) => ({
       id: r.id,
       name: r.name,
@@ -239,12 +234,12 @@ export async function getDashboardData(
       SELECT id, name, revenue, cost, orders,
              revenue / NULLIF(MAX(revenue) OVER (), 0) AS achievement
       FROM agg ORDER BY revenue DESC LIMIT ${limite}`;
-    const rows = await db.$queryRawUnsafe<
+    const rows = await consultaAnalitica<
       {
         id: string; name: string; revenue: unknown; cost: unknown;
         orders: number; achievement: unknown;
-      }[]
-    >(sql, ...p.values);
+      }
+    >(db, sql, p.values);
     return rows.map((r) => {
       const revenue = Number(r.revenue);
       const cost = Number(r.cost);

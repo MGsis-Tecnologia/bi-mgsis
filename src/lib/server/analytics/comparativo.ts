@@ -1,5 +1,5 @@
 import type { PrismaClient } from "@prisma/client";
-import { Params, cteLinhas, whereBase, type AnalyticsFilters } from "./base";
+import { Params, consultaAnalitica, cteLinhas, whereBase, type AnalyticsFilters } from "./base";
 
 /**
  * Agregações do Comparativo Anual.
@@ -87,8 +87,8 @@ export async function getComparativoData(
                      FROM sale_items s WHERE ${whereBase(f, pAnos)} ORDER BY 1`;
 
     const [top, anos] = await Promise.all([
-      db.$queryRawUnsafe<{ key: string; label: string; total: unknown }[]>(sqlTop, ...pTop.values),
-      db.$queryRawUnsafe<{ y: string }[]>(sqlAnos, ...pAnos.values),
+      consultaAnalitica<{ key: string; label: string; total: unknown }>(db, sqlTop, pTop.values),
+      consultaAnalitica<{ y: string }>(db, sqlAnos, pAnos.values),
     ]);
     return { top, anos: anos.map((a) => a.y) };
   };
@@ -114,7 +114,7 @@ export async function getComparativoData(
       SELECT ${cfg.key} AS key, substring(date, 1, 7) AS mes, SUM(total) AS v
       FROM l WHERE ${cfg.key} IN (${chaves})
       GROUP BY 1, 2`;
-    return db.$queryRawUnsafe<{ key: string; mes: string; v: unknown }[]>(sql, ...p.values);
+    return consultaAnalitica<{ key: string; mes: string; v: unknown }>(db, sql, p.values);
   };
 
   const meses = await porMes();

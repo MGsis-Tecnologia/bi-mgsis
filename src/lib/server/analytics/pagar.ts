@@ -1,5 +1,5 @@
 import type { PrismaClient } from "@prisma/client";
-import { Params, type AnalyticsFilters } from "./base";
+import { Params, consultaAnalitica, type AnalyticsFilters } from "./base";
 
 /**
  * Agregações de Contas a Pagar (`payable_items`).
@@ -195,7 +195,7 @@ export async function getPagarData(
               FROM por_fornecedor s) AS suppliers,
              (SELECT COALESCE(json_agg(l ORDER BY l.key), '[]'::json) FROM linha_tempo l) AS timeline,
              (SELECT COALESCE(json_agg(d), '[]'::json) FROM detalhe d) AS detail`;
-    const [row] = await db.$queryRawUnsafe<Record<string, unknown>[]>(sql, ...p.values);
+    const [row] = await consultaAnalitica<Record<string, unknown>>(db, sql, p.values);
     return row ?? {};
   };
 
@@ -239,7 +239,7 @@ export async function getPagarData(
              (SELECT COALESCE(json_agg(m ORDER BY m.key), '[]'::json) FROM por_mes m) AS meses,
              (SELECT COALESCE(json_agg(c ORDER BY c.total_due DESC, c.supplier_id), '[]'::json)
               FROM por_fornecedor c) AS fornecedores`;
-    const [row] = await db.$queryRawUnsafe<Record<string, unknown>[]>(sql, ...p.values);
+    const [row] = await consultaAnalitica<Record<string, unknown>>(db, sql, p.values);
     return row ?? {};
   };
 

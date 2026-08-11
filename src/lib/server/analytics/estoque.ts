@@ -1,6 +1,8 @@
 import type { PrismaClient } from "@prisma/client";
 import {
   Params,
+  WORK_MEM,
+  consultaAnalitica,
   exprTaxa,
   joinTaxas,
   whereGraficos,
@@ -137,11 +139,8 @@ export async function getEstoqueData(
   // A janela de demanda precisa da primeira venda do período filtrado, e ela
   // entra como constante no cálculo de cobertura — por isso vem antes.
   const pd = new Params();
-  const [pv] = await db.$queryRawUnsafe<{ primeira: string | null }[]>(
-    `SELECT MIN(s.date) AS primeira FROM sale_items s ${joinTaxas(f, pd)}
-     WHERE ${whereGraficos(f, pd)} AND s.date >= ${pd.add(f.from)} AND s.date <= ${pd.add(f.to)}`,
-    ...pd.values
-  );
+  const [pv] = await consultaAnalitica<{ primeira: string | null }>(db, `SELECT MIN(s.date) AS primeira FROM sale_items s ${joinTaxas(f, pd)}
+     WHERE ${whereGraficos(f, pd)} AND s.date >= ${pd.add(f.from)} AND s.date <= ${pd.add(f.to)}`, pd.values);
   const periodDays = calculaPeriodDays(f.from, f.to, o.hoje, pv?.primeira ?? null);
 
   // Moeda específica → mantém só os itens dela, sem converter.
@@ -336,7 +335,7 @@ export async function getEstoqueData(
     (SELECT COALESCE(json_agg(t), '[]'::json) FROM (
       SELECT status AS key, COUNT(*)::int AS count,
              COALESCE(SUM(cost_total), 0) AS "valueUSD"
-      FROM e_fin GROUP BY status) t) AS statuses,
+      FROM e_fin GROUP BY status ORDER BY status) t) AS statuses,
 
     (SELECT COALESCE(json_agg(t), '[]'::json) FROM (
       SELECT CASE
@@ -387,6 +386,9 @@ export async function getEstoqueData(
       // ele amostra 10× menos, a contagem de linhas continua exata e o plano
       // escolhido é o mesmo. Vale só nesta transação.
       await tx.$executeRawUnsafe("SET LOCAL default_statistics_target = 10");
+      // Mesmo ajuste que `consultaAnalitica` faz nas demais consultas de
+      // análise — aqui precisa ser explícito porque a transação já existe.
+      await tx.$executeRawUnsafe(`SET LOCAL work_mem = '${WORK_MEM}'`);
 
       for (const passo of passos) {
         await tx.$executeRawUnsafe(

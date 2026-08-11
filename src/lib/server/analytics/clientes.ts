@@ -1,5 +1,5 @@
 import type { PrismaClient } from "@prisma/client";
-import { Params, comPedidos, type AnalyticsFilters } from "./base";
+import { Params, comPedidos, consultaAnalitica, type AnalyticsFilters } from "./base";
 
 /**
  * Agregações da tela de Clientes.
@@ -136,10 +136,7 @@ export async function getClientesData(
                        CASE WHEN cum <= 0.8 THEN 'A' WHEN cum <= 0.95 THEN 'B' ELSE 'C' END AS curve
                 FROM topo ORDER BY revenue DESC, id
               ) x) AS topo`;
-    const [row] = await db.$queryRawUnsafe<{ resumo: Record<string, unknown>; topo: unknown[] }[]>(
-      sql,
-      ...p.values
-    );
+    const [row] = await consultaAnalitica<{ resumo: Record<string, unknown>; topo: unknown[] }>(db, sql, p.values);
     const resumo = (row?.resumo ?? {}) as Record<string, number>;
     const topo = (row?.topo ?? []) as {
       id: string; name: string; orders: number; revenue: unknown; cost: unknown;
@@ -190,9 +187,9 @@ export async function getClientesData(
       )
       SELECT id, name, orders, revenue, cost
       FROM agg ORDER BY (revenue - cost) DESC, id LIMIT ${limite}`;
-    const rows = await db.$queryRawUnsafe<
-      { id: string; name: string; orders: number; revenue: unknown; cost: unknown }[]
-    >(sql, ...p.values);
+    const rows = await consultaAnalitica<
+      { id: string; name: string; orders: number; revenue: unknown; cost: unknown }
+    >(db, sql, p.values);
     return rows.map((r) => {
       const revenue = Number(r.revenue);
       const cost = Number(r.cost);
@@ -222,7 +219,7 @@ export async function getClientesData(
     const sql = `SELECT COUNT(*)::int AS n FROM (
                    SELECT client_id FROM sale_items
                    WHERE ${cond.join(" AND ")} GROUP BY client_id) t`;
-    const [row] = await db.$queryRawUnsafe<{ n: number }[]>(sql, ...p.values);
+    const [row] = await consultaAnalitica<{ n: number }>(db, sql, p.values);
     return row?.n ?? 0;
   };
 

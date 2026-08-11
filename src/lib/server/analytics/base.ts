@@ -5,6 +5,8 @@
  * que cada tela migrada só descreva as suas próprias agregações.
  */
 
+import type { PrismaClient } from "@prisma/client";
+
 // ─── Contrato de filtros ─────────────────────────────────────────────────────
 
 export interface AnalyticsFilters {
@@ -22,6 +24,44 @@ export interface AnalyticsFilters {
   channel: string; // "all" | nome
   sellerId: string; // "all" | id
   subgroupId: string; // "all" | id
+}
+
+// ─── Execução ────────────────────────────────────────────────────────────────
+
+/** Só `<n>MB` — o valor vem do ambiente e entra no SQL como literal. */
+export const WORK_MEM = (() => {
+  const v = process.env.ANALYTICS_WORK_MEM?.trim();
+  return v && /^\d{1,4}MB$/.test(v) ? v : "64MB";
+})();
+
+/**
+ * Roda uma consulta de análise com `work_mem` elevado.
+ *
+ * O padrão do Postgres (4 MB) é dimensionado para transação, não para painel:
+ * os `GROUP BY` destas telas passam disso e caem em ordenação externa, gravando
+ * dezenas de MB em disco e perdendo a paralelização. Medido em /prospeccao com
+ * 287 mil linhas: a agregação por produto cai de 1.240 ms para 615 ms, e o
+ * resumo de 1.612 ms para 557 ms.
+ *
+ * `SET LOCAL` só vale até o fim da transação, e é por isso que a consulta
+ * precisa vir dentro dela: sem `LOCAL`, o ajuste ficaria na conexão do pool e
+ * vazaria para a próxima requisição, que pode ser uma importação.
+ *
+ * Uma transação por consulta (em vez de uma para todas) preserva o
+ * `Promise.all` das telas — cada consulta segue numa conexão própria.
+ */
+export async function consultaAnalitica<T>(
+  db: PrismaClient,
+  sql: string,
+  valores: unknown[] = []
+): Promise<T[]> {
+  return db.$transaction(
+    async (tx) => {
+      await tx.$executeRawUnsafe(`SET LOCAL work_mem = '${WORK_MEM}'`);
+      return tx.$queryRawUnsafe<T[]>(sql, ...valores);
+    },
+    { timeout: 120_000, maxWait: 30_000 }
+  );
 }
 
 // ─── Parâmetros ──────────────────────────────────────────────────────────────

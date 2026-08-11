@@ -4,6 +4,7 @@ import {
   Params,
   SERIE_SELECT,
   comPedidos,
+  consultaAnalitica,
   montaSerie,
   type AnalyticsFilters,
   type HeatmapCelula,
@@ -119,7 +120,7 @@ export async function getVendasData(
   const kpi = async (): Promise<VendasKpis> => {
     const p = new Params();
     const sql = `${comPedidos(f, p, escopo)} SELECT ${KPI_SELECT} FROM pe`;
-    const [row] = await db.$queryRawUnsafe<KpiRow[]>(sql, ...p.values);
+    const [row] = await consultaAnalitica<KpiRow>(db, sql, p.values);
     return montaKpi(row);
   };
 
@@ -128,7 +129,7 @@ export async function getVendasData(
     const p = new Params();
     const sql = `${comPedidos(f, p, { escopoGraficos: true, tipo: "DEVOLUCAO VENDA" })}
                  SELECT COALESCE(SUM(total), 0) AS v FROM pe`;
-    const [row] = await db.$queryRawUnsafe<{ v: unknown }[]>(sql, ...p.values);
+    const [row] = await consultaAnalitica<{ v: unknown }>(db, sql, p.values);
     return Number(row?.v ?? 0);
   };
 
@@ -136,16 +137,13 @@ export async function getVendasData(
     const p = new Params();
     const sql = `${comPedidos(f, p, escopo)}
                  SELECT ${expr} AS key, ${SERIE_SELECT} FROM pe GROUP BY 1 ORDER BY 1`;
-    return montaSerie(await db.$queryRawUnsafe<SerieRow[]>(sql, ...p.values));
+    return montaSerie(await consultaAnalitica<SerieRow>(db, sql, p.values));
   };
 
   const heatmap = async (): Promise<HeatmapCelula[]> => {
     const p = new Params();
-    const sql = `${comPedidos(f, p, escopo)} SELECT ${HEATMAP_SELECT} FROM pe GROUP BY 1, 2`;
-    const rows = await db.$queryRawUnsafe<{ weekday: number; week: number; value: unknown }[]>(
-      sql,
-      ...p.values
-    );
+    const sql = `${comPedidos(f, p, escopo)} SELECT ${HEATMAP_SELECT} FROM pe GROUP BY 1, 2 ORDER BY 1, 2`;
+    const rows = await consultaAnalitica<{ weekday: number; week: number; value: unknown }>(db, sql, p.values);
     return rows.map((r) => ({ weekday: r.weekday, week: r.week, value: Number(r.value) }));
   };
 
@@ -154,7 +152,7 @@ export async function getVendasData(
     const sql = `${comPedidos(f, p, escopo)}
                  SELECT channel AS key, COALESCE(SUM(total), 0) AS value
                  FROM pe GROUP BY 1 ORDER BY 2 DESC`;
-    const rows = await db.$queryRawUnsafe<{ key: string; value: unknown }[]>(sql, ...p.values);
+    const rows = await consultaAnalitica<{ key: string; value: unknown }>(db, sql, p.values);
     return rows.map((r) => ({ key: r.key, label: r.key, value: Number(r.value) }));
   };
 
@@ -171,10 +169,10 @@ export async function getVendasData(
     const sql = `${comPedidos(f, p, escopo)}
       SELECT client_city AS city, currency_id,
              COALESCE(SUM(total), 0) AS total_sales, COUNT(*)::int AS order_count
-      FROM pe WHERE client_city <> '' GROUP BY 1, 2`;
-    const rows = await db.$queryRawUnsafe<
-      { city: string; currency_id: string; total_sales: unknown; order_count: number }[]
-    >(sql, ...p.values);
+      FROM pe WHERE client_city <> '' GROUP BY 1, 2 ORDER BY 1, 2`;
+    const rows = await consultaAnalitica<
+      { city: string; currency_id: string; total_sales: unknown; order_count: number }
+    >(db, sql, p.values);
     return rows.map((r) => ({
       city: r.city,
       currencyId: r.currency_id,
@@ -191,12 +189,12 @@ export async function getVendasData(
       SELECT order_id AS id, client_name, seller_name, channel,
              quantity AS items, total, cost, date
       FROM pe ORDER BY date DESC, order_id DESC LIMIT ${limite}`;
-    const rows = await db.$queryRawUnsafe<
+    const rows = await consultaAnalitica<
       {
         id: string; client_name: string; seller_name: string; channel: string;
         items: unknown; total: unknown; cost: unknown; date: string;
-      }[]
-    >(sql, ...p.values);
+      }
+    >(db, sql, p.values);
     return rows.map((r) => {
       const total = Number(r.total);
       const cost = Number(r.cost);

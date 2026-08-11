@@ -1,5 +1,5 @@
 import type { PrismaClient } from "@prisma/client";
-import { Params, type AnalyticsFilters } from "./base";
+import { Params, consultaAnalitica, type AnalyticsFilters } from "./base";
 
 /**
  * Agregações de Caixa & DRE (`caixa_items`).
@@ -117,7 +117,7 @@ export async function getDreData(
              (SELECT COALESCE(json_agg(x ORDER BY x.plano_conta_codigo), '[]'::json) FROM plano x) AS plano,
              (SELECT COALESCE(json_agg(g ORDER BY g.value DESC, g.name), '[]'::json) FROM gastos_conta g) AS gastos,
              (SELECT COALESCE(json_agg(c ORDER BY c.gastos DESC, c.id), '[]'::json) FROM centros c) AS centros`;
-    const [row] = await db.$queryRawUnsafe<Record<string, unknown>[]>(sql, ...p.values);
+    const [row] = await consultaAnalitica<Record<string, unknown>>(db, sql, p.values);
     return row ?? {};
   };
 

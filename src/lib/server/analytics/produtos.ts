@@ -1,5 +1,5 @@
 import type { PrismaClient } from "@prisma/client";
-import { Params, comPedidos, type AnalyticsFilters } from "./base";
+import { Params, comPedidos, consultaAnalitica, type AnalyticsFilters } from "./base";
 
 /**
  * Agregações da tela de Produtos.
@@ -118,10 +118,7 @@ export async function getProdutosData(
                        t.share, t.cum, t.curve, ${MFR} AS mfr
                 FROM topo t ORDER BY t.revenue DESC, t.id
               ) x) AS topo`;
-    const [row] = await db.$queryRawUnsafe<{ resumo: Record<string, unknown>; topo: unknown[] }[]>(
-      sql,
-      ...p.values
-    );
+    const [row] = await consultaAnalitica<{ resumo: Record<string, unknown>; topo: unknown[] }>(db, sql, p.values);
     const resumo = (row?.resumo ?? {}) as Record<string, number>;
     const topo = (row?.topo ?? []) as {
       id: string; name: string; subgroup_name: string; units: unknown; revenue: unknown;
@@ -176,12 +173,12 @@ export async function getProdutosData(
                   ELSE 'C' END AS curve
       FROM agg a CROSS JOIN tot t
       ORDER BY a.revenue DESC, a.id`;
-    const rows = await db.$queryRawUnsafe<
+    const rows = await consultaAnalitica<
       {
         id: string; name: string; revenue: unknown; units: unknown; product_count: number;
         share: unknown; cum: unknown; curve: string;
-      }[]
-    >(sql, ...p.values);
+      }
+    >(db, sql, p.values);
     return rows.map((r) => ({
       id: r.id,
       name: r.name,
@@ -221,10 +218,7 @@ export async function getProdutosData(
                 SELECT t.id, t.name, t.subgroup_name, t.units, t.revenue, t.cost, ${MFR} AS mfr
                 FROM topo t ORDER BY (t.revenue - t.cost) DESC, t.id
               ) x) AS topo`;
-    const [row] = await db.$queryRawUnsafe<{ resumo: Record<string, unknown>; topo: unknown[] }[]>(
-      sql,
-      ...p.values
-    );
+    const [row] = await consultaAnalitica<{ resumo: Record<string, unknown>; topo: unknown[] }>(db, sql, p.values);
     const resumo = (row?.resumo ?? {}) as Record<string, number>;
     const topo = (row?.topo ?? []) as {
       id: string; name: string; subgroup_name: string;
@@ -275,7 +269,7 @@ export async function getProdutosData(
     const sql = `SELECT COUNT(*)::int AS n FROM (
                    SELECT product_id FROM sale_items
                    WHERE ${cond.join(" AND ")} GROUP BY product_id) t`;
-    const [row] = await db.$queryRawUnsafe<{ n: number }[]>(sql, ...p.values);
+    const [row] = await consultaAnalitica<{ n: number }>(db, sql, p.values);
     return row?.n ?? 0;
   };
 

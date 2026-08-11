@@ -1,5 +1,5 @@
 import type { PrismaClient } from "@prisma/client";
-import { Params, comPedidos, whereBase, type AnalyticsFilters } from "./base";
+import { Params, comPedidos, consultaAnalitica, whereBase, type AnalyticsFilters } from "./base";
 
 /**
  * Agregações da tela de Vendedores — a mais complexa migrada até aqui, porque
@@ -77,7 +77,7 @@ export async function getVendedoresData(
     const where = whereBase(f, p);
     const sql = `SELECT seller_id AS id, MIN(seller_name) AS name
                  FROM sale_items s WHERE ${where} GROUP BY seller_id`;
-    return db.$queryRawUnsafe(sql, ...p.values);
+    return consultaAnalitica<{ id: string; name: string }>(db, sql, p.values);
   };
 
   const agregadoPeriodo = async () => {
@@ -86,9 +86,9 @@ export async function getVendedoresData(
       SELECT seller_id AS id, COUNT(*)::int AS orders,
              SUM(total) AS revenue, SUM(cost) AS cost, SUM(discount) AS discount
       FROM pe GROUP BY seller_id`;
-    return db.$queryRawUnsafe<
-      { id: string; orders: number; revenue: unknown; cost: unknown; discount: unknown }[]
-    >(sql, ...p.values);
+    return consultaAnalitica<
+      { id: string; orders: number; revenue: unknown; cost: unknown; discount: unknown }
+    >(db, sql, p.values);
   };
 
   /** Devoluções: mesma tabela, outro `order_type`. */
@@ -96,7 +96,7 @@ export async function getVendedoresData(
     const p = new Params();
     const sql = `${comPedidos(f, p, { escopoGraficos: true, tipo: "DEVOLUCAO VENDA" })}
                  SELECT seller_id AS id, SUM(total) AS total FROM pe GROUP BY seller_id`;
-    return db.$queryRawUnsafe<{ id: string; total: unknown }[]>(sql, ...p.values);
+    return consultaAnalitica<{ id: string; total: unknown }>(db, sql, p.values);
   };
 
   /**
@@ -162,12 +162,12 @@ export async function getVendedoresData(
              COALESCE(r.rev_old, 0)        AS rev_old,
              COALESCE(r.cnt_old, 0)        AS cnt_old
       FROM resumo r FULL OUTER JOIN churn c ON c.id = r.id`;
-    return db.$queryRawUnsafe<
+    return consultaAnalitica<
       {
         id: string; active_clients: number; new_clients: number; churned: number;
         rev_new: unknown; cnt_new: number; rev_old: unknown; cnt_old: number;
-      }[]
-    >(sql, ...p.values);
+      }
+    >(db, sql, p.values);
   };
 
   /**
@@ -218,13 +218,13 @@ export async function getVendedoresData(
       JOIN pedido pd ON pd.seller_id = d.seller_id
       JOIN cliente cl ON cl.seller_id = d.seller_id
       WHERE d.revenue > 0`;
-    return db.$queryRawUnsafe<
+    return consultaAnalitica<
       {
         id: string; revenue: unknown; active_days: number; soma_quadrados: unknown;
         last5_revenue: unknown; top1: unknown; top3: unknown; top_client: unknown;
         operating_days: number;
-      }[]
-    >(sql, ...p.values);
+      }
+    >(db, sql, p.values);
   };
 
   const temAlgumDado = async (): Promise<boolean> => {

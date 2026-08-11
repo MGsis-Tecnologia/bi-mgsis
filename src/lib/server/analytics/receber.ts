@@ -1,5 +1,5 @@
 import type { PrismaClient } from "@prisma/client";
-import { Params, type AnalyticsFilters } from "./base";
+import { Params, consultaAnalitica, type AnalyticsFilters } from "./base";
 
 /**
  * Agregações de Contas a Receber (`receivable_items`).
@@ -235,7 +235,7 @@ export async function getReceberData(
              (SELECT COALESCE(json_agg(x ORDER BY x.total DESC, x.id), '[]'::json) FROM por_cidade x) AS cities,
              (SELECT COALESCE(json_agg(l ORDER BY l.key), '[]'::json) FROM linha_tempo l) AS timeline,
              (SELECT COALESCE(json_agg(d), '[]'::json) FROM detalhe d) AS detail`;
-    const [row] = await db.$queryRawUnsafe<Record<string, unknown>[]>(sql, ...p.values);
+    const [row] = await consultaAnalitica<Record<string, unknown>>(db, sql, p.values);
     return row ?? {};
   };
 
@@ -286,7 +286,7 @@ export async function getReceberData(
              (SELECT COALESCE(json_agg(m ORDER BY m.key), '[]'::json) FROM por_mes m) AS meses,
              (SELECT COALESCE(json_agg(c ORDER BY c.total_due DESC, c.client_id), '[]'::json)
               FROM por_cliente c) AS clientes`;
-    const [row] = await db.$queryRawUnsafe<Record<string, unknown>[]>(sql, ...p.values);
+    const [row] = await consultaAnalitica<Record<string, unknown>>(db, sql, p.values);
     return row ?? {};
   };
 
