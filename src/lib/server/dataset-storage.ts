@@ -77,49 +77,28 @@ export async function deleteDataset(db: PrismaClient, kind: DatasetKind): Promis
 // Row operations — batch insert (max ~3 000 rows por call)
 // ---------------------------------------------------------------------------
 
+/**
+ * Sem log por lote: a importação de vendas faz ~284 chamadas destas, e o
+ * progresso de verdade fica no `import_jobs` (ver server/importacao). Quatro
+ * linhas de console por lote só enterrariam o que interessa no log do container.
+ */
 export async function insertRows(db: PrismaClient, kind: DatasetKind, rows: unknown[]): Promise<number> {
   if (!rows.length) return 0;
-  console.log(`🔗 Conectando ao banco para ${kind}...`);
-  console.log(`✅ Banco conectado`);
 
   try {
     switch (kind) {
-      case "sales": {
-        console.log(`📥 Inserindo ${rows.length} vendas...`);
-        const r = await db.saleItem.createMany({ data: rows as OrderLineItem[] });
-        console.log(`✅ ${r.count} vendas inseridas`);
-        return r.count;
-      }
-      case "receivable": {
-        console.log(`📥 Inserindo ${rows.length} contas a receber...`);
-        const r = await db.receivableItem.createMany({ data: rows as ReceivableItem[] });
-        console.log(`✅ ${r.count} contas inseridas`);
-        return r.count;
-      }
-      case "payable": {
-        console.log(`📥 Inserindo ${rows.length} contas a pagar...`);
-        const r = await db.payableItem.createMany({ data: rows as PayableItem[] });
-        console.log(`✅ ${r.count} contas inseridas`);
-        return r.count;
-      }
-      case "inventory": {
-        console.log(`📥 Inserindo ${rows.length} itens de estoque...`);
-        const r = await db.inventoryItem.createMany({ data: rows as InventoryItem[] });
-        console.log(`✅ ${r.count} itens inseridos`);
-        return r.count;
-      }
-      case "caixa": {
-        console.log(`📥 Inserindo ${rows.length} movimentações...`);
-        const r = await db.caixaItem.createMany({ data: rows as CaixaItem[] });
-        console.log(`✅ ${r.count} movimentações inseridas`);
-        return r.count;
-      }
-      case "orcamento": {
-        console.log(`📥 Inserindo ${rows.length} itens de orçamento...`);
-        const r = await db.orcamentoItem.createMany({ data: rows as OrcamentoLineItem[] });
-        console.log(`✅ ${r.count} itens de orçamento inseridos`);
-        return r.count;
-      }
+      case "sales":
+        return (await db.saleItem.createMany({ data: rows as OrderLineItem[] })).count;
+      case "receivable":
+        return (await db.receivableItem.createMany({ data: rows as ReceivableItem[] })).count;
+      case "payable":
+        return (await db.payableItem.createMany({ data: rows as PayableItem[] })).count;
+      case "inventory":
+        return (await db.inventoryItem.createMany({ data: rows as InventoryItem[] })).count;
+      case "caixa":
+        return (await db.caixaItem.createMany({ data: rows as CaixaItem[] })).count;
+      case "orcamento":
+        return (await db.orcamentoItem.createMany({ data: rows as OrcamentoLineItem[] })).count;
     }
   } catch (e) {
     console.error(`❌ Erro ao inserir ${kind}:`, e);

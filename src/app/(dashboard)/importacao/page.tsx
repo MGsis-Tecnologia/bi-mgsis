@@ -5,15 +5,24 @@ import { Boxes, CheckCircle2, CircleDollarSign, Clock, CreditCard, FileSpreadshe
 import { PageHeader } from "@/components/layout/page-header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { parseFile, type DatasetKind } from "@/lib/parsers/csv-parser";
-import { useDatasetStore, IDB_KEY, RECEIVABLES_IDB_KEY, PAYABLES_IDB_KEY, INVENTORY_IDB_KEY, CAIXA_IDB_KEY, ORCAMENTO_IDB_KEY } from "@/lib/store/dataset";
-import { idbSet, idbDel } from "@/lib/store/idb";
-import { serverDelete, serverImport } from "@/lib/server/dataset-client";
+import type { DatasetKind } from "@/lib/parsers/csv-parser";
+import {
+  acompanhaJob,
+  apagaDataset,
+  enviaArquivo,
+  useDatasets,
+} from "@/lib/hooks/use-importacao";
 import { useTranslation } from "@/lib/hooks/use-translation";
 import type { DictionaryKey } from "@/lib/i18n/dictionaries";
 import { formatNumber, formatDate } from "@/lib/utils/format";
 
-type ItemStatus = "waiting" | "parsing" | "success" | "error";
+/**
+ * "enviando" é o upload dos bytes; "processando" é o servidor lendo o arquivo.
+ * São etapas distintas e demoram coisas diferentes — o arquivo de vendas leva
+ * mais tempo subindo do que sendo gravado, e mostrar as duas como uma só faria
+ * a barra parecer travada.
+ */
+type ItemStatus = "waiting" | "enviando" | "processando" | "success" | "error";
 
 interface QueueItem {
   id: string;
@@ -25,6 +34,8 @@ interface QueueItem {
   warnings: string[];
   skipped: number;
   rowCount: number;
+  /** Linhas lidas do arquivo, enquanto o servidor processa. */
+  lidas: number;
 }
 
 // Rótulo e unidade ("linhas", "títulos", "itens"…) de cada tipo de dado vêm do
@@ -40,110 +51,58 @@ export default function ImportacaoPage() {
   const processingRef = React.useRef(false);
   const inputRef = React.useRef<HTMLInputElement>(null);
 
-  const {
-    dataset, receivables, payables, inventory, caixa, orcamento,
-    setDataset, setReceivables, setPayables, setInventory, setCaixa, setOrcamento,
-    clearDataset, clearReceivables, clearPayables, clearInventory, clearCaixa, clearOrcamento,
-  } = useDatasetStore();
+  const { datasets, recarrega } = useDatasets();
 
   function updateItem(id: string, patch: Partial<QueueItem>) {
     queueRef.current = queueRef.current.map(i => i.id === id ? { ...i, ...patch } : i);
     setQueue([...queueRef.current]);
   }
 
+  /**
+   * Um arquivo por vez, como antes — mas agora o navegador só envia os bytes.
+   * O parse e a gravação são do servidor, e continuam mesmo se esta aba fechar.
+   */
   async function processQueue() {
     if (processingRef.current) return;
     processingRef.current = true;
+
+    let importou = false;
 
     while (true) {
       const nextItem = queueRef.current.find(i => i.status === "waiting");
       if (!nextItem) break;
 
-      updateItem(nextItem.id, { status: "parsing" });
+      updateItem(nextItem.id, { status: "enviando" });
 
-      const result = await parseFile(nextItem.file);
+      try {
+        const jobId = await enviaArquivo(nextItem.file);
+        updateItem(nextItem.id, { status: "processando" });
 
-      if (result.errors.length > 0 || (!result.dataset && !result.receivables && !result.payables && !result.inventory && !result.caixa && !result.orcamento)) {
-        updateItem(nextItem.id, {
-          status: "error", kind: result.kind,
-          errors: result.errors, warnings: result.warnings, skipped: result.skipped,
+        const fim = await acompanhaJob(jobId, (e) => {
+          updateItem(nextItem.id, { lidas: e.lidas, kind: e.kind, skipped: e.ignoradas });
         });
-        continue;
-      }
 
-      // Optional advisory when the server persistence fails — IDB remains
-      // authoritative for the local browser.
-      const serverWarning: string[] = [];
-      async function pushToServer(
-        kind: DatasetKind,
-        items: unknown[],
-        meta: { filename: string; rowCount: number; importedAt: string }
-      ) {
-        try {
-          await serverImport(kind, items, meta);
-        } catch (err) {
-          serverWarning.push(t("importacao.error.server", { msg: (err as Error).message }));
+        if (fim.status === "erro") {
+          updateItem(nextItem.id, {
+            status: "error", kind: fim.kind,
+            errors: [fim.erro], warnings: fim.avisos, skipped: fim.ignoradas,
+          });
+          continue;
         }
-      }
 
-      if (result.kind === "caixa" && result.caixa) {
-        await idbSet(CAIXA_IDB_KEY, result.caixa);
-        await pushToServer("caixa", result.caixa.items, { filename: result.caixa.filename, rowCount: result.caixa.rowCount, importedAt: result.caixa.importedAt });
-        setCaixa(result.caixa);
+        importou = true;
         updateItem(nextItem.id, {
-          status: "success", kind: "caixa",
-          rowCount: result.caixa.rowCount,
-          warnings: [...result.warnings, ...serverWarning], skipped: result.skipped,
+          status: "success", kind: fim.kind,
+          rowCount: fim.gravadas, lidas: fim.lidas,
+          warnings: fim.avisos, skipped: fim.ignoradas,
         });
-      } else if (result.kind === "inventory" && result.inventory) {
-        await idbSet(INVENTORY_IDB_KEY, result.inventory);
-        await pushToServer("inventory", result.inventory.items, { filename: result.inventory.filename, rowCount: result.inventory.rowCount, importedAt: result.inventory.importedAt });
-        setInventory(result.inventory);
-        updateItem(nextItem.id, {
-          status: "success", kind: "inventory",
-          rowCount: result.inventory.rowCount,
-          warnings: [...result.warnings, ...serverWarning], skipped: result.skipped,
-        });
-      } else if (result.kind === "payable" && result.payables) {
-        await idbSet(PAYABLES_IDB_KEY, result.payables);
-        await pushToServer("payable", result.payables.items, { filename: result.payables.filename, rowCount: result.payables.rowCount, importedAt: result.payables.importedAt });
-        setPayables(result.payables);
-        updateItem(nextItem.id, {
-          status: "success", kind: "payable",
-          rowCount: result.payables.rowCount,
-          warnings: [...result.warnings, ...serverWarning], skipped: result.skipped,
-        });
-      } else if (result.kind === "receivable" && result.receivables) {
-        await idbSet(RECEIVABLES_IDB_KEY, result.receivables);
-        await pushToServer("receivable", result.receivables.items, { filename: result.receivables.filename, rowCount: result.receivables.rowCount, importedAt: result.receivables.importedAt });
-        setReceivables(result.receivables);
-        updateItem(nextItem.id, {
-          status: "success", kind: "receivable",
-          rowCount: result.receivables.rowCount,
-          warnings: [...result.warnings, ...serverWarning], skipped: result.skipped,
-        });
-      } else if (result.kind === "orcamento" && result.orcamento) {
-        await idbSet(ORCAMENTO_IDB_KEY, result.orcamento);
-        await pushToServer("orcamento", result.orcamento.items, { filename: result.orcamento.filename, rowCount: result.orcamento.rowCount, importedAt: result.orcamento.importedAt });
-        setOrcamento(result.orcamento);
-        updateItem(nextItem.id, {
-          status: "success", kind: "orcamento",
-          rowCount: result.orcamento.rowCount,
-          warnings: [...result.warnings, ...serverWarning], skipped: result.skipped,
-        });
-      } else if (result.dataset) {
-        await idbSet(IDB_KEY, result.dataset);
-        await pushToServer("sales", result.dataset.items, { filename: result.dataset.filename, rowCount: result.dataset.rowCount, importedAt: result.dataset.importedAt });
-        setDataset(result.dataset);
-        updateItem(nextItem.id, {
-          status: "success", kind: "sales",
-          rowCount: result.dataset.rowCount,
-          warnings: [...result.warnings, ...serverWarning], skipped: result.skipped,
-        });
+      } catch (err) {
+        updateItem(nextItem.id, { status: "error", errors: [(err as Error).message] });
       }
     }
 
     processingRef.current = false;
+    if (importou) recarrega();
   }
 
   function enqueueFiles(files: File[]) {
@@ -159,6 +118,7 @@ export default function ImportacaoPage() {
       warnings: [],
       skipped: 0,
       rowCount: 0,
+      lidas: 0,
     }));
     queueRef.current = [...queueRef.current, ...newItems];
     setQueue([...queueRef.current]);
@@ -176,9 +136,20 @@ export default function ImportacaoPage() {
     e.target.value = "";
   }
 
-  const isRunning = queue.some(i => i.status === "waiting" || i.status === "parsing");
+  const isRunning = queue.some(
+    i => i.status === "waiting" || i.status === "enviando" || i.status === "processando"
+  );
   const hasQueue = queue.length > 0;
-  const hasDatasets = !!(dataset || receivables || payables || inventory || caixa || orcamento);
+
+  const ICONES: Record<DatasetKind, React.ReactNode> = {
+    sales: <ShoppingCart className="h-4 w-4 text-accent" />,
+    receivable: <CircleDollarSign className="h-4 w-4 text-accent" />,
+    payable: <CreditCard className="h-4 w-4 text-accent" />,
+    inventory: <Boxes className="h-4 w-4 text-accent" />,
+    caixa: <Landmark className="h-4 w-4 text-accent" />,
+    orcamento: <FileSpreadsheet className="h-4 w-4 text-accent" />,
+  };
+  const presentes = datasets.filter(d => d.present);
 
   return (
     <div className="space-y-8">
@@ -246,71 +217,25 @@ export default function ImportacaoPage() {
         </Card>
       )}
 
-      {/* Current datasets */}
-      {hasDatasets && (
+      {/* Current datasets — vem de dataset_meta, não mais do store do navegador */}
+      {presentes.length > 0 && (
         <Card>
           <CardHeader><CardTitle>{t("importacao.current.title")}</CardTitle></CardHeader>
           <CardContent className="space-y-3">
-            {dataset && (
+            {presentes.map((d) => (
               <DatasetRow
-                icon={<ShoppingCart className="h-4 w-4 text-accent" />}
-                kind="sales"
-                filename={dataset.filename}
-                rowCount={dataset.rowCount}
-                importedAt={dataset.importedAt}
-                onRemove={async () => { await idbDel(IDB_KEY); await serverDelete("sales"); clearDataset(); }}
+                key={d.kind}
+                icon={ICONES[d.kind]}
+                kind={d.kind}
+                filename={d.filename ?? ""}
+                rowCount={d.rowCount ?? 0}
+                importedAt={d.importedAt ?? ""}
+                onRemove={async () => {
+                  await apagaDataset(d.kind);
+                  recarrega();
+                }}
               />
-            )}
-            {receivables && (
-              <DatasetRow
-                icon={<CircleDollarSign className="h-4 w-4 text-accent" />}
-                kind="receivable"
-                filename={receivables.filename}
-                rowCount={receivables.rowCount}
-                importedAt={receivables.importedAt}
-                onRemove={async () => { await idbDel(RECEIVABLES_IDB_KEY); await serverDelete("receivable"); clearReceivables(); }}
-              />
-            )}
-            {payables && (
-              <DatasetRow
-                icon={<CreditCard className="h-4 w-4 text-accent" />}
-                kind="payable"
-                filename={payables.filename}
-                rowCount={payables.rowCount}
-                importedAt={payables.importedAt}
-                onRemove={async () => { await idbDel(PAYABLES_IDB_KEY); await serverDelete("payable"); clearPayables(); }}
-              />
-            )}
-            {inventory && (
-              <DatasetRow
-                icon={<Boxes className="h-4 w-4 text-accent" />}
-                kind="inventory"
-                filename={inventory.filename}
-                rowCount={inventory.rowCount}
-                importedAt={inventory.importedAt}
-                onRemove={async () => { await idbDel(INVENTORY_IDB_KEY); await serverDelete("inventory"); clearInventory(); }}
-              />
-            )}
-            {caixa && (
-              <DatasetRow
-                icon={<Landmark className="h-4 w-4 text-accent" />}
-                kind="caixa"
-                filename={caixa.filename}
-                rowCount={caixa.rowCount}
-                importedAt={caixa.importedAt}
-                onRemove={async () => { await idbDel(CAIXA_IDB_KEY); await serverDelete("caixa"); clearCaixa(); }}
-              />
-            )}
-            {orcamento && (
-              <DatasetRow
-                icon={<FileSpreadsheet className="h-4 w-4 text-accent" />}
-                kind="orcamento"
-                filename={orcamento.filename}
-                rowCount={orcamento.rowCount}
-                importedAt={orcamento.importedAt}
-                onRemove={async () => { await idbDel(ORCAMENTO_IDB_KEY); await serverDelete("orcamento"); clearOrcamento(); }}
-              />
-            )}
+            ))}
           </CardContent>
         </Card>
       )}
@@ -338,7 +263,9 @@ function QueueRow({ item }: { item: QueueItem }) {
     <div className="flex items-start gap-3 rounded-md border border-border p-3">
       <div className="mt-0.5 shrink-0">
         {item.status === "waiting" && <Clock className="h-4 w-4 text-muted-foreground" />}
-        {item.status === "parsing" && <Loader2 className="h-4 w-4 text-accent animate-spin" />}
+        {(item.status === "enviando" || item.status === "processando") && (
+          <Loader2 className="h-4 w-4 text-accent animate-spin" />
+        )}
         {item.status === "success" && <CheckCircle2 className="h-4 w-4 text-positive" />}
         {item.status === "error" && <XCircle className="h-4 w-4 text-negative" />}
       </div>
@@ -348,8 +275,17 @@ function QueueRow({ item }: { item: QueueItem }) {
           {item.status === "waiting" && (
             <span className="text-[11px] text-muted-foreground">{t("importacao.queue.waiting")}</span>
           )}
-          {item.status === "parsing" && (
-            <span className="text-[11px] text-accent animate-pulse">{t("importacao.queue.processing")}</span>
+          {item.status === "enviando" && (
+            <span className="text-[11px] text-accent animate-pulse">{t("importacao.queue.uploading")}</span>
+          )}
+          {item.status === "processando" && (
+            <span className="text-[11px] text-accent animate-pulse">
+              {/* O total de linhas de um CSV só se sabe lendo até o fim, então
+                  não há percentual — o que dá para mostrar é o que já foi lido. */}
+              {item.lidas > 0
+                ? t("importacao.queue.readRows", { count: formatNumber(item.lidas) })
+                : t("importacao.queue.processing")}
+            </span>
           )}
           {item.status === "success" && item.kind && (
             <>

@@ -190,7 +190,7 @@ function mapRow(row: Record<string, unknown>, colMap: Record<string, string>): R
 
 // ─── Dispatcher: detect layout (VENDAS vs RECEBER) and route ──────────────────
 
-function processRows(rawRows: Record<string, unknown>[], filename: string): ParseResult {
+export function processRows(rawRows: Record<string, unknown>[], filename: string): ParseResult {
   if (rawRows.length === 0) {
     return errorResult(["Arquivo vazio."]);
   }

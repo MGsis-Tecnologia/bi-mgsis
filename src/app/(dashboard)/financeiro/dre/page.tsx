@@ -25,8 +25,7 @@ import { useFilters } from "@/lib/store/filters";
 import type { DreRow } from "@/lib/analytics/cashflow";
 import { formatCurrency, formatPercent, formatNumber } from "@/lib/utils/format";
 import { cn } from "@/lib/utils";
-import { parseFile } from "@/lib/parsers/csv-parser";
-import { serverImport } from "@/lib/server/dataset-client";
+import { acompanhaJob, enviaArquivo } from "@/lib/hooks/use-importacao";
 
 const PIE_COLORS = [
   "hsl(var(--chart-1))",
@@ -430,6 +429,11 @@ function InlineImport({ onImportado }: { onImportado: () => void }) {
   const [message, setMessage] = React.useState("");
   const inputRef = React.useRef<HTMLInputElement>(null);
 
+  /**
+   * Mesmo caminho da tela de Importação (fase E): o navegador envia o arquivo e
+   * o servidor faz o resto. Antes o parse era aqui, e o arquivo de caixa
+   * precisava caber na memória da aba.
+   */
   async function handleFile(file: File) {
     if (!/\.(csv|xlsx|xls)$/i.test(file.name)) {
       setStatus("error");
@@ -438,27 +442,35 @@ function InlineImport({ onImportado }: { onImportado: () => void }) {
     }
     setStatus("parsing");
     setMessage("");
-    const result = await parseFile(file);
-    if (result.kind === "caixa" && result.caixa) {
-      // Grava no Postgres, como faz a tela de Importação. Antes isto só ia para
-      // o IndexedDB, então o arquivo se perdia ao trocar de máquina.
-      const { items, filename, rowCount, importedAt } = result.caixa;
-      try {
-        await serverImport("caixa", items, { filename, rowCount, importedAt });
-      } catch (err) {
+
+    try {
+      const jobId = await enviaArquivo(file);
+      const fim = await acompanhaJob(jobId, (e) => {
+        if (e.lidas > 0) setMessage(`${formatNumber(e.lidas)} linhas lidas…`);
+      });
+
+      if (fim.status === "erro") {
         setStatus("error");
-        setMessage(err instanceof Error ? err.message : "Falha ao gravar no servidor.");
+        setMessage(fim.erro);
         return;
       }
+      // Esta tela é só de caixa: outro leiaute foi importado por engano, e o
+      // usuário precisa saber que os dados foram para outro lugar.
+      if (fim.kind !== "caixa") {
+        setStatus("error");
+        setMessage(
+          `O arquivo foi reconhecido como "${fim.kind}", não como Caixa. ` +
+            `Ele foi importado, mas alimenta outra tela.`
+        );
+        return;
+      }
+
       setStatus("success");
-      setMessage(`${formatNumber(rowCount)} movimentações carregadas.`);
+      setMessage(`${formatNumber(fim.gravadas)} movimentações carregadas.`);
       onImportado();
-    } else {
-      const errMsg = result.errors.join(" | ") ||
-        `Leiaute não reconhecido como Caixa (kind=${result.kind ?? "null"}). Abra o DevTools (F12 → Console) para ver as colunas detectadas.`;
-      console.error("[InlineImport] falha:", { kind: result.kind, errors: result.errors, warnings: result.warnings });
+    } catch (err) {
       setStatus("error");
-      setMessage(errMsg);
+      setMessage(err instanceof Error ? err.message : "Falha ao importar.");
     }
   }
 
