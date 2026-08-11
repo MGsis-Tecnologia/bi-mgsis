@@ -15,14 +15,22 @@
 --   um recebimento parcial também é > 0 e o título segue em aberto.
 --   Mantido como estava: com recebimento parcial, o valor que vale é o
 --   recebido. Mudar isto mexeria em números que o usuário já conhece.
+--
+--   Data OPCIONAL fora de 1990–2035 sai como vazia, não como está no ERP.
+--   A API recusa a linha inteira com 422 nesse caso, e um vencimento em 2220
+--   (digitação de 2022) não carrega informação nenhuma — melhor perder o
+--   campo que perder o título. Use datas-impossiveis.sql para listar quais
+--   linhas caem nisso e corrigir no ERP.
 -- ============================================================================
 CREATE OR REPLACE VIEW bi_receber AS
 SELECT
     COALESCE(r.receber_documento::text, '')     AS receber_documento,
     r.receber_data_emissao                      AS data_emissao,
-    COALESCE(TO_CHAR(r.receber_data_vencimento, 'YYYY-MM-DD'), '')
+    CASE WHEN r.receber_data_vencimento >= DATE '1990-01-01' AND r.receber_data_vencimento < DATE '2036-01-01'
+             THEN TO_CHAR(r.receber_data_vencimento, 'YYYY-MM-DD') ELSE '' END
                                                 AS data_vencimento,
-    COALESCE(TO_CHAR(r.receber_data_recebimento, 'YYYY-MM-DD'), '')
+    CASE WHEN r.receber_data_recebimento >= DATE '1990-01-01' AND r.receber_data_recebimento < DATE '2036-01-01'
+             THEN TO_CHAR(r.receber_data_recebimento, 'YYYY-MM-DD') ELSE '' END
                                                 AS data_recebimento,
     (r.receber_data_recebimento IS NOT NULL)     AS is_paid,
     'RECEBER'::text                              AS tipolanzamiento,

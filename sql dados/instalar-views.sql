@@ -58,7 +58,8 @@ SELECT
     COALESCE(o.orcamento_id::text, '')              AS orcamento_id,
     o.orcamento_data                                AS orcamento_data,
     COALESCE(o.orcamento_confirmado, false)         AS orcamento_confirmado,
-    COALESCE(TO_CHAR(o.orcamento_data_confirmacao, 'YYYY-MM-DD'), '')
+    CASE WHEN o.orcamento_data_confirmacao >= DATE '1990-01-01' AND o.orcamento_data_confirmacao < DATE '2036-01-01'
+             THEN TO_CHAR(o.orcamento_data_confirmacao, 'YYYY-MM-DD') ELSE '' END
                                                     AS orcamento_data_confirmacao,
     COALESCE(o.cliente_id::text, '')                AS cliente_id,
     COALESCE(c.pessoa_nome, '')                     AS cliente_nome,
@@ -91,9 +92,11 @@ CREATE OR REPLACE VIEW bi_receber AS
 SELECT
     COALESCE(r.receber_documento::text, '')     AS receber_documento,
     r.receber_data_emissao                      AS data_emissao,
-    COALESCE(TO_CHAR(r.receber_data_vencimento, 'YYYY-MM-DD'), '')
+    CASE WHEN r.receber_data_vencimento >= DATE '1990-01-01' AND r.receber_data_vencimento < DATE '2036-01-01'
+             THEN TO_CHAR(r.receber_data_vencimento, 'YYYY-MM-DD') ELSE '' END
                                                 AS data_vencimento,
-    COALESCE(TO_CHAR(r.receber_data_recebimento, 'YYYY-MM-DD'), '')
+    CASE WHEN r.receber_data_recebimento >= DATE '1990-01-01' AND r.receber_data_recebimento < DATE '2036-01-01'
+             THEN TO_CHAR(r.receber_data_recebimento, 'YYYY-MM-DD') ELSE '' END
                                                 AS data_recebimento,
     (r.receber_data_recebimento IS NOT NULL)     AS is_paid,
     'RECEBER'::text                              AS tipolanzamiento,
@@ -128,9 +131,11 @@ CREATE OR REPLACE VIEW bi_pagar AS
 SELECT
     COALESCE(r.pagar_documento::text, '')      AS pagar_documento,
     r.pagar_data_emissao                       AS data_emissao,
-    COALESCE(TO_CHAR(r.pagar_data_vencimento, 'YYYY-MM-DD'), '')
+    CASE WHEN r.pagar_data_vencimento >= DATE '1990-01-01' AND r.pagar_data_vencimento < DATE '2036-01-01'
+             THEN TO_CHAR(r.pagar_data_vencimento, 'YYYY-MM-DD') ELSE '' END
                                                AS data_vencimento,
-    COALESCE(TO_CHAR(r.pagar_data_pagamento, 'YYYY-MM-DD'), '')
+    CASE WHEN r.pagar_data_pagamento >= DATE '1990-01-01' AND r.pagar_data_pagamento < DATE '2036-01-01'
+             THEN TO_CHAR(r.pagar_data_pagamento, 'YYYY-MM-DD') ELSE '' END
                                                AS data_pagamento,
     (r.pagar_data_pagamento IS NOT NULL)        AS is_paid,
     'PAGAR'::text                               AS tipolanzamiento,

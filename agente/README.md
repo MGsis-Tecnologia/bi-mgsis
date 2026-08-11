@@ -205,6 +205,7 @@ mesmo apagar um período.
 | `401 Token de integração inválido ou revogado` | Gerar um novo token invalida o anterior. Refaça o passo 3. |
 | `403` | A empresa está suspensa no Analytics. |
 | `413 Lote com N linhas excede o limite` | Mês grande demais (>150.000 linhas). Use `--periodo 2026-05-01..2026-05-15` direto na API, ou fale com o suporte. |
+| `422 ... campo "x" — data fora de 1990–2035` | Digitação no ERP (2220 no lugar de 2022). As views já limpam data OPCIONAL fora de faixa; se for obrigatória, corrija no ERP. Liste com `sql dados/datas-impossiveis.sql`. |
 | `422 Linha N inválida: campo "x"` | Uma view foi alterada e voltou a produzir `NULL`. A resposta traz a linha e o campo. |
 | `permission denied for view bi_x` | Faltou o `GRANT SELECT` daquela view. |
 | `outra execução em andamento — saindo` | Normal: o ciclo esbarrou numa carga inicial ainda rodando. |

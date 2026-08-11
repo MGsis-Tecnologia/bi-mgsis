@@ -21,13 +21,20 @@
 --   Dados do item
 --   INNER: orçamento sem item não tem o que analisar, e viraria uma linha
 --   fantasma com produto vazio e quantidade zero.
+--
+--   Data OPCIONAL fora de 1990–2035 sai como vazia, não como está no ERP.
+--   A API recusa a linha inteira com 422 nesse caso, e um vencimento em 2220
+--   (digitação de 2022) não carrega informação nenhuma — melhor perder o
+--   campo que perder o título. Use datas-impossiveis.sql para listar quais
+--   linhas caem nisso e corrigir no ERP.
 -- ============================================================================
 CREATE OR REPLACE VIEW bi_orcamentos AS
 SELECT
     COALESCE(o.orcamento_id::text, '')              AS orcamento_id,
     o.orcamento_data                                AS orcamento_data,
     COALESCE(o.orcamento_confirmado, false)         AS orcamento_confirmado,
-    COALESCE(TO_CHAR(o.orcamento_data_confirmacao, 'YYYY-MM-DD'), '')
+    CASE WHEN o.orcamento_data_confirmacao >= DATE '1990-01-01' AND o.orcamento_data_confirmacao < DATE '2036-01-01'
+             THEN TO_CHAR(o.orcamento_data_confirmacao, 'YYYY-MM-DD') ELSE '' END
                                                     AS orcamento_data_confirmacao,
     COALESCE(o.cliente_id::text, '')                AS cliente_id,
     COALESCE(c.pessoa_nome, '')                     AS cliente_nome,
