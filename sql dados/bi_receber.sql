@@ -6,9 +6,15 @@
 -- O período é pela DATA DE EMISSÃO, não pelo vencimento: a tela filtra por
 -- vencimento, mas quem define a que mês o título PERTENCE é a emissão — é o que
 -- torna o reenvio de um período idempotente. Por isso só `data_emissao` fica
--- crua; vencimento e recebimento já saem em ISO, porque são só carga.
+-- crua — vencimento e recebimento já saem em ISO, porque são só carga.
 --
 -- `is_paid` é novo: a API precisa do booleano e a view não o tinha.
+--
+-- Notas sobre o comando abaixo:
+--   Quitado = tem data de recebimento. O valor recebido sozinho não serve:
+--   um recebimento parcial também é > 0 e o título segue em aberto.
+--   Mantido como estava: com recebimento parcial, o valor que vale é o
+--   recebido. Mudar isto mexeria em números que o usuário já conhece.
 -- ============================================================================
 CREATE OR REPLACE VIEW bi_receber AS
 SELECT
@@ -18,12 +24,8 @@ SELECT
                                                 AS data_vencimento,
     COALESCE(TO_CHAR(r.receber_data_recebimento, 'YYYY-MM-DD'), '')
                                                 AS data_recebimento,
-    -- Quitado = tem data de recebimento. O valor recebido sozinho não serve:
-    -- um recebimento parcial também é > 0 e o título segue em aberto.
     (r.receber_data_recebimento IS NOT NULL)     AS is_paid,
     'RECEBER'::text                              AS tipolanzamiento,
-    -- Mantido como estava: com recebimento parcial, o valor que vale é o
-    -- recebido. Mudar isto mexeria em números que o usuário já conhece.
     COALESCE(
         CASE WHEN r.receber_valor_recebido > 0::numeric
              THEN r.receber_valor_recebido

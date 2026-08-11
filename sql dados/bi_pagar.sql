@@ -3,6 +3,9 @@
 --
 -- Corrigida em 11/08/2026. Ver as três regras no topo de bi_movimento.sql.
 -- Espelha bi_receber: mesmo critério de período (emissão) e mesmo `is_paid`.
+--
+-- Notas sobre o comando abaixo:
+--   Quitado = tem data de pagamento — pagamento parcial também é > 0.
 -- ============================================================================
 CREATE OR REPLACE VIEW bi_pagar AS
 SELECT
@@ -12,7 +15,6 @@ SELECT
                                                AS data_vencimento,
     COALESCE(TO_CHAR(r.pagar_data_pagamento, 'YYYY-MM-DD'), '')
                                                AS data_pagamento,
-    -- Quitado = tem data de pagamento; pagamento parcial também é > 0.
     (r.pagar_data_pagamento IS NOT NULL)        AS is_paid,
     'PAGAR'::text                               AS tipolanzamiento,
     COALESCE(

@@ -2,7 +2,7 @@
 -- VIEW: bi_caixa  →  dataset "caixa" da API de ingestão
 --
 -- Corrigida em 11/08/2026. Ver as três regras no topo de bi_movimento.sql.
--- Era a única view cujo mapeamento já estava completo; o que mudou foi o
+-- Era a única view cujo mapeamento já estava completo — o que mudou foi o
 -- COALESCE nos campos vindos de LEFT JOIN e o descarte de linha sem data.
 --
 -- O JOIN com `pessoa` saiu: nenhuma coluna dele era usada, e ele custava uma

@@ -13,6 +13,9 @@
 -- ⚠ DECISÃO PENDENTE, ver o comentário no fim do arquivo: com duas empresas, o
 -- mínimo do cadastro (que é por produto, não por empresa) é repetido nas duas
 -- linhas, e o BI soma as empresas ao consolidar por SKU.
+--
+-- Notas sobre o comando abaixo:
+--   MIN, não SUM: é atributo do cadastro do produto, não da linha de estoque.
 -- ============================================================================
 CREATE OR REPLACE VIEW bi_estoque AS
 SELECT
@@ -25,7 +28,6 @@ SELECT
     COALESCE(SUM(e.estoque_quantidade), 0)          AS estoque_item,
     COALESCE(SUM(e.estoque_quantidade * p.produto_custo_unitario), 0)
                                                     AS valor_estoque,
-    -- MIN, não SUM: é atributo do cadastro do produto, não da linha de estoque.
     COALESCE(MIN(p.produto_estoque_minimo), 0)      AS estoque_minimo
 FROM estoque e
     JOIN      produto p ON p.produto_id = e.produto_id
@@ -47,8 +49,8 @@ GROUP BY e.produto_id, p.produto_descricao, p.produto_fabricante,
 --
 -- Não corrigi porque a resposta é de negócio, não de SQL:
 --   a) o mínimo é da REDE  → emitir só numa linha por produto (a menor
---      empresa_id) e 0 nas demais, para a soma dar o valor certo;
+--      empresa_id) e 0 nas demais, para a soma dar o valor certo —
 --   b) o mínimo é POR LOJA → está certo como está, e quem precisa mudar é o BI,
---      que não deveria somar;
+--      que não deveria somar —
 --   c) o mínimo deveria ser cadastrado por (produto, empresa) no ERP.
 

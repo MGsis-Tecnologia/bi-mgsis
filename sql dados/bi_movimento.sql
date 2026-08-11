@@ -10,7 +10,7 @@
 --     nulo — `null` não é o mesmo que "ausente". Como toda view aqui usa
 --     LEFT JOIN, cada coluna que vem de join levou COALESCE.
 --  2. A DATA DO PERÍODO FICA CRUA. É por ela que o agente filtra
---     (`WHERE pedido_data >= $1 AND pedido_data < $2`), e comparar timestamp
+--     (`WHERE pedido_data >= <param 1> AND pedido_data < <param 2>`), e comparar timestamp
 --     com data usa índice. Se viesse TO_CHAR ou ::date, cada mês viraria
 --     varredura completa — na consulta que roda a cada 2 horas.
 --     O agente formata para YYYY-MM-DD no SELECT dele.
@@ -18,6 +18,9 @@
 --     anterior tinha `>= '2022-01-01' AND <= '2026-12-31'` embutido: o piso já
 --     escondia as vendas anteriores a 2022, e o teto faria a view parar de
 --     devolver venda nova em 31/12/2026, em silêncio.
+--
+-- Notas sobre o comando abaixo:
+--   A API exige data — item sem faturamento não tem a que mês pertencer.
 -- ============================================================================
 CREATE OR REPLACE VIEW bi_movimento AS
 SELECT
@@ -57,6 +60,5 @@ FROM item_pedido i
     LEFT JOIN moeda                 ON moeda.moeda_id = p.moeda_id
     LEFT JOIN subgrupo              ON subgrupo.subgrupo_id = pr.subgrupo_id
 WHERE p.pedido_tipo::text IN ('VENDA', 'DEVOLUCAO VENDA')
-  -- A API exige data; item sem faturamento não tem a que mês pertencer.
   AND p.pedido_data_fatura IS NOT NULL;
 

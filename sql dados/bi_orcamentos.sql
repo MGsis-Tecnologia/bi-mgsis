@@ -14,14 +14,19 @@
 --  2. Saiu o ORDER BY. Numa view ele é peso morto: o agente sempre filtra por
 --     período, e ordenar o resultado inteiro antes de descartar a ordem custa
 --     uma sort de milhões de linhas por consulta.
+--
+-- Notas sobre o comando abaixo:
+--   Dados do orçamento (repetidos em cada item)
+--   Data só de carga, nunca usada para filtrar: já sai em ISO ou vazia.
+--   Dados do item
+--   INNER: orçamento sem item não tem o que analisar, e viraria uma linha
+--   fantasma com produto vazio e quantidade zero.
 -- ============================================================================
 CREATE OR REPLACE VIEW bi_orcamentos AS
 SELECT
-    -- Dados do orçamento (repetidos em cada item)
     COALESCE(o.orcamento_id::text, '')              AS orcamento_id,
     o.orcamento_data                                AS orcamento_data,
     COALESCE(o.orcamento_confirmado, false)         AS orcamento_confirmado,
-    -- Data só de carga, nunca usada para filtrar: já sai em ISO ou vazia.
     COALESCE(TO_CHAR(o.orcamento_data_confirmacao, 'YYYY-MM-DD'), '')
                                                     AS orcamento_data_confirmacao,
     COALESCE(o.cliente_id::text, '')                AS cliente_id,
@@ -31,7 +36,6 @@ SELECT
     COALESCE(o.empresa_id::text, '')                AS empresa_id,
     COALESCE(o.moeda_id::text, '')                  AS moeda_id,
     COALESCE(m.moeda_sigla, '')                     AS moeda_sigla,
-    -- Dados do item
     COALESCE(io.item_orcamento_id::text, '')        AS item_orcamento_id,
     COALESCE(io.produto_id::text, '')               AS produto_id,
     COALESCE(pr.produto_descricao, '')              AS produto_descricao,
@@ -42,8 +46,6 @@ SELECT
     COALESCE(io.item_quantidade_confirmada, 0)      AS item_quantidade_confirmada,
     COALESCE(io.item_total, 0)                      AS item_total
 FROM orcamento o
-    -- INNER: orçamento sem item não tem o que analisar, e viraria uma linha
-    -- fantasma com produto vazio e quantidade zero.
     JOIN      item_orcamento io ON io.orcamento_id = o.orcamento_id
     LEFT JOIN pessoa   c        ON c.pessoa_id = o.cliente_id
     LEFT JOIN pessoa   v        ON v.pessoa_id = o.vendedor_id
