@@ -685,10 +685,9 @@ próximas frentes, em ordem de retorno:
 2. **`/estoque` a ~5,3 s** (era 7,8 s antes do `work_mem`) — é a tela mais cara
    que restou. Ver "O que o /estoque ensinou" antes de mexer: duas otimizações
    já foram medidas e descartadas ali.
-3. **Decisão de produto pendente** — a pendência 6 (demanda em dobro no
-   /estoque) é divergência herdada do código antigo, replicada de propósito.
-   Não é de desempenho: espera você dizer o que a tela **deve** mostrar,
-   demanda por SKU ou rateada por SKU-empresa.
+3. **Taxas de câmbio ainda vêm do cliente** (pendência 3) — sai do contrato
+   quando a tabela `cambio` da seção 6.1 existir. É o que resta de dívida de
+   desenho; as divergências herdadas do código antigo foram todas resolvidas.
 
 Não há mais pendência de desempenho conhecida sem causa identificada.
 
@@ -1052,14 +1051,22 @@ diferença — os 5.837 ms que eu tinha visto antes eram cache frio, não largur
    mínimo de 5 que limita, não o teto de 1.000. A tela diz que é um recorte,
    e qual (`prospeccao.produtos.recorte`).
 
-6. **`/estoque` conta a demanda em dobro** quando o filtro é "todas as
-   empresas": o snapshot tem uma linha por (produto, empresa), e cada uma recebe
-   o movimento **inteiro** do produto. Some duas vezes nas agregações por
-   categoria (`unitsSold`, `revenueSold`); estoque e capital estão certos, porque
-   esses são por linha mesmo. Vem do código antigo e foi **replicado fielmente**
-   para não mudar números conhecidos. Corrigir significa decidir o que a tela
-   deve mostrar: demanda por SKU (uma vez) ou por SKU-empresa (rateada).
-   **Decisão de produto, pendente.**
+6. ~~**`/estoque` conta a demanda em dobro.**~~ **RESOLVIDA em 11/08/2026.**
+   Decisão tomada: **demanda por SKU, contada uma vez.** `e_inv` passou a
+   consolidar o snapshot por `product_id`, somando estoque, mínimo e capital —
+   o par (produto, empresa) é único, e 35.262 dos 76.708 SKUs existem nas duas
+   empresas. Com uma empresa selecionada o agrupamento é inócuo.
+
+   A verificação que fecha o caso: com "todas as empresas", `unitsSold` e
+   `revenueSold` agora são **exatamente** a soma dos valores de cada empresa
+   isolada (1.549.255 = 972.377 + 576.878), e a receita vendida do /estoque
+   passou a bater dígito a dígito com o faturamento do /dashboard no mesmo
+   período (₲898.097.470.053). Estoque e capital continuam somando como antes.
+
+   Consequências visíveis, todas desejadas: a contagem de SKUs virou 76.821 em
+   vez de 112.120 (que contava linha de snapshot, não SKU); a tabela não repete
+   mais o mesmo SKU; e "abaixo do mínimo" passou a comparar estoque total
+   contra mínimo total, e não empresa a empresa.
 
 7. **`/estoque` responde em ~4,7 s** no período de 12 meses. Já otimizada de
    6,9 s; o que sobra está distribuído, sem gargalo dominante — ver "O que o

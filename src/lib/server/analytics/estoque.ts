@@ -18,15 +18,24 @@ import {
  * texto e o filtro de situação também passam a ser resolvidos aqui, e a tabela
  * volta paginada.
  *
- * Duas particularidades do comportamento antigo foram mantidas de propósito,
- * porque mudá-las mudaria números que o usuário já conhece:
+ * **A unidade da tela é o SKU, não a linha do snapshot.** O snapshot tem uma
+ * linha por (produto, empresa) — verificado: o par é único, e 35.262 dos 76.708
+ * SKUs existem nas duas empresas. `e_inv` consolida por `product_id`, somando
+ * estoque, estoque mínimo e capital; descrição e fabricante vêm da linha de
+ * menor `id` (conferido: são idênticos entre empresas em todos os SKUs
+ * compartilhados). Com uma empresa selecionada o agrupamento é inócuo, porque
+ * já existe uma linha só por produto.
  *
- * 1. O snapshot tem uma linha por (produto, empresa). Com "todas as empresas"
- *    o mesmo SKU aparece **duas vezes**, e cada linha recebe o movimento
- *    INTEIRO do produto — a demanda é contada em dobro nas agregações por
- *    categoria. É o que o código antigo fazia (`for (const item of inventory)`).
- * 2. Um SKU vendido no período mas ausente do snapshot entra como ruptura, com
- *    estoque 0.
+ * Isso corrige a demanda contada em dobro: antes cada linha do snapshot recebia
+ * o movimento INTEIRO do produto, então com "todas as empresas" um SKU presente
+ * nas duas somava a própria demanda duas vezes nas agregações por categoria.
+ * Era o que o código antigo fazia (`for (const item of inventory)`), replicado
+ * fielmente na fase B e corrigido em 11/08/2026 por decisão de produto:
+ * **demanda por SKU, contada uma vez**.
+ *
+ * Uma particularidade do comportamento antigo segue mantida de propósito: um
+ * SKU vendido no período mas ausente do snapshot entra como ruptura, com
+ * estoque 0.
  */
 
 const RISK_DAYS = 15;
@@ -169,10 +178,18 @@ export async function getEstoqueData(
   passos.push({
     nome: "e_inv",
     params: pInv.values,
-    sql: `SELECT i.id, i.product_id, i.description, i.manufacturer_code,
-                 i.stock, i.min_stock, ${custoInvP} AS cost_total
+    // Uma linha por SKU, não por (produto, empresa) — ver a nota no topo.
+    // `MIN(i.id)` continua servindo de `ord` (ordem de inserção do snapshot) e
+    // é reproduzível; `MIN()` em descrição e fabricante é seguro porque não
+    // divergem entre empresas.
+    sql: `SELECT MIN(i.id) AS id, i.product_id,
+                 MIN(i.description) AS description,
+                 MIN(i.manufacturer_code) AS manufacturer_code,
+                 SUM(i.stock) AS stock, SUM(i.min_stock) AS min_stock,
+                 SUM(${custoInvP}) AS cost_total
           FROM inventory_items i ${joinInvP}
-          ${condInvP.length ? `WHERE ${condInvP.join(" AND ")}` : ""}`,
+          ${condInvP.length ? `WHERE ${condInvP.join(" AND ")}` : ""}
+          GROUP BY i.product_id`,
   });
 
   const pL = new Params();
@@ -243,7 +260,8 @@ export async function getEstoqueData(
     params: pFin.values,
     sql: `
   WITH base AS (
-    -- Uma linha por linha do snapshot (não por SKU) — ver nota 1 no topo.
+    -- Uma linha por SKU: e_inv já consolidou as empresas, então o movimento
+    -- do produto entra uma vez só. Ver a nota no topo do arquivo.
     SELECT inv.product_id,
            TRIM(COALESCE(NULLIF(mov.product_name, ''), NULLIF(cat.product_name, ''), inv.description, '')) AS description,
            inv.manufacturer_code,
