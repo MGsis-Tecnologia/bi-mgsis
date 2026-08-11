@@ -26,7 +26,7 @@ export const dictionaries = {
     "sidebar.nav.users": "Usuários",
     "sidebar.insight.title": "Insight do dia",
     "sidebar.insight.investigate": "Investigar",
-    "sidebar.insight.empty.noData": "Importe um dataset para ver destaques automáticos do período.",
+    "sidebar.insight.loading": "Calculando destaques do período…",
     "sidebar.insight.empty.noHighlights": "Sem destaques relevantes no período selecionado.",
 
     // Topbar
@@ -545,7 +545,7 @@ export const dictionaries = {
     "sidebar.nav.users": "Usuarios",
     "sidebar.insight.title": "Insight del día",
     "sidebar.insight.investigate": "Investigar",
-    "sidebar.insight.empty.noData": "Importe un dataset para ver destaques automáticos del período.",
+    "sidebar.insight.loading": "Calculando destacados del período…",
     "sidebar.insight.empty.noHighlights": "Sin destaques relevantes en el período seleccionado.",
     
     // Topbar

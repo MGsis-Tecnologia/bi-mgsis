@@ -78,7 +78,7 @@ export interface DashboardData {
   hasData: boolean;
 }
 
-interface KpiRow {
+export interface KpiRow {
   revenue: unknown;
   cost: unknown;
   discount: unknown;
@@ -87,7 +87,7 @@ interface KpiRow {
   unique_customers: number;
 }
 
-const KPI_SELECT = `
+export const KPI_SELECT = `
   COALESCE(SUM(total), 0)        AS revenue,
   COALESCE(SUM(cost), 0)         AS cost,
   COALESCE(SUM(discount), 0)     AS discount,

@@ -31,9 +31,8 @@ import {
 import { cn } from "@/lib/utils";
 import { useTranslation } from "@/lib/hooks/use-translation";
 import { DictionaryKey } from "@/lib/i18n/dictionaries";
-import { useDataset } from "@/lib/hooks/use-dataset";
-import { useFilters } from "@/lib/store/filters";
-import { generateInsights, type Insight } from "@/lib/analytics/insights";
+import { useInsightDoDia } from "@/lib/hooks/use-insight-do-dia";
+import type { Insight } from "@/lib/analytics/insights";
 
 type NavItem = {
   href: string;
@@ -167,23 +166,16 @@ export function Sidebar({ isMaster = false, role, allowedMenus }: SidebarProps) 
     });
   };
 
-  const ds = useDataset();
-  const preset = useFilters((s) => s.preset);
-  const customRange = useFilters((s) => s.customRange);
-  const getRange = useFilters((s) => s.getRange);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  const range = React.useMemo(() => getRange(), [preset, customRange, getRange]);
-  const dailyInsight = React.useMemo<Insight | null>(() => {
-    if (!ds.hasData) return null;
-    const list = generateInsights(ds.orders, range, preset);
-    return list[0] ?? null;
-  }, [ds.hasData, ds.orders, range, preset]);
+  // Vem agregado do servidor. Antes rodava sobre a lista inteira de pedidos no
+  // navegador — e como a sidebar aparece em toda tela, mas o store só era
+  // preenchido nas rotas NÃO migradas, o cartão ficou vazio em quase todo lugar.
+  const { insight: dailyInsight, carregando: insightCarregando } = useInsightDoDia();
 
   const insightStyle = dailyInsight ? INSIGHT_TONE_STYLES[dailyInsight.tone] : INSIGHT_TONE_STYLES.neutral;
   const InsightIcon = insightStyle.icon;
   const investigateHref = dailyInsight ? (INSIGHT_HREF[dailyInsight.id] ?? "/vendas") : "/vendas";
-  const emptyMessage = !ds.hasData
-    ? t("sidebar.insight.empty.noData")
+  const emptyMessage = insightCarregando
+    ? t("sidebar.insight.loading")
     : t("sidebar.insight.empty.noHighlights");
 
   return (

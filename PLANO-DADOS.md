@@ -596,18 +596,35 @@ consultas que já existem.
 |---|---|
 | A — preparar o banco | Medida, **não aplicada** (índice rendeu só 18%; ver 4.1) |
 | **B — endpoints de agregação** | **Concluída: todas as telas de leitura migradas** |
-| C — aposentar o download total | Não iniciada (depende da B terminar) |
+| **C — aposentar o download total** | **Concluída em 11/08/2026** |
 | **D — ingestão por API** | **Implementada e testada** — ver [INGESTAO-API.md](INGESTAO-API.md) |
-| E — importação de CSV no servidor | Não iniciada |
-| F — pré-agregação | Não decidida (depende de medição) |
+| **E — importação de CSV no servidor** | **Concluída em 11/08/2026** |
+| F — pré-agregação | Não decidida (a medição não pediu) |
 
-**Telas migradas:** `/dashboard`, `/vendas`, `/produtos`, `/clientes`,
-`/vendedores`, `/comparativo`, `/prospeccao`, `/financeiro/receber`,
-`/financeiro/pagar`, `/financeiro/dre` e `/estoque`.
+**Todas as telas migradas.** O navegador não baixa mais linha nenhuma: o store
+Zustand, o IndexedDB, o `DatasetBootstrap` e as rotas `/api/datasets/[kind]/rows`
+foram **removidos**. A tela de "Carregando dados…" não existe mais.
 
-**Falta:** `/importacao`, que usa o store para gravar, não para ler — cai na
-fase E, não na B. Enquanto ela não for migrada, `DatasetBootstrap` continua
-existindo só para essa rota.
+### O que a fase C exigiu além do previsto
+
+O plano dizia que a fase C dependia só de `/importacao`. Eram **cinco**
+bloqueios, e três deles já estavam quebrados em produção sem ninguém notar:
+
+| Bloqueio | Situação encontrada |
+|---|---|
+| `/importacao` | Usava o store para gravar — a fase E resolveu |
+| `global-filters` | **Dropdowns de canal, vendedor e subgrupo VAZIOS** nas 11 telas migradas |
+| `empresa-switcher` | **Seletor de empresa vazio** nas mesmas telas |
+| `sidebar` | **"Insight do dia" não aparecia** nelas |
+| `/financeiro` (índice) | Rota **órfã**, fora do menu — apagada |
+
+A causa dos três do meio é a mesma: `Sidebar` e `Topbar` ficam no layout, então
+aparecem em toda tela, mas o `DatasetBootstrap` era **pulado** justamente nas
+rotas migradas (`ROTAS_SEM_STORE`). Store vazio, `useDataset()` devolvendo
+arrays vazios, nenhuma opção para escolher. Não quebrava — só sumia.
+
+**A lição:** ao tirar uma tela do store, é preciso conferir também o que o
+*layout* renderiza em volta dela. A migração por rota deixou o casco de fora.
 
 Payload no preset padrão:
 
@@ -675,34 +692,53 @@ src/app/(dashboard)/<tela>/page.tsx     ← consome o hook
 
 ### ▶ Retomar por aqui
 
-**Fases B e D concluídas; desempenho das telas resolvido em 11/08/2026.** As
-próximas frentes, em ordem de retorno:
+**Fases B, C, D e E concluídas.** O plano original está cumprido: o navegador
+não baixa mais dado nenhum, a agregação é toda no Postgres, o ERP envia por API
+e o CSV é processado no servidor. O que sobra:
 
-1. **Fase E → C** — migrar `/importacao` para gravar no servidor e então apagar
-   `DatasetBootstrap`, o store e o IndexedDB. É a **única** frente grande que
-   sobrou, e ficou mais urgente depois da fase D: ver "A ingestão pressiona a
-   fase E", logo abaixo. Também é o que libera a fase C.
-2. **`/estoque` a ~5,3 s** (era 7,8 s antes do `work_mem`) — é a tela mais cara
+1. **Taxas de câmbio ainda vêm do cliente** (pendência 3) — sai do contrato
+   quando a tabela `cambio` da seção 6.1 existir. É a última dívida de desenho.
+2. **`/estoque` a ~5,3 s** (era 7,8 s antes do `work_mem`) — a tela mais cara
    que restou. Ver "O que o /estoque ensinou" antes de mexer: duas otimizações
    já foram medidas e descartadas ali.
-3. **Taxas de câmbio ainda vêm do cliente** (pendência 3) — sai do contrato
-   quando a tabela `cambio` da seção 6.1 existir. É o que resta de dívida de
-   desenho; as divergências herdadas do código antigo foram todas resolvidas.
+3. **Fase A** (tipar datas, índices) e **fase F** (pré-agregação) seguem sem
+   justificativa por medição. A fase F em particular era "só se a medição
+   pedir" — e ela não pediu: nenhuma tela passa de 5,3 s.
 
-Não há mais pendência de desempenho conhecida sem causa identificada.
+Não há mais pendência de desempenho conhecida sem causa identificada, nem
+divergência herdada do código antigo em aberto.
 
-### A ingestão pressiona a fase E
+### ~~A ingestão pressiona a fase E~~ *(resolvido em 11/08/2026)*
 
-Cada envio da API atualiza `dataset_meta.importedAt`, que é justamente o campo
-que o `DatasetBootstrap` usa para decidir se precisa rebaixar o dataset inteiro.
+Ficou registrado porque explica a ordem em que as fases foram feitas: cada envio
+da API atualiza `dataset_meta.importedAt`, que era o campo que o
+`DatasetBootstrap` usava para decidir se rebaixava o dataset inteiro. Com o ciclo
+de 2 horas rodando, quem estivesse em `/importacao` baixaria 1,5 GB **a cada
+envio** — a fase D transformou um download eventual em um download recorrente.
 
-Com o ciclo de 2 horas rodando, **quem estiver na tela `/importacao` volta a
-baixar 1,5 GB depois de cada envio** — é a única rota que ainda depende do
-store. As telas de leitura não sofrem: todas já estão em `ROTAS_SEM_STORE`.
+Não existe mais: com a fase C, não há bootstrap, nem store, nem download.
 
-Não é regressão (o comportamento é o mesmo de antes da fase B), mas a fase D
-transforma um download eventual em um download a cada 2 horas. Isso torna a
-fase E mais urgente do que parecia quando foi ordenada.
+### O que a fase E ensinou (11/08/2026)
+
+**1. `formData()` não serve para arquivo grande.** O `request.formData()` do
+Next carrega o upload inteiro na memória antes de entregar — com 245 MB, derruba
+o processo. O corpo cru (`fetch(url, { body: file })` e
+`Readable.fromWeb(req.body)`) vai direto para o disco, sem passar pela memória.
+
+**2. Streaming só funciona se houver contrapressão.** Ler em streaming não
+adianta se o consumidor não segurar o produtor: sem `parser.pause()` enquanto o
+lote é gravado, o Papa continua empurrando linhas e a memória cresce igual. O
+pico medido foi **181 MB para um arquivo de 245 MB** — e não cresce com o
+arquivo, que é o ponto.
+
+**3. Progresso não pode ser escrito dentro da transação.** Nada gravado nela
+aparece antes do commit — que é justamente o fim do trabalho que se quer
+acompanhar. O `import_jobs` é atualizado por fora, numa conexão separada.
+
+**4. Uma função pura vale por dois caminhos de código.** `processRows` já
+existia e era pura, então o servidor a chama **por lote** e reaproveita
+detecção de leiaute, datas BR/Excel e validações sem manter uma segunda
+implementação para divergir da primeira.
 
 ### O `work_mem` padrão está derrubando todas as telas
 
@@ -899,9 +935,11 @@ então o painel aparece zerado. Troque para "Mês anterior" ou "12 meses".
    diferença entre 2.985 ms e 1.070 ms (ver 4.1).
 5. **Criar a rota e o hook** copiando os existentes.
 6. **Validar os números** (ver abaixo) — este passo não é opcional.
-7. **Adicionar a rota a `ROTAS_SEM_STORE`** em
-   `src/components/layout/dataset-bootstrap.tsx`. Sem isso a tela continua
-   pagando o download de 1,5 GB mesmo sem usar o store.
+7. ~~Adicionar a rota a `ROTAS_SEM_STORE`.~~ Não existe mais: a fase C removeu
+   o `DatasetBootstrap`, o store e o IndexedDB. Toda rota nasce sem store.
+   **Em compensação, confira o que o LAYOUT renderiza em volta da tela** —
+   `Sidebar` e `Topbar` aparecem em todas elas, e foi exatamente aí que a
+   migração por rota deixou três componentes quebrados sem ninguém ver.
 
 ### Como validar (o passo que garante que nada muda)
 

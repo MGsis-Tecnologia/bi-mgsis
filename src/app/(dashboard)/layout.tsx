@@ -6,7 +6,6 @@ import { getCatalogPrisma } from "@/lib/server/catalog-db";
 import { Sidebar } from "@/components/layout/sidebar";
 import { Topbar } from "@/components/layout/topbar";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { DatasetBootstrap } from "@/components/layout/dataset-bootstrap";
 import { DbError } from "@/components/layout/db-error";
 
 export const dynamic = "force-dynamic";
@@ -45,7 +44,6 @@ export default async function DashboardLayout({
 
   return (
     <TooltipProvider delayDuration={200}>
-      <DatasetBootstrap />
       <div className="flex min-h-screen bg-background">
         <Sidebar isMaster={session.isMaster} role={session.role} allowedMenus={session.allowedMenus} />
         <div className="flex min-w-0 flex-1 flex-col">
