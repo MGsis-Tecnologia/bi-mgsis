@@ -619,7 +619,7 @@ Payload no preset padrão:
 | `/clientes` | 10,0 KB | ~0,8 s |
 | `/vendedores` | 26,6 KB | 2,4–9,7 s |
 | `/comparativo` | 24,6 KB | 2,2–9,1 s |
-| `/prospeccao` | **1.393 KB** | 1,4–3,7 s |
+| `/prospeccao` | 148 KB | ~0,07 s |
 | `/financeiro/receber` | 20,0 KB | ~0,2 s |
 | `/financeiro/pagar` | 7,5 KB | ~0,02 s |
 | `/financeiro/dre` | 0,2 KB* | ~0,1 s |
@@ -641,7 +641,23 @@ As mais lentas são as que **varrem o histórico completo**, não só o período
 `/vendedores` precisa da primeira compra de cada par (vendedor, cliente), e
 `/comparativo` compara ano a ano por definição.
 
-`/prospeccao` é a exceção no payload — ver a pendência 5.
+Os números acima são de antes da otimização de 11/08/2026 — ver "O que
+/prospeccao ensinou (11/08/2026)". Medido de novo depois dela, no período de 12
+meses (o pior caso, não o preset padrão):
+
+| Tela | Antes | Depois |
+|---|---:|---:|
+| `/dashboard` | 5.285 ms | **2.385 ms** |
+| `/vendas` | 3.952 ms | **3.042 ms** |
+| `/produtos` | 4.679 ms | **1.625 ms** |
+| `/clientes` | 4.056 ms | **2.404 ms** |
+| `/vendedores` | 6.110 ms | **4.565 ms** |
+| `/comparativo` | 3.079 ms | **1.487 ms** |
+| `/prospeccao` | 3.951 ms | **920 ms** |
+| `/financeiro/receber` | 1.813 ms | **1.590 ms** |
+| `/financeiro/pagar` | 113 ms | 109 ms |
+| `/financeiro/dre` | 8 ms | 12 ms |
+| `/estoque` | 7.843 ms | **5.264–6.689 ms** |
 
 ### Como a Fase B está estruturada
 
@@ -739,6 +755,50 @@ Ambas partiam de "o hash derrama porque a linha é larga demais":
 Foram revertidas. A lição: **antes de reescrever SQL para "carregar menos
 dados", confirme no `EXPLAIN` que o dado largo é mesmo o que está indo para
 disco.**
+
+### O que o /prospeccao ensinou (11/08/2026)
+
+A tela levava ~2,9 s no servidor e devolvia 4,9 MB em 12 meses. Três causas
+distintas, todas medidas em `empresa_80027879` (1,14 mi de linhas em
+`orcamento_items`, 287 mil no período).
+
+**1. Uma CTE que a consulta não usa custa caro.** A consulta de produtos
+montava as três CTEs (`filtrado`, `quotes`, `com_status`) mas só lia a primeira.
+Isso basta para o estrago: o Postgres embute (*inline*) uma CTE referenciada
+**uma** vez e materializa a que é referenciada **duas ou mais** — e `quotes`,
+mesmo nunca executada, conta como referência a `filtrado`. Materializada, ela
+virou 287 mil linhas gravadas em `temp` e o plano perdeu a paralelização.
+Só separar as CTEs por consumidor: **2.263 ms → 1.240 ms**, mesmo resultado.
+
+> Regra prática: cada consulta deve declarar **só** as CTEs que lê. Num arquivo
+> com um construtor de CTE compartilhado, isso significa parametrizar o
+> construtor, não reaproveitar o bloco inteiro.
+
+**2. Contagem global na varredura de toda requisição.** `totalGeral` agrupava a
+tabela inteira (1,4 s) para um número que **só aparece na tela vazia**. Passou a
+rodar apenas quando o período não devolve nada. No preset padrão isso sozinho
+levou a tela de 1.285 ms para 253 ms.
+
+**3. O gargalo maior não estava no servidor.** Depois dos dois ajustes, o que
+sobrava eram 30.715 produtos e 4,9 MB atravessando a rede para uma tabela de
+420 px de altura — parse do JSON, ordenação em JS e ~184 mil células no DOM.
+Recortar (pendência 5) resolveu: **4,9 MB → 172 KB** com 1.000 linhas.
+
+> Antes de otimizar SQL, veja o tamanho do payload. Uma consulta de 1,2 s que
+> devolve 4,9 MB é um problema de recorte, não de plano.
+
+**Efeito colateral a conhecer:** com `work_mem` maior o Postgres escolhe planos
+paralelos, e a soma de `double precision` muda de ordem. Os totais divergem no
+último bit — desvio relativo máximo medido de **2,1e-14** (menos de um milésimo
+de centavo em valores na casa dos bilhões). As 11 telas foram comparadas campo a
+campo antes e depois: fora esse ruído, só mudou o que se quis mudar.
+
+Isso também expôs três consultas que agregavam **sem `ORDER BY`** (heatmap do
+dashboard e de vendas, cidades em vendas, situações em estoque). O conjunto de
+linhas nunca mudou, mas a ordem dependia do plano — e o plano mudou. Nenhuma
+das telas usa essa ordem (todas remontam matriz ou mapa por chave), mas a
+ordenação foi fixada mesmo assim, pela mesma razão da seção "Ordenação com
+empate".
 
 ### O que o /estoque ensinou
 
@@ -933,12 +993,19 @@ diferença — os 5.837 ms que eu tinha visto antes eram cache frio, não largur
 
 ### Pendências conhecidas
 
-1. **Período de 12 meses ainda é lento — causa encontrada, correção não
-   aplicada.** É o `work_mem` de 4 MB fazendo o banco derramar 229 MB em disco a
-   cada painel; com 64 MB o tempo cai 27%. Está tudo medido em "O `work_mem`
-   padrão está derrubando todas as telas", **inclusive a armadilha dos 32 MB**.
-   **Falta você decidir** entre 64 MB global, 16 MB global ou 64 MB só nas rotas
-   de análise — é dimensionamento de VPS, não código.
+1. ~~**Período de 12 meses ainda é lento.**~~ **RESOLVIDA em 11/08/2026.**
+   Era o `work_mem` de 4 MB fazendo o banco derramar centenas de MB em disco a
+   cada painel. Decisão tomada: **64 MB só nas rotas de análise**, via
+   `consultaAnalitica()` em `base.ts` — `SET LOCAL work_mem` dentro de uma
+   transação por consulta, o que preserva o `Promise.all` das telas e não vaza o
+   ajuste para a conexão do pool (a próxima requisição pode ser uma importação).
+   O valor sai de `ANALYTICS_WORK_MEM` (padrão `64MB`, só aceita `<n>MB`).
+   As 34 consultas de agregação passaram a usar o helper; as sondas
+   `SELECT EXISTS (...)` não, porque não ordenam nem agregam nada. `/estoque` já
+   tinha transação própria e recebeu o `SET LOCAL` direto.
+   Ver a tabela antes/depois acima. A armadilha dos 32 MB continua registrada em
+   "O `work_mem` padrão está derrubando todas as telas" — 64 MB foi o valor
+   medido como melhor, não um chute.
 
    Para referência, cinco hipóteses já foram derrubadas por medição:
    compartilhar a varredura no nível de linha e no nível de pedido (ver 4.1),
@@ -963,12 +1030,15 @@ diferença — os 5.837 ms que eu tinha visto antes eram cache frio, não largur
 4. **`next.config.ts` linha 10**: a chave `eslint` virou no-op no Next 16 e é o
    único erro do `npm run type-check`. Não removida.
 
-5. **`/prospeccao` devolve 1,4 MB** — 50× mais que as outras telas. A causa é a
-   tabela de conversão por produto, que o original renderiza **inteira**: 13.561
-   produtos num bimestre, 29.696 num ano. Ainda é 8× menos que os 11 MB de
-   antes, mas destoa. Recortar (top N por menor taxa) resolveria, e a tabela é
-   rolável com 420px de altura — ninguém percorre 30 mil linhas. **É decisão de
-   produto, não foi alterado.**
+5. ~~**`/prospeccao` devolve 1,4 MB.**~~ **RESOLVIDA em 11/08/2026.** Decisão
+   tomada: a tabela de conversão por produto mostra os **1.000 mais orçados**
+   no período, com mínimo de **5 propostas** (`TOP_PRODUTOS` e `MIN_PROPOSTAS`
+   em `src/lib/analytics/prospeccao.ts`). Ordem: volume orçado decrescente e,
+   no empate, pior conversão primeiro. Payload de 12 meses: 4,9 MB → 172 KB
+   (1.000 linhas, corte por volume — a menor da lista tem 51 propostas, então
+   o mínimo nem chega a valer ali). Num mês típico saem 879 linhas: aí é o
+   mínimo de 5 que limita, não o teto de 1.000. A tela diz que é um recorte,
+   e qual (`prospeccao.produtos.recorte`).
 
 6. **`/estoque` conta a demanda em dobro** quando o filtro é "todas as
    empresas": o snapshot tem uma linha por (produto, empresa), e cada uma recebe
