@@ -119,16 +119,21 @@ export async function getDashboardData(
   db: PrismaClient,
   f: AnalyticsFilters
 ): Promise<DashboardData> {
-  // ATENÇÃO ao escopo: os cartões de KPI usam apenas empresa/moeda, sem canal,
-  // vendedor e subgrupo. É o comportamento da tela hoje — ela chama
-  // `computeKpisWithComparison(ds.orders, ...)`, e não a lista filtrada. Está
-  // replicado assim de propósito, para os números não mudarem na migração.
-  const SEM_FILTROS_DE_GRAFICO = { escopoGraficos: false } as const;
-  const COM_FILTROS_DE_GRAFICO = { escopoGraficos: true } as const;
+  // Escopo único: canal, vendedor e subgrupo valem para a tela inteira —
+  // cartões e gráficos.
+  //
+  // Até 11/08/2026 os cartões usavam só empresa/moeda. Era herança do código
+  // antigo, que chamava `computeKpisWithComparison(ds.orders, ...)` em vez da
+  // lista filtrada, e foi replicado fielmente na migração para os números não
+  // mudarem de uma vez. O efeito era um painel que se contradizia: com um canal
+  // selecionado, o cartão de faturamento mostrava a empresa toda enquanto o
+  // gráfico logo abaixo mostrava só aquele canal. `/vendas` sempre aplicou os
+  // filtros nos seus KPIs — o dashboard é que estava fora do padrão.
+  const ESCOPO = { escopoGraficos: true } as const;
 
   const kpiAtual = async (): Promise<Kpis> => {
     const p = new Params();
-    const sql = `${comPedidos(f, p, SEM_FILTROS_DE_GRAFICO)} SELECT ${KPI_SELECT} FROM pe`;
+    const sql = `${comPedidos(f, p, ESCOPO)} SELECT ${KPI_SELECT} FROM pe`;
     const [row] = await consultaAnalitica<KpiRow>(db, sql, p.values);
     return montaKpi(row);
   };
@@ -137,7 +142,7 @@ export async function getDashboardData(
     if (!f.cmpFrom || !f.cmpTo) return montaKpi(undefined);
     const p = new Params();
     const sql = `${comPedidos(f, p, {
-      escopoGraficos: false,
+      ...ESCOPO,
       from: f.cmpFrom,
       to: f.cmpTo,
     })} SELECT ${KPI_SELECT} FROM pe`;
@@ -147,7 +152,7 @@ export async function getDashboardData(
 
   const serieAgrupada = async (expr: string): Promise<SeriePonto[]> => {
     const p = new Params();
-    const sql = `${comPedidos(f, p, COM_FILTROS_DE_GRAFICO)}
+    const sql = `${comPedidos(f, p, ESCOPO)}
                  SELECT ${expr} AS key, ${SERIE_SELECT} FROM pe GROUP BY 1 ORDER BY 1`;
     return montaSerie(await consultaAnalitica<SerieRow>(db, sql, p.values));
   };
@@ -163,7 +168,7 @@ export async function getDashboardData(
     labelCol: string
   ): Promise<FatiaValor[]> => {
     const p = new Params();
-    const sql = `${comPedidos(f, p, COM_FILTROS_DE_GRAFICO)}
+    const sql = `${comPedidos(f, p, ESCOPO)}
                  SELECT ${idCol} AS key, MIN(${labelCol}) AS label,
                         COALESCE(SUM(total), 0) AS value
                  FROM ${origem} GROUP BY 1 ORDER BY 3 DESC`;
@@ -173,7 +178,7 @@ export async function getDashboardData(
 
   const heatmap = async (): Promise<HeatmapCelula[]> => {
     const p = new Params();
-    const sql = `${comPedidos(f, p, COM_FILTROS_DE_GRAFICO)}
+    const sql = `${comPedidos(f, p, ESCOPO)}
                  SELECT ${HEATMAP_SELECT} FROM pe GROUP BY 1, 2 ORDER BY 1, 2`;
     const rows = await consultaAnalitica<{ weekday: number; week: number; value: unknown }>(db, sql, p.values);
     return rows.map((r) => ({ weekday: r.weekday, week: r.week, value: Number(r.value) }));
@@ -184,7 +189,7 @@ export async function getDashboardData(
   // depois os primeiros são recortados. Nível de ITEM.
   const topProducts = async (): Promise<ProdutoTop[]> => {
     const p = new Params();
-    const prefixo = comPedidos(f, p, COM_FILTROS_DE_GRAFICO);
+    const prefixo = comPedidos(f, p, ESCOPO);
     const limite = p.add(12);
     const sql = `${prefixo},
       agg AS (
@@ -223,7 +228,7 @@ export async function getDashboardData(
   // pedidos daria um "nº de pedidos" inflado.
   const topSellers = async (): Promise<VendedorTop[]> => {
     const p = new Params();
-    const prefixo = comPedidos(f, p, COM_FILTROS_DE_GRAFICO);
+    const prefixo = comPedidos(f, p, ESCOPO);
     const limite = p.add(12);
     const sql = `${prefixo},
       agg AS (

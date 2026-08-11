@@ -685,10 +685,10 @@ próximas frentes, em ordem de retorno:
 2. **`/estoque` a ~5,3 s** (era 7,8 s antes do `work_mem`) — é a tela mais cara
    que restou. Ver "O que o /estoque ensinou" antes de mexer: duas otimizações
    já foram medidas e descartadas ali.
-3. **Decisões de produto pendentes** — as pendências 2 (filtros do dashboard)
-   e 6 (demanda em dobro no /estoque) são divergências herdadas do código
-   antigo, replicadas de propósito. Nenhuma é de desempenho; as duas esperam
-   você dizer o que a tela **deve** mostrar.
+3. **Decisão de produto pendente** — a pendência 6 (demanda em dobro no
+   /estoque) é divergência herdada do código antigo, replicada de propósito.
+   Não é de desempenho: espera você dizer o que a tela **deve** mostrar,
+   demanda por SKU ou rateada por SKU-empresa.
 
 Não há mais pendência de desempenho conhecida sem causa identificada.
 
@@ -1026,10 +1026,14 @@ diferença — os 5.837 ms que eu tinha visto antes eram cache frio, não largur
    mas o efeito prático dela é indireto: ela desestabiliza a escolha de plano
    quando o `work_mem` muda.
 
-2. **Inconsistência herdada nos filtros do dashboard**: os cartões de KPI ignoram
-   canal, vendedor e subgrupo, enquanto os gráficos os aplicam. Foi replicado
-   fielmente para não mudar números, mas parece bug. Corrigir é uma linha em
-   `whereBase` — decisão pendente.
+2. ~~**Inconsistência herdada nos filtros do dashboard.**~~ **RESOLVIDA em
+   11/08/2026.** Os cartões de KPI passaram a usar o mesmo escopo dos gráficos
+   (`escopoGraficos: true`). Era bug mesmo: com um vendedor selecionado, o
+   cartão de faturamento mostrava **23× o valor** que o gráfico logo abaixo
+   mostrava (898 bi contra 38,4 bi), porque somava a empresa inteira.
+   `/vendas` já aplicava os filtros nos seus KPIs — o dashboard é que estava
+   fora do padrão. **Sem filtro ativo os números não mudam**, e é assim que se
+   verifica a correção sem baseline novo.
 
 3. **Taxas de câmbio ainda vêm do cliente** no corpo da requisição, para os
    números seguirem idênticos aos de hoje. Quando a tabela `cambio` existir
