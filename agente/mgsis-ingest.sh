@@ -50,6 +50,25 @@ trap 'rm -rf "$TMP"' EXIT
 log() { printf '%s  %s\n' "$(date '+%Y-%m-%d %H:%M:%S')" "$*"; }
 erro() { printf '%s  ERRO: %s\n' "$(date '+%Y-%m-%d %H:%M:%S')" "$*" >&2; }
 
+# Aritmética de mês SEMPRE em UTC (-u). Em horário local o dia 1º pode
+# simplesmente NÃO EXISTIR: o Paraguai começava o horário de verão no primeiro
+# domingo de outubro à meia-noite, então 2023-10-01 00:00 nunca aconteceu — o
+# relógio pulou de 23:59:59 para 01:00. O GNU date recusa horário local
+# inexistente com "data inválida", e a carga inicial morria naquele mês.
+# UTC não tem essa descontinuidade em nenhum ano.
+#
+# Falha vira erro alto: sem isto, a data vazia entrava no SQL como `< ''` e
+# produzia um erro obscuro cinco linhas abaixo.
+desloca_mes() { # <YYYY-MM-DD> <deslocamento> <formato>
+  local r
+  r="$(date -u -d "$1 $2" "+$3" 2>/dev/null)" || r=""
+  [[ -n "$r" ]] || {
+    erro "não consegui calcular \"$1 $2\" — o comando 'date' desta máquina não aceita deslocamento relativo?"
+    return 1
+  }
+  printf '%s' "$r"
+}
+
 # ─── Consultas ───────────────────────────────────────────────────────────────
 #
 # Cada uma devolve UMA linha com o corpo pronto da requisição. Os apelidos entre
@@ -276,7 +295,7 @@ envia_mes() {
   local mes="$1" so="${2:-}"
   local de="$mes-01"
   local ate
-  ate="$(date -d "$de +1 month" +%Y-%m-%d)"
+  ate="$(desloca_mes "$de" "+1 month" "%Y-%m-%d")" || return 1
   log "período $mes"
   local falhas=0
   for ds in "${DATASETS_PERIODO[@]}"; do
@@ -334,7 +353,7 @@ case "$MODO" in
     # Mês anterior junto, sempre. Uma venda lançada dia 1º com data do dia 31
     # do mês passado cairia num mês que o ciclo não reescreve mais, e nunca
     # chegaria ao Analytics — sem sinal de erro nenhum.
-    ANTERIOR="$(date -d "$(date +%Y-%m-01) -1 month" +%Y-%m)"
+    ANTERIOR="$(desloca_mes "$(date +%Y-%m-01)" "-1 month" "%Y-%m")" || exit 1
     CORRENTE="$(date +%Y-%m)"
     log "ciclo: $ANTERIOR e $CORRENTE"
     envia_mes "$ANTERIOR" "$SO_DATASET" || FALHAS=$(( FALHAS + $? ))
@@ -352,7 +371,7 @@ case "$MODO" in
     MES="$ARG"
     while [[ "$MES" < "$FIM" || "$MES" == "$FIM" ]]; do
       envia_mes "$MES" "$SO_DATASET" || FALHAS=$(( FALHAS + $? ))
-      MES="$(date -d "$MES-01 +1 month" +%Y-%m)"
+      MES="$(desloca_mes "$MES-01" "+1 month" "%Y-%m")" || exit 1
     done
     if [[ -z "$SO_DATASET" || "$SO_DATASET" == "estoque" ]]; then
       log "estoque (foto completa)"
