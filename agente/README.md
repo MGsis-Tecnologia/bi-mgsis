@@ -59,37 +59,53 @@ scp agente/systemd/mgsis-ingest.* usuario@servidor:/tmp/
 
 ```bash
 # 1. Usuário de serviço, sem shell e sem home
-sudo useradd --system --no-create-home --shell /usr/sbin/nologin mgsis
+sudo useradd --system --no-create-home --shell /usr/sbin/nologin analytics
 
 # 2. O agente
 sudo install -m 755 mgsis-ingest.sh /usr/local/bin/mgsis-ingest.sh
 
 # 3. O token, legível só por ele
 printf '%s' 'COLE_O_TOKEN_AQUI' | sudo tee /etc/mgsis-token >/dev/null
-sudo chown mgsis:mgsis /etc/mgsis-token
+sudo chown analytics:analytics /etc/mgsis-token
 sudo chmod 600 /etc/mgsis-token
 
 # 4. A configuração
-sudo install -m 640 -o root -g mgsis mgsis-ingest.conf.exemplo /etc/mgsis-ingest.conf
+sudo install -m 640 -o root -g analytics mgsis-ingest.conf.exemplo /etc/mgsis-ingest.conf
 sudo nano /etc/mgsis-ingest.conf          # ajuste PGDATABASE e a senha
 
-# 5. A senha do banco, fora do ambiente do processo (não aparece em `ps e`)
-sudo -u mgsis mkdir -p /var/lib/mgsis
-echo 'localhost:5432:erp_do_cliente:analytics:SENHA' | \
-  sudo -u mgsis tee /var/lib/mgsis/.pgpass >/dev/null
-sudo -u mgsis chmod 600 /var/lib/mgsis/.pgpass
+# 5. Confirme que o Postgres já aceita sem senha
+sudo -u analytics psql -d erp_do_cliente -c 'SELECT current_user'
 ```
 
-> Se usar `.pgpass` fora do home padrão, aponte `PGPASSFILE=/var/lib/mgsis/.pgpass`
-> no `/etc/mgsis-ingest.conf` e adicione `Environment=PGPASSFILE=...` no
-> `.service`.
+Este último passo decide a configuração do banco.
+
+Como o usuário do sistema se chama `analytics` — **igual ao papel no
+Postgres** — a autenticação `peer` reconhece um pelo outro e **não pede
+senha**. É o padrão da linha `local` no `pg_hba.conf` da maioria das
+distribuições. Não há senha para guardar, nem arquivo para proteger.
+
+- **Respondeu `analytics`:** deixe `PGHOST=""` no conf. Acabou.
+- **Deu `peer authentication failed`:** o `pg_hba.conf` não usa peer nesta
+  máquina. Volte para TCP com senha:
+
+```bash
+sudo mkdir -p /var/lib/analytics
+sudo chown analytics:analytics /var/lib/analytics
+echo 'localhost:5432:erp_do_cliente:analytics:SENHA' | \
+  sudo -u analytics tee /var/lib/analytics/.pgpass >/dev/null
+sudo -u analytics chmod 600 /var/lib/analytics/.pgpass
+```
+
+E no `/etc/mgsis-ingest.conf`: `PGHOST="localhost"` mais
+`export PGPASSFILE="/var/lib/analytics/.pgpass"` — o caminho precisa ser
+explícito porque o usuário é de serviço e não tem home.
 
 ## Primeiro teste, sem enviar nada
 
 `--simular` monta as consultas, mostra o volume e **não envia**:
 
 ```bash
-sudo -u mgsis mgsis-ingest.sh --periodo 2026-07 --simular
+sudo -u analytics mgsis-ingest.sh --periodo 2026-07 --simular
 ```
 
 Saída esperada:
@@ -106,7 +122,7 @@ Se aqui já der erro, é permissão ou view faltando — nada saiu da máquina.
 ## Envio de um mês, de verdade
 
 ```bash
-sudo -u mgsis mgsis-ingest.sh --periodo 2026-07
+sudo -u analytics mgsis-ingest.sh --periodo 2026-07
 ```
 
 Confira no Analytics se o mês aparece. Pode repetir à vontade: a operação é
@@ -117,7 +133,7 @@ Confira no Analytics se o mês aparece. Pode repetir à vontade: a operação é
 Mês a mês, do início do histórico até hoje, mais a foto de estoque:
 
 ```bash
-sudo -u mgsis mgsis-ingest.sh --inicial 2022-01 | tee /tmp/carga-inicial.log
+sudo -u analytics mgsis-ingest.sh --inicial 2022-01 | tee /tmp/carga-inicial.log
 ```
 
 São ~5 s por mês de vendas. Cinco anos ficam na casa de poucos minutos por
@@ -139,7 +155,7 @@ journalctl -u mgsis-ingest.service -f        # acompanha
 Sem systemd, no cron:
 
 ```cron
-7 */2 * * * mgsis /usr/local/bin/mgsis-ingest.sh --ciclo >> /var/log/mgsis-ingest.log 2>&1
+7 */2 * * * analytics /usr/local/bin/mgsis-ingest.sh --ciclo >> /var/log/mgsis-ingest.log 2>&1
 ```
 
 ### Por que o ciclo manda o mês anterior junto
@@ -157,13 +173,13 @@ uma nota de março de 2024, o Analytics segue mostrando o valor antigo até que
 alguém reenvie aquele período:
 
 ```bash
-sudo -u mgsis mgsis-ingest.sh --periodo 2024-03
+sudo -u analytics mgsis-ingest.sh --periodo 2024-03
 ```
 
 Vale agendar uma recarga da janela completa uma vez por mês, de madrugada:
 
 ```cron
-0 3 1 * * mgsis /usr/local/bin/mgsis-ingest.sh --inicial 2022-01 >> /var/log/mgsis-ingest.log 2>&1
+0 3 1 * * analytics /usr/local/bin/mgsis-ingest.sh --inicial 2022-01 >> /var/log/mgsis-ingest.log 2>&1
 ```
 
 ## A proteção que você não deve desligar

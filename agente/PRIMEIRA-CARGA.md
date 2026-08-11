@@ -86,12 +86,16 @@ partido em quinzenas, direto na API.
 Siga o [README](README.md). Resumo:
 
 ```bash
-sudo useradd --system --no-create-home --shell /usr/sbin/nologin mgsis
+sudo useradd --system --no-create-home --shell /usr/sbin/nologin analytics
 sudo install -m 755 mgsis-ingest.sh /usr/local/bin/mgsis-ingest.sh
 printf '%s' 'O_TOKEN' | sudo tee /etc/mgsis-token >/dev/null
-sudo chown mgsis:mgsis /etc/mgsis-token && sudo chmod 600 /etc/mgsis-token
-sudo install -m 640 -o root -g mgsis mgsis-ingest.conf.exemplo /etc/mgsis-ingest.conf
+sudo chown analytics:analytics /etc/mgsis-token && sudo chmod 600 /etc/mgsis-token
+sudo install -m 640 -o root -g analytics mgsis-ingest.conf.exemplo /etc/mgsis-ingest.conf
 sudo nano /etc/mgsis-ingest.conf
+
+# confirme que o Postgres aceita sem senha (peer) — se responder
+# 'analytics', deixe PGHOST="" no conf e não há senha para guardar
+sudo -u analytics psql -d erp_do_cliente -c 'SELECT current_user'
 ```
 
 ## 5. Testar o token sem escrever nada
@@ -122,7 +126,7 @@ certo. Se vier outro nome, o token é de outra empresa.
 ## 6. Simular — monta tudo, não envia
 
 ```bash
-sudo -u mgsis mgsis-ingest.sh --periodo 2026-07 --simular
+sudo -u analytics mgsis-ingest.sh --periodo 2026-07 --simular
 ```
 
 Aqui se descobre permissão faltando ou view ausente, sem nada sair da máquina.
@@ -131,7 +135,7 @@ A saída mostra linhas e KB por dataset.
 ## 7. Um mês de verdade — o teste que importa
 
 ```bash
-sudo -u mgsis mgsis-ingest.sh --periodo 2026-07
+sudo -u analytics mgsis-ingest.sh --periodo 2026-07
 ```
 
 **Faça isto antes da carga cheia.** Um mês de vendas são ~12 MB de JSON numa
@@ -146,18 +150,18 @@ deve ter subido.
 Com a janela escolhida no passo 3:
 
 ```bash
-sudo -u mgsis mgsis-ingest.sh --inicial 2022-01 | tee /tmp/carga-inicial.log
+sudo -u analytics mgsis-ingest.sh --inicial 2022-01 | tee /tmp/carga-inicial.log
 ```
 
 Janelas diferentes por dataset, quando o histórico não começa junto:
 
 ```bash
-sudo -u mgsis mgsis-ingest.sh --inicial 2022-01 --dataset vendas
-sudo -u mgsis mgsis-ingest.sh --inicial 2022-01 --dataset orcamentos
-sudo -u mgsis mgsis-ingest.sh --inicial 2015-01 --dataset receber
-sudo -u mgsis mgsis-ingest.sh --inicial 2015-01 --dataset pagar
-sudo -u mgsis mgsis-ingest.sh --inicial 2022-01 --dataset caixa
-sudo -u mgsis mgsis-ingest.sh --periodo  2026-07 --dataset estoque
+sudo -u analytics mgsis-ingest.sh --inicial 2022-01 --dataset vendas
+sudo -u analytics mgsis-ingest.sh --inicial 2022-01 --dataset orcamentos
+sudo -u analytics mgsis-ingest.sh --inicial 2015-01 --dataset receber
+sudo -u analytics mgsis-ingest.sh --inicial 2015-01 --dataset pagar
+sudo -u analytics mgsis-ingest.sh --inicial 2022-01 --dataset caixa
+sudo -u analytics mgsis-ingest.sh --periodo  2026-07 --dataset estoque
 ```
 
 Ordem de grandeza: ~5 s por mês de vendas. Rode numa `tmux`/`screen` se a
@@ -208,5 +212,5 @@ A partir daí, de 2 em 2 horas: mês corrente, mês anterior e a foto de estoque
 com o valor antigo até aquele período ser reenviado:
 
 ```cron
-0 3 1 * * mgsis /usr/local/bin/mgsis-ingest.sh --inicial 2022-01 >> /var/log/mgsis-ingest.log 2>&1
+0 3 1 * * analytics /usr/local/bin/mgsis-ingest.sh --inicial 2022-01 >> /var/log/mgsis-ingest.log 2>&1
 ```

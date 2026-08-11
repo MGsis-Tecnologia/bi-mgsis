@@ -6,8 +6,8 @@ Wants=network-online.target
 
 [Service]
 Type=oneshot
-User=mgsis
-Group=mgsis
+User=analytics
+Group=analytics
 ExecStart=/usr/local/bin/mgsis-ingest.sh --ciclo
 
 # O agente só lê o ERP e fala com uma API. Nada além disso é necessário.

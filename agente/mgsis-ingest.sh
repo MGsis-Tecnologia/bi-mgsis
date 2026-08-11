@@ -26,7 +26,10 @@ source "$CONF"
 : "${API_URL:?defina API_URL no $CONF}"
 : "${TOKEN_FILE:?defina TOKEN_FILE no $CONF}"
 : "${PGDATABASE:?defina PGDATABASE no $CONF}"
-export PGHOST="${PGHOST:-localhost}"
+# `${PGHOST-...}` sem os dois-pontos: PGHOST="" no conf é uma escolha, não uma
+# omissão — significa "use o socket local", que é o que habilita autenticação
+# `peer` e dispensa senha. Com `:-` o vazio viraria "localhost" e forçaria TCP.
+export PGHOST="${PGHOST-localhost}"
 export PGPORT="${PGPORT:-5432}"
 export PGUSER="${PGUSER:-analytics}"
 export PGDATABASE PGPASSWORD="${PGPASSWORD:-}"

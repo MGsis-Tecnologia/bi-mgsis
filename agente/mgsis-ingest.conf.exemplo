@@ -3,7 +3,7 @@
 # Copie para /etc/mgsis-ingest.conf e ajuste. O arquivo é lido pelo bash, então
 # use aspas em valor com espaço.
 #
-#   sudo install -m 640 -o root -g mgsis mgsis-ingest.conf.exemplo /etc/mgsis-ingest.conf
+#   sudo install -m 640 -o root -g analytics mgsis-ingest.conf.exemplo /etc/mgsis-ingest.conf
 
 # ─── Destino ─────────────────────────────────────────────────────────────────
 API_URL="https://analytics.mgsis.com"
@@ -14,20 +14,36 @@ API_URL="https://analytics.mgsis.com"
 #
 #   printf '%s' 'COLE_O_TOKEN_AQUI' | sudo tee /etc/mgsis-token >/dev/null
 #   sudo chmod 600 /etc/mgsis-token
-#   sudo chown mgsis:mgsis /etc/mgsis-token
+#   sudo chown analytics:analytics /etc/mgsis-token
 TOKEN_FILE="/etc/mgsis-token"
 
 # ─── Origem: o Postgres do ERP ───────────────────────────────────────────────
-PGHOST="localhost"
+#
+# PGHOST VAZIO = socket local do Unix. É o recomendado, e por um motivo
+# concreto: como o usuário do sistema se chama `analytics`, igual ao papel no
+# Postgres, a autenticação `peer` (padrão do `local` no pg_hba.conf) reconhece
+# um pelo outro e NÃO PEDE SENHA. Some o arquivo de senha, some o segredo.
+#
+# Confira que funciona antes de decidir:
+#   sudo -u analytics psql -d erp_do_cliente -c 'SELECT current_user'
+#
+# Se der "peer authentication failed", o pg_hba.conf não usa peer no `local`.
+# Aí volte para TCP com senha: PGHOST="localhost" e o .pgpass abaixo.
+PGHOST=""
 PGPORT="5432"
 PGDATABASE="erp_do_cliente"
 PGUSER="analytics"
 
-# Deixe PGPASSWORD vazio e use ~/.pgpass (modo 600) — assim a senha não fica
-# no ambiente do processo, visível em `ps e`:
+# Só é necessário no modo TCP (PGHOST="localhost").
 #
-#   echo 'localhost:5432:erp_do_cliente:analytics:SENHA' > ~/.pgpass
-#   chmod 600 ~/.pgpass
+# Mesmo aí, deixe PGPASSWORD vazio e use um .pgpass modo 600: senha em variável
+# de ambiente aparece para qualquer usuário da máquina em `ps e`.
+#
+#   echo 'localhost:5432:erp_do_cliente:analytics:SENHA' > /var/lib/analytics/.pgpass
+#   chmod 600 /var/lib/analytics/.pgpass
+#
+# E aponte o caminho, porque o usuário é de serviço e não tem home:
+#   export PGPASSFILE="/var/lib/analytics/.pgpass"
 PGPASSWORD=""
 
 # ─── Comportamento ───────────────────────────────────────────────────────────
