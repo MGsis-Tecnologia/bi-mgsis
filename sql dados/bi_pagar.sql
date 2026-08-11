@@ -1,21 +1,34 @@
-create or replace view bi_pagar as
- SELECT r.moeda_id,
-    moeda.moeda_sigla,
-    r.pessoa_fornecedor_id,
-    c.pessoa_nome,
-    r.pagar_data_emissao AS data_emissao,
-    r.pagar_data_vencimento AS data_vencimento,
-    r.pagar_documento,
-    'PAGAR'::text AS tipolanzamiento,
-        CASE
-            WHEN r.pagar_valor_pago > 0::numeric THEN r.pagar_valor_pago
-            ELSE r.pagar_valor_documento
-        END AS valor_documento,
-    r.pagar_data_pagamento AS data_pagamento,
-    r.empresa_id as empresa_id
-   FROM pagar r
+-- ============================================================================
+-- VIEW: bi_pagar  →  dataset "pagar" da API de ingestão
+--
+-- Corrigida em 11/08/2026. Ver as três regras no topo de bi_movimento.sql.
+-- Espelha bi_receber: mesmo critério de período (emissão) e mesmo `is_paid`.
+-- ============================================================================
+CREATE OR REPLACE VIEW bi_pagar AS
+SELECT
+    COALESCE(r.pagar_documento::text, '')      AS pagar_documento,
+    r.pagar_data_emissao                       AS data_emissao,
+    COALESCE(TO_CHAR(r.pagar_data_vencimento, 'YYYY-MM-DD'), '')
+                                               AS data_vencimento,
+    COALESCE(TO_CHAR(r.pagar_data_pagamento, 'YYYY-MM-DD'), '')
+                                               AS data_pagamento,
+    -- Quitado = tem data de pagamento; pagamento parcial também é > 0.
+    (r.pagar_data_pagamento IS NOT NULL)        AS is_paid,
+    'PAGAR'::text                               AS tipolanzamiento,
+    COALESCE(
+        CASE WHEN r.pagar_valor_pago > 0::numeric
+             THEN r.pagar_valor_pago
+             ELSE r.pagar_valor_documento
+        END, 0)                                 AS valor_documento,
+    COALESCE(r.pessoa_fornecedor_id::text, '')  AS pessoa_fornecedor_id,
+    COALESCE(c.pessoa_nome, '')                 AS pessoa_nome,
+    COALESCE(r.moeda_id::text, '')              AS moeda_id,
+    COALESCE(moeda.moeda_sigla, '')             AS moeda_sigla,
+    COALESCE(r.empresa_id::text, '')            AS empresa_id
 
-LEFT JOIN pessoa c ON c.pessoa_id = r.pessoa_fornecedor_id
-LEFT JOIN moeda ON moeda.moeda_id = r.moeda_id
+FROM pagar r
+    LEFT JOIN pessoa c ON c.pessoa_id = r.pessoa_fornecedor_id
+    LEFT JOIN moeda    ON moeda.moeda_id = r.moeda_id
 
-WHERE (r.pagar_valor_pago+r.pagar_valor_documento) > 0
+WHERE (COALESCE(r.pagar_valor_pago, 0) + COALESCE(r.pagar_valor_documento, 0)) > 0
+  AND r.pagar_data_emissao IS NOT NULL;
