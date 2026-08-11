@@ -28,7 +28,11 @@
       "PowerShell(node --env-file=.env \"C:\\\\Users\\\\rogerio\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\c--bi-mgsis\\\\7487b5d1-23d0-4029-8dac-8f2252369540\\\\scratchpad\\\\final-8telas.mjs\")",
       "Bash(npx tsc *)",
       "Bash(npx tsx *)",
-      "Bash(curl -s -o /dev/null -w \"servidor: %{http_code}\\\\n\" http://localhost:3000/)"
+      "Bash(curl -s -o /dev/null -w \"servidor: %{http_code}\\\\n\" http://localhost:3000/)",
+      "PowerShell(node \"C:\\\\Users\\\\rogerio\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\c--bi-mgsis\\\\599125bf-6c54-4c28-9af0-6024d8d265d0\\\\scratchpad\\\\comparar.mjs\" 2>&1)",
+      "PowerShell(npx --yes eslint src/lib/server/analytics/ \"src/app/\\(dashboard\\)/prospeccao/page.tsx\" src/lib/analytics/prospeccao.ts src/lib/i18n/dictionaries.ts)",
+      "PowerShell(npx --yes eslint src/lib/server/analytics/ src/lib/analytics/prospeccao.ts src/lib/i18n/dictionaries.ts \"src/app/\\(dashboard\\)/prospeccao/page.tsx\")",
+      "PowerShell(if \\($?\\) { \"eslint: ok\" })"
     ]
   }
 }
