@@ -156,6 +156,12 @@ mesmo apagar um período.
 O agente sai com **código 1** se qualquer envio falhar, então o systemd e o
 cron marcam a falha — não é preciso ler o log para saber que houve problema.
 
+## Primeira carga
+
+O roteiro completo, da máquina zerada até o ciclo ligado, está em
+[PRIMEIRA-CARGA.md](PRIMEIRA-CARGA.md) — inclusive os passos que confirmam as
+views e a janela de histórico antes de mandar qualquer coisa.
+
 ## Referências
 
 - Contrato da API, limites e exemplos: [`../INGESTAO-API.md`](../INGESTAO-API.md)
