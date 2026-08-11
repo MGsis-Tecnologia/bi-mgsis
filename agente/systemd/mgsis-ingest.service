@@ -1,0 +1,28 @@
+[Unit]
+Description=Envia os dados do ERP para o MGSIS Analytics
+Documentation=https://github.com/MGsis-Tecnologia/bi-mgsis/blob/main/agente/README.md
+After=network-online.target postgresql.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=mgsis
+Group=mgsis
+ExecStart=/usr/local/bin/mgsis-ingest.sh --ciclo
+
+# O agente só lê o ERP e fala com uma API. Nada além disso é necessário.
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lock
+ProtectKernelTunables=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+LockPersonality=true
+
+# Uma carga de mês é ~12 MB de JSON montado pelo psql. O teto evita que uma
+# consulta inesperadamente grande pressione o servidor do ERP.
+MemoryMax=1G
+Nice=10
+IOSchedulingClass=idle

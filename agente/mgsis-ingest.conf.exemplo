@@ -1,0 +1,51 @@
+# Configuração do agente de ingestão MGSIS Analytics
+#
+# Copie para /etc/mgsis-ingest.conf e ajuste. O arquivo é lido pelo bash, então
+# use aspas em valor com espaço.
+#
+#   sudo install -m 640 -o root -g mgsis mgsis-ingest.conf.exemplo /etc/mgsis-ingest.conf
+
+# ─── Destino ─────────────────────────────────────────────────────────────────
+API_URL="https://analytics.mgsis.com"
+
+# Arquivo com o token de integração, e SÓ ele (64 caracteres hex).
+# Gerado em: Master → Empresas → (a empresa) → token de integração.
+# Aparece uma única vez; o servidor guarda apenas o hash.
+#
+#   printf '%s' 'COLE_O_TOKEN_AQUI' | sudo tee /etc/mgsis-token >/dev/null
+#   sudo chmod 600 /etc/mgsis-token
+#   sudo chown mgsis:mgsis /etc/mgsis-token
+TOKEN_FILE="/etc/mgsis-token"
+
+# ─── Origem: o Postgres do ERP ───────────────────────────────────────────────
+PGHOST="localhost"
+PGPORT="5432"
+PGDATABASE="erp_do_cliente"
+PGUSER="analytics"
+
+# Deixe PGPASSWORD vazio e use ~/.pgpass (modo 600) — assim a senha não fica
+# no ambiente do processo, visível em `ps e`:
+#
+#   echo 'localhost:5432:erp_do_cliente:analytics:SENHA' > ~/.pgpass
+#   chmod 600 ~/.pgpass
+PGPASSWORD=""
+
+# ─── Comportamento ───────────────────────────────────────────────────────────
+
+# Tentativas por requisição em falha de rede ou erro 5xx. Erro 4xx não é
+# repetido: é defeito do que foi enviado, e repetir daria o mesmo resultado.
+TENTATIVAS=3
+
+# Segundos por requisição. Um mês de vendas leva ~5 s; a foto de estoque, ~9 s.
+# A folga existe para link ruim, não para consulta lenta.
+TIMEOUT=600
+
+# Enviar período com ZERO linhas é permitido pela API — e APAGA aquele período,
+# porque a operação é "substitua o período por estas linhas". Por padrão o
+# agente PULA períodos vazios: se a consulta ao ERP voltar vazia por defeito
+# (view recriada, permissão revogada), enviar destruiria dado bom sem aviso.
+#
+# Só mude para "sim" quando a intenção for mesmo apagar um período.
+PERMITIR_VAZIO="nao"
+
+LOCK_FILE="/var/lock/mgsis-ingest.lock"

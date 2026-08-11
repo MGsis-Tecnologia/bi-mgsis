@@ -1,0 +1,14 @@
+[Unit]
+Description=Ciclo de 2 horas do agente MGSIS Analytics
+
+[Timer]
+OnCalendar=0/2:07
+# Espalha o disparo em até 5 min: com vários clientes, evita todos baterem na
+# VPS no mesmo segundo.
+RandomizedDelaySec=300
+# Se a máquina estava desligada na hora marcada, roda ao voltar.
+Persistent=true
+Unit=mgsis-ingest.service
+
+[Install]
+WantedBy=timers.target
