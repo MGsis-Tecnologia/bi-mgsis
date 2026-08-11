@@ -588,7 +588,7 @@ consultas que já existem.
 
 ## 8. Estado atual — onde retomar
 
-*Atualizado em 08/08/2026.*
+*Atualizado em 11/08/2026.*
 
 ### O que já está pronto
 
@@ -675,14 +675,22 @@ src/app/(dashboard)/<tela>/page.tsx     ← consome o hook
 
 ### ▶ Retomar por aqui
 
-**Fases B e D concluídas.** As próximas frentes, em ordem de retorno:
+**Fases B e D concluídas; desempenho das telas resolvido em 11/08/2026.** As
+próximas frentes, em ordem de retorno:
 
 1. **Fase E → C** — migrar `/importacao` para gravar no servidor e então apagar
-   `DatasetBootstrap`, o store e o IndexedDB. Ficou **mais urgente** depois da
-   fase D: ver "A ingestão pressiona a fase E", logo abaixo.
-2. **`work_mem`** — a correção está medida e espera só a decisão de
-   dimensionamento (pendência 1).
-3. **`/estoque` a ~4,7 s** — ver "O que o /estoque ensinou" antes de mexer.
+   `DatasetBootstrap`, o store e o IndexedDB. É a **única** frente grande que
+   sobrou, e ficou mais urgente depois da fase D: ver "A ingestão pressiona a
+   fase E", logo abaixo. Também é o que libera a fase C.
+2. **`/estoque` a ~5,3 s** (era 7,8 s antes do `work_mem`) — é a tela mais cara
+   que restou. Ver "O que o /estoque ensinou" antes de mexer: duas otimizações
+   já foram medidas e descartadas ali.
+3. **Decisões de produto pendentes** — as pendências 2 (filtros do dashboard)
+   e 6 (demanda em dobro no /estoque) são divergências herdadas do código
+   antigo, replicadas de propósito. Nenhuma é de desempenho; as duas esperam
+   você dizer o que a tela **deve** mostrar.
+
+Não há mais pendência de desempenho conhecida sem causa identificada.
 
 ### A ingestão pressiona a fase E
 
