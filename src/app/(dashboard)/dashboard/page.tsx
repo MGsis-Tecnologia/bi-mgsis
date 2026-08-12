@@ -20,6 +20,8 @@ import { useFilters } from "@/lib/store/filters";
 import { comparisonLabel } from "@/lib/utils/dates";
 import { formatCurrency, formatNumber, formatPercent } from "@/lib/utils/format";
 import { useTranslation } from "@/lib/hooks/use-translation";
+import { usePrimeiroNome } from "@/components/providers/usuario-provider";
+import type { DictionaryKey } from "@/lib/i18n/dictionaries";
 
 export default function ExecutiveDashboardPage() {
   const { t } = useTranslation();
@@ -48,18 +50,26 @@ export default function ExecutiveDashboardPage() {
   const sparkMonthly = monthly.slice(-12);
   const goalProgress = kpi ? Math.min(1.4, kpi.revenue / (kpi.previous.revenue * 1.08 || 1)) : 0;
 
-  const greeting = React.useMemo(() => {
+  // A chave sai direto da hora. Antes o código escolhia um texto em português
+  // e depois comparava esse texto para achar a chave — o que quebraria calado
+  // se alguém editasse a tradução.
+  const saudacao = React.useMemo<DictionaryKey>(() => {
     const h = new Date().getHours();
-    if (h < 12) return "Bom dia";
-    if (h < 18) return "Boa tarde";
-    return "Boa noite";
+    if (h < 12) return "dashboard.header.greeting.morning";
+    if (h < 18) return "dashboard.header.greeting.afternoon";
+    return "dashboard.header.greeting.evening";
   }, []);
+
+  // Sem nome (sessão ainda não hidratada), a saudação vai sozinha em vez de
+  // mostrar uma vírgula solta.
+  const primeiroNome = usePrimeiroNome();
+  const titulo = primeiroNome ? `${t(saudacao)}, ${primeiroNome}.` : `${t(saudacao)}.`;
 
   return (
     <div className="space-y-8">
       <PageHeader
         eyebrow={t("dashboard.header.eyebrow")}
-        title={`${t(greeting === "Bom dia" ? "dashboard.header.greeting.morning" : greeting === "Boa tarde" ? "dashboard.header.greeting.afternoon" : "dashboard.header.greeting.evening")}, Rogério.`}
+        title={titulo}
         description={t("dashboard.header.description", { count: formatNumber(kpi?.ordersCount ?? 0) })}
       >
         <Badge variant={loading ? "warning" : "positive"} className="gap-1.5">
