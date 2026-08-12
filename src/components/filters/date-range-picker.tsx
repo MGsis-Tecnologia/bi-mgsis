@@ -30,14 +30,17 @@ export function DateRangePicker() {
   const customRange  = useFilters((s) => s.customRange);
   const setPreset    = useFilters((s) => s.setPreset);
   const setCustomRange = useFilters((s) => s.setCustomRange);
+  const getRange     = useFilters((s) => s.getRange);
   const [open, setOpen] = React.useState(false);
 
-  // Local state for the custom inputs — initialised from store when preset=custom
+  // O que está no store JÁ é `YYYY-MM-DD`, o mesmo formato do input — não há
+  // conversão no caminho, e é isso que garante que o dia digitado é o dia que
+  // volta a aparecer.
   const [fromInput, setFromInput] = React.useState<string>(
-    preset === "custom" && customRange ? customRange.from.slice(0, 10) : ""
+    preset === "custom" && customRange ? customRange.from : ""
   );
   const [toInput, setToInput] = React.useState<string>(
-    preset === "custom" && customRange ? customRange.to.slice(0, 10) : ""
+    preset === "custom" && customRange ? customRange.to : ""
   );
 
   // Keep local inputs in sync with the active filter. When the preset isn't
@@ -45,8 +48,8 @@ export function DateRangePicker() {
   // re-apply on blur and silently overwrite the chosen preset.
   React.useEffect(() => {
     if (preset === "custom" && customRange) {
-      setFromInput(customRange.from.slice(0, 10));
-      setToInput(customRange.to.slice(0, 10));
+      setFromInput(customRange.from);
+      setToInput(customRange.to);
     } else {
       setFromInput("");
       setToInput("");
@@ -58,11 +61,14 @@ export function DateRangePicker() {
   // typed date doesn't re-filter on each digit (e.g. years 0002, 0020, 2026…).
   function handleCustomChange(from: string, to: string) {
     if (!from || !to) return;
-    const fromDate = new Date(from + "T00:00:00");
-    const toDate   = new Date(to   + "T23:59:59");
-    if (isNaN(fromDate.getTime()) || isNaN(toDate.getTime())) return;
-    if (fromDate > toDate) return;
-    setCustomRange({ from: fromDate, to: toDate });
+    // Validação sobre o TEXTO: em `YYYY-MM-DD`, ordem alfabética é ordem
+    // cronológica, então não é preciso construir `Date` — e não construir é
+    // justamente o que impede o fuso de deslocar o dia.
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(from) || !/^\d{4}-\d{2}-\d{2}$/.test(to)) return;
+    if (isNaN(new Date(`${from}T00:00:00`).getTime())) return; // 2024-02-31 e afins
+    if (isNaN(new Date(`${to}T00:00:00`).getTime())) return;
+    if (from > to) return;
+    setCustomRange({ from, to });
   }
 
   function handleCustomKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
@@ -72,12 +78,10 @@ export function DateRangePicker() {
     }
   }
 
-  const range = React.useMemo(() => {
-    if (preset === "custom" && customRange) {
-      return { from: new Date(customRange.from), to: new Date(customRange.to) };
-    }
-    return presetRange(preset);
-  }, [preset, customRange]);
+  // Do store, não recalculado aqui: duplicar a conversão de calendário para
+  // `Date` é exatamente como o erro de fuso apareceu em dois lugares.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const range = React.useMemo(() => getRange(), [preset, customRange, getRange]);
 
   const presetLabelKey = PRESETS.find((p) => p.value === preset)?.labelKey;
   const presetLabel    = presetLabelKey ? t(presetLabelKey) : t("filters.date.custom");
@@ -158,7 +162,7 @@ export function DateRangePicker() {
               </div>
               {preset === "custom" && customRange && (
                 <p className="text-[10px] text-positive">
-                  ✓ {formatDate(new Date(customRange.from), "day")} → {formatDate(new Date(customRange.to), "day")}
+                  ✓ {formatDate(range.from, "day")} → {formatDate(range.to, "day")}
                 </p>
               )}
             </div>

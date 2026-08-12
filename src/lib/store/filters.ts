@@ -8,6 +8,18 @@ import { presetRange } from "@/lib/utils/dates";
 
 interface FiltersState {
   preset: DatePreset;
+  /**
+   * Período personalizado, em data de CALENDÁRIO (`YYYY-MM-DD`) — nunca em
+   * instante ISO.
+   *
+   * Guardar `Date.toISOString()` aqui trocava o dia: `31/12/2024 23:59:59` em
+   * Assunção vira `2025-01-01T02:59:59Z`, e o campo do formulário, que relê o
+   * texto guardado, passava a mostrar 01/01/2025. Pior que o cosmético: ao
+   * confirmar de novo, o filtro andava mesmo um dia.
+   *
+   * "De 1º a 31 de dezembro" não tem fuso horário — é calendário. O fuso entra
+   * só na hora de virar `Date`, em `getRange()`.
+   */
   customRange: { from: string; to: string } | null;
   currency: AppCurrencyId;      // "1"|"2"|"3" = filter by that currency; "ALL" = all + convert to R$
   empresaId: string | "all";    // "all" = Todas as empresas; caso contrário o empresa_id exato
@@ -15,7 +27,8 @@ interface FiltersState {
   sellerId: string | "all";
   subgroupId: string | "all";   // replaces categoryId
   setPreset: (p: DatePreset) => void;
-  setCustomRange: (r: { from: Date; to: Date }) => void;
+  /** Datas de calendário, `YYYY-MM-DD` — é o que o `<input type="date">` já dá. */
+  setCustomRange: (r: { from: string; to: string }) => void;
   setCurrency: (c: AppCurrencyId) => void;
   setEmpresa: (id: string | "all") => void;
   setChannel: (c: string | "all") => void;
@@ -36,8 +49,7 @@ export const useFilters = create<FiltersState>()(
       sellerId: "all",
       subgroupId: "all",
       setPreset: (preset) => set({ preset, customRange: null }),
-      setCustomRange: ({ from, to }) =>
-        set({ preset: "custom", customRange: { from: from.toISOString(), to: to.toISOString() } }),
+      setCustomRange: ({ from, to }) => set({ preset: "custom", customRange: { from, to } }),
       setCurrency: (currency) => set({ currency }),
       setEmpresa: (empresaId) => set({ empresaId }),
       setChannel: (channel) => set({ channel }),
@@ -48,7 +60,13 @@ export const useFilters = create<FiltersState>()(
       getRange: () => {
         const { preset, customRange } = get();
         if (preset === "custom" && customRange) {
-          return { from: new Date(customRange.from), to: new Date(customRange.to) };
+          // `T00:00:00` e `T23:59:59` explícitos: sem a hora, o JS lê
+          // "2024-12-31" como meia-noite UTC, que em fuso negativo é o dia 30
+          // à noite — o mesmo erro de um dia, só que na direção oposta.
+          return {
+            from: new Date(`${customRange.from}T00:00:00`),
+            to: new Date(`${customRange.to}T23:59:59`),
+          };
         }
         return presetRange(preset);
       },
