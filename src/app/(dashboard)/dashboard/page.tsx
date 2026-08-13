@@ -21,11 +21,12 @@ import { comparisonLabel } from "@/lib/utils/dates";
 import { formatCurrency, formatNumber, formatPercent } from "@/lib/utils/format";
 import { useTranslation } from "@/lib/hooks/use-translation";
 import { usePrimeiroNome } from "@/components/providers/usuario-provider";
+import { useMoedaExibicao } from "@/lib/hooks/use-moeda-exibicao";
 import type { DictionaryKey } from "@/lib/i18n/dictionaries";
 
 export default function ExecutiveDashboardPage() {
   const { t } = useTranslation();
-  const currency = useFilters((s) => s.currency);
+  const currency = useMoedaExibicao();
   const getRange = useFilters((s) => s.getRange);
   const preset = useFilters((s) => s.preset);
   const customRange = useFilters((s) => s.customRange);

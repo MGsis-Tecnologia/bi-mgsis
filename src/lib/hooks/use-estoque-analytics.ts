@@ -2,7 +2,6 @@
 
 import * as React from "react";
 import { useFilters } from "@/lib/store/filters";
-import { useExchangeRates } from "@/lib/store/exchange-rates";
 import type {
   EstoqueData,
   EstoqueRow as EstoqueRowServidor,
@@ -96,7 +95,6 @@ export function useEstoqueAnalytics(opcoes: {
   const sellerId = useFilters((s) => s.sellerId);
   const subgroupId = useFilters((s) => s.subgroupId);
   const getRange = useFilters((s) => s.getRange);
-  const rates = useExchangeRates((s) => s.rates);
 
   const [resposta, setResposta] = React.useState<EstoqueData | null>(null);
   const [loading, setLoading] = React.useState(true);
@@ -117,7 +115,6 @@ export function useEstoqueAnalytics(opcoes: {
       from: iso(range.from),
       to: iso(range.to),
       currency,
-      rates,
       empresaId,
       channel,
       sellerId,
@@ -127,7 +124,7 @@ export function useEstoqueAnalytics(opcoes: {
       busca: buscaAdiada,
       limite: 200,
     }),
-    [range, currency, rates, empresaId, channel, sellerId, subgroupId, opcoes.status, buscaAdiada]
+    [range, currency, empresaId, channel, sellerId, subgroupId, opcoes.status, buscaAdiada]
   );
 
   React.useEffect(() => {

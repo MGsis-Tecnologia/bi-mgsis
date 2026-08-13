@@ -26,6 +26,21 @@ export class EmpresaInativaError extends Error {
  * na requisição seguinte à suspensão.
  */
 export async function getTenantPrisma(session: SessionPayload): Promise<PrismaClient> {
+  return (await getTenantContext(session)).db;
+}
+
+/**
+ * Igual ao acima, mas devolve junto a moeda de exibição da empresa.
+ *
+ * As telas de análise precisam dela para converter quando o filtro está em
+ * "todas as moedas", e ela tem que sair DAQUI, do catalog: se viesse no corpo
+ * da requisição, quem abrisse o DevTools escolheria em que moeda a empresa lê
+ * os próprios números. Como a empresa já é carregada para checar o status, sai
+ * de graça — não há consulta a mais.
+ */
+export async function getTenantContext(
+  session: SessionPayload
+): Promise<{ db: PrismaClient; moedaPadrao: string }> {
   const catalog = await getCatalogPrisma();
   const empresa = await catalog.empresa.findUnique({ where: { id: session.empresaId } });
   if (!empresa) {
@@ -36,5 +51,8 @@ export async function getTenantPrisma(session: SessionPayload): Promise<PrismaCl
   if (empresa.status !== "ativa" && !session.isMaster) {
     throw new EmpresaInativaError(empresa.status);
   }
-  return getPrisma(buildTenantUrl(empresa.dbName));
+  return {
+    db: await getPrisma(buildTenantUrl(empresa.dbName)),
+    moedaPadrao: empresa.moedaPadrao,
+  };
 }

@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { Check, ChevronDown, RefreshCw } from "lucide-react";
+import { Check, ChevronDown } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -11,7 +11,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useFilters } from "@/lib/store/filters";
-import { useExchangeRates } from "@/lib/store/exchange-rates";
+import { useUsuario } from "@/components/providers/usuario-provider";
 import { CURRENCY_OPTIONS } from "@/lib/types/dataset";
 import type { AppCurrencyId } from "@/lib/types/dataset";
 import { useTranslation } from "@/lib/hooks/use-translation";
@@ -21,12 +21,10 @@ export function CurrencySwitcher() {
   const { t } = useTranslation();
   const currency = useFilters((s) => s.currency);
   const setCurrency = useFilters((s) => s.setCurrency);
-  const { fetchRates, isLoading, fetchError } = useExchangeRates();
-
-  // Fetch rates on mount (no-op if cached)
-  React.useEffect(() => { fetchRates(); }, [fetchRates]);
+  const moedaPadrao = useUsuario()?.moedaPadrao ?? "1";
 
   const current = CURRENCY_OPTIONS.find((o) => o.id === currency) ?? CURRENCY_OPTIONS[3]!;
+  const destino = CURRENCY_OPTIONS.find((o) => o.id === moedaPadrao);
 
   return (
     <DropdownMenu>
@@ -53,13 +51,10 @@ export function CurrencySwitcher() {
           </DropdownMenuItem>
         ))}
         <DropdownMenuSeparator />
-        <div className="px-2 py-1.5 flex items-center gap-1.5 text-[10px] text-muted-foreground">
-          {isLoading
-            ? <><RefreshCw className="h-3 w-3 animate-spin" /> {t("topbar.currency.updating")}</>
-            : fetchError
-            ? <span className="text-warning">{fetchError}</span>
-            : <span>{t("topbar.currency.note")}</span>
-          }
+        {/* A conversão é do servidor, pela cotação do dia de cada lançamento —
+            a nota diz para onde ela vai, que é a moeda padrão da empresa. */}
+        <div className="px-2 py-1.5 text-[10px] text-muted-foreground">
+          {t("topbar.currency.note")} {destino?.code ?? moedaPadrao}.
         </div>
       </DropdownMenuContent>
     </DropdownMenu>

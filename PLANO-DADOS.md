@@ -696,8 +696,10 @@ src/app/(dashboard)/<tela>/page.tsx     ← consome o hook
 não baixa mais dado nenhum, a agregação é toda no Postgres, o ERP envia por API
 e o CSV é processado no servidor. O que sobra:
 
-1. **Taxas de câmbio ainda vêm do cliente** (pendência 3) — sai do contrato
-   quando a tabela `cambio` da seção 6.1 existir. É a última dívida de desenho.
+1. ~~**Taxas de câmbio ainda vêm do cliente**~~ — resolvida em 12/08/2026
+   (pendência 3). A seção 6.1 está implementada: `cambio` + `cambio_diario`,
+   agente enviando, e a conversão pela cotação do dia na moeda padrão da
+   empresa. Não sobrou dívida de desenho do plano original.
 2. **`/estoque` a ~5,3 s** (era 7,8 s antes do `work_mem`) — a tela mais cara
    que restou. Ver "O que o /estoque ensinou" antes de mexer: duas otimizações
    já foram medidas e descartadas ali.
@@ -1072,9 +1074,34 @@ diferença — os 5.837 ms que eu tinha visto antes eram cache frio, não largur
    fora do padrão. **Sem filtro ativo os números não mudam**, e é assim que se
    verifica a correção sem baseline novo.
 
-3. **Taxas de câmbio ainda vêm do cliente** no corpo da requisição, para os
-   números seguirem idênticos aos de hoje. Quando a tabela `cambio` existir
-   (seção 6.1), a origem passa a ser o banco e o campo `rates` sai do contrato.
+3. ~~**Taxas de câmbio ainda vêm do cliente.**~~ **RESOLVIDA em 12/08/2026.**
+   O campo `rates` saiu do contrato das 12 rotas de análise. A conversão passou
+   a ser um `LEFT JOIN cambio_diario` pela **data de cada lançamento**, com
+   destino na **moeda padrão da empresa** (`empresas.moeda_padrao`, no catalog)
+   — nunca no que vem no corpo da requisição. Ver `joinCambio`/`exprTaxa` em
+   `base.ts` e a seção 6.1.
+
+   A data usada é sempre a do fato: `s.date` em vendas, `c.date` no DRE,
+   `issue_date` (emissão, não vencimento) em receber e pagar, `orcamento_data`
+   em prospecção. O estoque é a exceção — é um snapshot sem data de transação,
+   então converte pela cotação mais recente que existe na tabela
+   (`MAX(data)`, não `CURRENT_DATE`, para que um atraso do agente não jogue
+   tudo silenciosamente no `COALESCE(taxa, 1)`).
+
+   Três defeitos morreram juntos: uma venda de 2022 era convertida pela taxa de
+   hoje, dois usuários com cache diferente viam totais diferentes para o mesmo
+   período, e o número era manipulável por quem abrisse o DevTools.
+   `src/lib/store/exchange-rates.ts` e `FALLBACK_RATES` foram removidos.
+
+   No cliente sobrou só rótulo: `useMoedaExibicao()` decide qual símbolo
+   escrever — a moeda do filtro, ou a padrão da empresa quando o filtro está em
+   "todas". Antes o rótulo era R$ fixo, o que fazia uma empresa paraguaia ler os
+   próprios totais em reais.
+
+   Verificado contra um Postgres real (não só em teste isolado): com US$→G$ a
+   7.000 no dia 10 e 8.000 no dia 20, uma venda de US$ 100 do dia 20 entra como
+   800.000 em "todas as moedas"; com o filtro em US$ ela fica bruta (100); e um
+   título emitido no dia 10 e vencido no dia 25 converte por 7.000.
 
 4. **`next.config.ts` linha 10**: a chave `eslint` virou no-op no Next 16 e é o
    único erro do `npm run type-check`. Não removida.

@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { cn } from "@/lib/utils";
-import { useFilters } from "@/lib/store/filters";
+import { useMoedaExibicao } from "@/lib/hooks/use-moeda-exibicao";
 import { formatCurrency } from "@/lib/utils/format";
 
 interface Props {
@@ -14,7 +14,7 @@ const DAYS = ["dom", "seg", "ter", "qua", "qui", "sex", "sáb"];
 const WEEKS = ["Sem 1", "Sem 2", "Sem 3", "Sem 4", "Sem 5", "Sem 6"];
 
 export function Heatmap({ matrix, max }: Props) {
-  const currency = useFilters((s) => s.currency);
+  const currency = useMoedaExibicao();
   return (
     <div className="flex gap-3">
       <div className="flex flex-col justify-around pt-5 text-[10px] uppercase tracking-[0.14em] text-muted-foreground">

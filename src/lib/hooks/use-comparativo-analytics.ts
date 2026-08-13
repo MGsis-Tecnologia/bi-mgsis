@@ -2,7 +2,6 @@
 
 import * as React from "react";
 import { useFilters } from "@/lib/store/filters";
-import { useExchangeRates } from "@/lib/store/exchange-rates";
 
 /**
  * Dados do Comparativo Anual, agregados no servidor.
@@ -36,15 +35,14 @@ export function useComparativoAnalytics(dimensao: Dimensao): {
 } {
   const currency = useFilters((s) => s.currency);
   const empresaId = useFilters((s) => s.empresaId);
-  const rates = useExchangeRates((s) => s.rates);
 
   const [data, setData] = React.useState<ComparativoView | null>(null);
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
 
   const corpo = React.useMemo(
-    () => ({ dimensao, currency, rates, empresaId }),
-    [dimensao, currency, rates, empresaId]
+    () => ({ dimensao, currency, empresaId }),
+    [dimensao, currency, empresaId]
   );
 
   React.useEffect(() => {

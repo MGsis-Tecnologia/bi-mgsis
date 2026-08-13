@@ -21,10 +21,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ChartTooltip } from "@/components/charts/chart-tooltip";
 import { useDreAnalytics } from "@/lib/hooks/use-dre-analytics";
-import { useFilters } from "@/lib/store/filters";
 import type { DreRow } from "@/lib/analytics/cashflow";
 import { formatCurrency, formatPercent, formatNumber } from "@/lib/utils/format";
 import { cn } from "@/lib/utils";
+import { useMoedaExibicao } from "@/lib/hooks/use-moeda-exibicao";
 import { acompanhaJob, enviaArquivo } from "@/lib/hooks/use-importacao";
 
 const PIE_COLORS = [
@@ -41,7 +41,7 @@ type ChartMode = "monthly" | "daily";
 
 export default function DrePage() {
   const { data, loading, error, recarregar } = useDreAnalytics();
-  const currency = useFilters((s) => s.currency);
+  const currency = useMoedaExibicao();
   const [chartMode, setChartMode] = React.useState<ChartMode>("monthly");
   const [dreExpanded, setDreExpanded] = React.useState<Set<string>>(new Set());
 

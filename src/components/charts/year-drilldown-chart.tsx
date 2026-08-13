@@ -13,8 +13,8 @@ import {
   Legend,
   ResponsiveContainer,
 } from "recharts";
-import { useFilters } from "@/lib/store/filters";
 import { formatCurrency } from "@/lib/utils/format";
+import { useMoedaExibicao } from "@/lib/hooks/use-moeda-exibicao";
 import type { YearProjection } from "@/lib/analytics/yearly";
 
 const YEAR_COLORS = [
@@ -32,7 +32,7 @@ interface Props {
 }
 
 export function YearDrilldownChart({ years, byYear, projection }: Props) {
-  const currency = useFilters((s) => s.currency);
+  const currency = useMoedaExibicao();
   const fmt = (v: number) => formatCurrency(v, currency, { compact: true });
 
   const hasProjection = !!projection && years.includes(projection.currentYear);

@@ -2,7 +2,6 @@
 
 import * as React from "react";
 import { useFilters } from "@/lib/store/filters";
-import { useExchangeRates } from "@/lib/store/exchange-rates";
 import type { DreData } from "@/lib/server/analytics/dre";
 import type {
   CashflowKpis,
@@ -129,7 +128,6 @@ export function useDreAnalytics(): {
   const currency = useFilters((s) => s.currency);
   const empresaId = useFilters((s) => s.empresaId);
   const getRange = useFilters((s) => s.getRange);
-  const rates = useExchangeRates((s) => s.rates);
 
   const [resposta, setResposta] = React.useState<DreData | null>(null);
   const [loading, setLoading] = React.useState(true);
@@ -141,8 +139,8 @@ export function useDreAnalytics(): {
   const range = React.useMemo(() => getRange(), [preset, customRange, getRange]);
 
   const corpo = React.useMemo(
-    () => ({ from: iso(range.from), to: iso(range.to), currency, rates, empresaId }),
-    [range, currency, rates, empresaId]
+    () => ({ from: iso(range.from), to: iso(range.to), currency, empresaId }),
+    [range, currency, empresaId]
   );
 
   React.useEffect(() => {

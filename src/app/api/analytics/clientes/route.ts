@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { getSession } from "@/lib/server/auth";
-import { getTenantPrisma } from "@/lib/server/tenant";
+import { getTenantContext } from "@/lib/server/tenant";
 import { getClientesData } from "@/lib/server/analytics/clientes";
 
 export const runtime = "nodejs";
@@ -15,8 +15,6 @@ const filtrosSchema = z.object({
   cmpFrom: dataISO.nullable().default(null),
   cmpTo: dataISO.nullable().default(null),
   currency: z.enum(["ALL", "1", "2", "3"]).default("ALL"),
-  // Taxas ainda vêm do cliente para manter os números idênticos aos de hoje.
-  rates: z.record(z.string(), z.number().positive()).default({}),
   empresaId: z.string().default("all"),
   channel: z.string().default("all"),
   sellerId: z.string().default("all"),
@@ -46,9 +44,9 @@ export async function POST(req: NextRequest) {
   }
 
   const { hoje, ...filtros } = corpo;
-  const db = await getTenantPrisma(session);
+  const { db, moedaPadrao } = await getTenantContext(session);
   const inicio = Date.now();
-  const data = await getClientesData(db, filtros, hoje);
+  const data = await getClientesData(db, { ...filtros, moedaPadrao }, hoje);
 
   return NextResponse.json({ ...data, ms: Date.now() - inicio });
 }

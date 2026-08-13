@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { getSession } from "@/lib/server/auth";
-import { getTenantPrisma } from "@/lib/server/tenant";
+import { getTenantContext } from "@/lib/server/tenant";
 import { getDashboardData, type DashboardFilters } from "@/lib/server/analytics/dashboard";
 
 export const runtime = "nodejs";
@@ -15,10 +15,6 @@ const filtrosSchema = z.object({
   cmpFrom: dataISO.nullable().default(null),
   cmpTo: dataISO.nullable().default(null),
   currency: z.enum(["ALL", "1", "2", "3"]).default("ALL"),
-  // Taxas ainda vêm do cliente para manter os números idênticos aos de hoje.
-  // Quando a tabela `cambio` existir (fase D), a origem passa a ser o banco e
-  // este campo sai do contrato — ver PLANO-DADOS.md, seção 6.1.
-  rates: z.record(z.string(), z.number().positive()).default({}),
   empresaId: z.string().default("all"),
   channel: z.string().default("all"),
   sellerId: z.string().default("all"),
@@ -33,7 +29,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Não autenticado" }, { status: 401 });
   }
 
-  let filtros: DashboardFilters;
+  let filtros: Omit<DashboardFilters, "moedaPadrao">;
   try {
     filtros = filtrosSchema.parse(await req.json());
   } catch (err) {
@@ -45,9 +41,9 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Período invertido: 'from' é maior que 'to'" }, { status: 400 });
   }
 
-  const db = await getTenantPrisma(session);
+  const { db, moedaPadrao } = await getTenantContext(session);
   const inicio = Date.now();
-  const data = await getDashboardData(db, filtros);
+  const data = await getDashboardData(db, { ...filtros, moedaPadrao });
 
   return NextResponse.json({ ...data, ms: Date.now() - inicio });
 }

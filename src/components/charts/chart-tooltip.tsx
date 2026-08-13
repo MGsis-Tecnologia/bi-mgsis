@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { formatCurrency, formatNumber } from "@/lib/utils/format";
-import { useFilters } from "@/lib/store/filters";
+import { useMoedaExibicao } from "@/lib/hooks/use-moeda-exibicao";
 
 interface RechartsTooltipPayloadItem {
   name: string;
@@ -25,7 +25,7 @@ export function ChartTooltip({
   formatter?: (v: number, key: string) => string;
   showCurrency?: boolean;
 }) {
-  const currency = useFilters((s) => s.currency);
+  const currency = useMoedaExibicao();
   if (!active || !payload || payload.length === 0) return null;
 
   return (

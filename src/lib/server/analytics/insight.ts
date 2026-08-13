@@ -39,7 +39,7 @@ export async function getInsightInput(
   // quando alguém importa. Mesmo padrão de `opcoes.ts`, e pela mesma razão: a
   // sidebar recarrega a cada navegação e isto não pode virar consulta nova.
   const chaveFiltros = JSON.stringify([
-    f.from, f.to, f.cmpFrom, f.cmpTo, f.currency, f.rates,
+    f.from, f.to, f.cmpFrom, f.cmpTo, f.currency, f.moedaPadrao,
     f.empresaId, f.channel, f.sellerId, f.subgroupId,
   ]);
   const versao = await versaoDatasets(db);

@@ -2,7 +2,6 @@
 
 import * as React from "react";
 import { useFilters } from "@/lib/store/filters";
-import { useExchangeRates } from "@/lib/store/exchange-rates";
 
 /**
  * Dados da tela de Produtos, agregados no servidor.
@@ -78,7 +77,6 @@ export function useProdutosAnalytics(): {
   const sellerId = useFilters((s) => s.sellerId);
   const subgroupId = useFilters((s) => s.subgroupId);
   const getRange = useFilters((s) => s.getRange);
-  const rates = useExchangeRates((s) => s.rates);
 
   const [resposta, setResposta] = React.useState<Omit<ProdutosView, "donut"> | null>(null);
   const [loading, setLoading] = React.useState(true);
@@ -94,13 +92,12 @@ export function useProdutosAnalytics(): {
       cmpFrom: null,
       cmpTo: null,
       currency,
-      rates,
       empresaId,
       channel,
       sellerId,
       subgroupId,
     }),
-    [range, currency, rates, empresaId, channel, sellerId, subgroupId]
+    [range, currency, empresaId, channel, sellerId, subgroupId]
   );
 
   React.useEffect(() => {

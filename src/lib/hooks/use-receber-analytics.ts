@@ -2,7 +2,6 @@
 
 import * as React from "react";
 import { useFilters } from "@/lib/store/filters";
-import { useExchangeRates } from "@/lib/store/exchange-rates";
 import type { AgingBucketId, GroupRow } from "@/lib/server/analytics/receber";
 
 /**
@@ -74,7 +73,6 @@ export function useReceberAnalytics(): {
   const empresaId = useFilters((s) => s.empresaId);
   const sellerId = useFilters((s) => s.sellerId);
   const getRange = useFilters((s) => s.getRange);
-  const rates = useExchangeRates((s) => s.rates);
 
   const [resposta, setResposta] = React.useState<Omit<ReceberView, "timeline" | "monthlyCollection"> & {
     timeline: { key: string; overdue: number; upcoming: number; total: number }[];
@@ -91,13 +89,12 @@ export function useReceberAnalytics(): {
       from: iso(range.from),
       to: iso(range.to),
       currency,
-      rates,
       empresaId,
       sellerId,
       hoje: iso(new Date()),
       aplicarLimiteSuperior: preset === "custom",
     }),
-    [range, currency, rates, empresaId, sellerId, preset]
+    [range, currency, empresaId, sellerId, preset]
   );
 
   React.useEffect(() => {

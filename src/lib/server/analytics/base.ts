@@ -18,8 +18,13 @@ export interface AnalyticsFilters {
   cmpTo: string | null;
   /** "ALL" = todas as moedas convertidas · "1"|"2"|"3" = só aquela, sem conversão. */
   currency: string;
-  /** currencyId → taxa. Usado só quando currency === "ALL". */
-  rates: Record<string, number>;
+  /**
+   * Moeda de exibição da empresa — destino da conversão quando currency="ALL".
+   *
+   * Vem do catalog, NUNCA do corpo da requisição: o cliente escolhe o filtro,
+   * mas não decide em que moeda a empresa lê os próprios números.
+   */
+  moedaPadrao: string;
   empresaId: string; // "all" | id exato
   channel: string; // "all" | nome
   sellerId: string; // "all" | id
@@ -78,21 +83,41 @@ export class Params {
 // ─── Conversão de moeda ──────────────────────────────────────────────────────
 
 /**
- * Em "ALL" cada linha é multiplicada pela taxa da sua moeda (o `?? 1` do código
- * antigo vira COALESCE); com moeda específica não há conversão, só filtro.
+ * Conversão pela cotação do DIA DA TRANSAÇÃO, para a moeda padrão da empresa.
+ *
+ * Antes a taxa vinha do NAVEGADOR: cada usuário buscava a cotação de hoje numa
+ * API pública e a mandava no corpo da requisição. Três defeitos de uma vez —
+ * uma venda de 2022 era convertida pela taxa de hoje, dois usuários com cache
+ * diferente viam totais diferentes para o mesmo período, e o número era
+ * manipulável por quem abrisse o DevTools. Era a pendência 3 do PLANO-DADOS.
+ *
+ * Agora sai de `cambio_diario`, que tem uma linha para todo dia do calendário
+ * e todos os sentidos — ver server/ingest/cambio.ts.
+ *
+ * Com moeda específica no filtro não há conversão nenhuma: a consulta filtra
+ * por aquela moeda e mostra o valor bruto, exatamente como está no ERP.
+ *
+ * `COALESCE(taxa, 1)` na ponta: a cobertura vai do primeiro fato até hoje, e as
+ * linhas de identidade (X→X = 1) existem, então só cai no 1 quando a moeda da
+ * linha não tem cotação NENHUMA — o caso dos `moeda_id` 0 e 5 encontrados na
+ * base deste cliente. É o mesmo comportamento de antes, e não silencia a linha
+ * (somar como se fosse 1:1 é errado, mas descartar seria pior e invisível).
  */
-export function joinTaxas(f: AnalyticsFilters, p: Params): string {
+export function joinCambio(
+  f: AnalyticsFilters,
+  p: Params,
+  colData: string,
+  colMoeda: string
+): string {
   if (f.currency !== "ALL") return "";
-  const linhas = Object.entries(f.rates);
-  if (linhas.length === 0) return "";
-  const values = linhas
-    .map(([cid, taxa]) => `(${p.add(cid)}::text, ${p.add(taxa)}::double precision)`)
-    .join(", ");
-  return `LEFT JOIN (VALUES ${values}) AS r(cid, taxa) ON r.cid = s.currency_id`;
+  return `LEFT JOIN cambio_diario cbx
+            ON cbx.data = ${colData}
+           AND cbx.moeda_origem = ${colMoeda}
+           AND cbx.moeda_destino = ${p.add(f.moedaPadrao)}`;
 }
 
 export function exprTaxa(f: AnalyticsFilters): string {
-  return f.currency === "ALL" ? "COALESCE(r.taxa, 1)" : "1";
+  return f.currency === "ALL" ? "COALESCE(cbx.taxa, 1)" : "1";
 }
 
 // ─── Filtros → WHERE ─────────────────────────────────────────────────────────
@@ -150,7 +175,7 @@ export function cteLinhas(f: AnalyticsFilters, p: Params, o: OpcoesLinhas): stri
            s.cost_orig     * ${taxa} AS cost,
            s.discount_orig * ${taxa} AS discount
     FROM sale_items s
-    ${joinTaxas(f, p)}
+    ${joinCambio(f, p, "s.date", "s.currency_id")}
     WHERE ${where}
       AND s.date >= ${p.add(o.from ?? f.from)} AND s.date <= ${p.add(o.to ?? f.to)}`;
 }

@@ -32,9 +32,7 @@ export const dictionaries = {
     // Topbar
     "topbar.search.placeholder": "Buscar pedido, cliente, produto…",
     "topbar.currency.title": "Moeda de exibição",
-    "topbar.currency.mock": "Taxas mock · arquitetura pronta para integração cambial.",
-    "topbar.currency.updating": "Atualizando câmbio…",
-    "topbar.currency.note": "Todas as moedas convertem para R$.",
+    "topbar.currency.note": "Todas as moedas convertem, pela cotação do dia, para",
     "topbar.language.title": "Idioma",
     "topbar.logout": "Sair (Logout)",
 
@@ -551,9 +549,7 @@ export const dictionaries = {
     // Topbar
     "topbar.search.placeholder": "Buscar pedido, cliente, producto…",
     "topbar.currency.title": "Moneda de visualización",
-    "topbar.currency.mock": "Tasas mock · arquitectura lista para integración cambiaria.",
-    "topbar.currency.updating": "Actualizando cambio…",
-    "topbar.currency.note": "Todas las monedas se convierten a R$.",
+    "topbar.currency.note": "Todas las monedas se convierten, a la cotización del día, a",
     "topbar.language.title": "Idioma",
     "topbar.logout": "Salir (Logout)",
 

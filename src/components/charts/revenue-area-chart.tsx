@@ -11,9 +11,9 @@ import {
   YAxis,
 } from "recharts";
 import type { TimePoint } from "@/lib/analytics/timeseries";
-import { useFilters } from "@/lib/store/filters";
 import { formatCurrency, formatNumber, formatPercent } from "@/lib/utils/format";
 import { ChartDefs } from "./chart-defs";
+import { useMoedaExibicao } from "@/lib/hooks/use-moeda-exibicao";
 import { ChartTooltip } from "./chart-tooltip";
 
 interface Props {
@@ -39,7 +39,7 @@ export function RevenueAreaChart({
   showGrid = true,
   compareKey = "revenue",
 }: Props) {
-  const currency = useFilters((s) => s.currency);
+  const currency = useMoedaExibicao();
   const isCount = compareKey === "orders";
   const isPercent = compareKey === "discountPct";
   const yFormat = (v: number) =>

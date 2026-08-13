@@ -3,10 +3,10 @@
 
 import * as React from "react";
 import { MapContainer, TileLayer, CircleMarker, Popup, useMap } from "react-leaflet";
-import { useFilters } from "@/lib/store/filters";
 import { formatCurrency, formatNumber } from "@/lib/utils/format";
 import { MAP_CENTER, MAP_ZOOM } from "@/lib/mock/cities-geo";
 import type { CityMetrics } from "@/lib/analytics/geo-sales";
+import { useMoedaExibicao } from "@/lib/hooks/use-moeda-exibicao";
 import "leaflet/dist/leaflet.css";
 
 interface SalesHeatmapGeoProps {
@@ -59,7 +59,7 @@ function getCircleSize(value: number, max: number): number {
 }
 
 export function SalesHeatmapGeo({ cities, maxSales }: SalesHeatmapGeoProps) {
-  const currency = useFilters((s) => s.currency);
+  const currency = useMoedaExibicao();
   const [mounted, setMounted] = React.useState(false);
 
   // Leaflet requires client-side rendering

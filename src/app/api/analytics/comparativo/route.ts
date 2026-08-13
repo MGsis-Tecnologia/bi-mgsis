@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { getSession } from "@/lib/server/auth";
-import { getTenantPrisma } from "@/lib/server/tenant";
+import { getTenantContext } from "@/lib/server/tenant";
 import { getComparativoData } from "@/lib/server/analytics/comparativo";
 import type { AnalyticsFilters } from "@/lib/server/analytics/base";
 
@@ -12,7 +12,6 @@ export const dynamic = "force-dynamic";
 const corpoSchema = z.object({
   dimensao: z.enum(["vendedores", "subgrupos", "canais", "clientes", "produtos"]),
   currency: z.enum(["ALL", "1", "2", "3"]).default("ALL"),
-  rates: z.record(z.string(), z.number().positive()).default({}),
   empresaId: z.string().default("all"),
 });
 
@@ -30,6 +29,8 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: `Filtros inválidos: ${detalhe}` }, { status: 400 });
   }
 
+  const { db, moedaPadrao } = await getTenantContext(session);
+
   // A tela ignora canal/vendedor/subgrupo e período — o módulo usa escopo base.
   const filtros: AnalyticsFilters = {
     from: "0000-01-01",
@@ -37,14 +38,13 @@ export async function POST(req: NextRequest) {
     cmpFrom: null,
     cmpTo: null,
     currency: corpo.currency,
-    rates: corpo.rates,
+    moedaPadrao,
     empresaId: corpo.empresaId,
     channel: "all",
     sellerId: "all",
     subgroupId: "all",
   };
 
-  const db = await getTenantPrisma(session);
   const inicio = Date.now();
   const data = await getComparativoData(db, filtros, corpo.dimensao);
 

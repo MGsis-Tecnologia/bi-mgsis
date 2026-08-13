@@ -4,7 +4,7 @@ import {
   WORK_MEM,
   consultaAnalitica,
   exprTaxa,
-  joinTaxas,
+  joinCambio,
   whereGraficos,
   type AnalyticsFilters,
 } from "./base";
@@ -148,13 +148,13 @@ export async function getEstoqueData(
   // A janela de demanda precisa da primeira venda do período filtrado, e ela
   // entra como constante no cálculo de cobertura — por isso vem antes.
   const pd = new Params();
-  const [pv] = await consultaAnalitica<{ primeira: string | null }>(db, `SELECT MIN(s.date) AS primeira FROM sale_items s ${joinTaxas(f, pd)}
+  const [pv] = await consultaAnalitica<{ primeira: string | null }>(db, `SELECT MIN(s.date) AS primeira FROM sale_items s ${joinCambio(f, pd, "s.date", "s.currency_id")}
      WHERE ${whereGraficos(f, pd)} AND s.date >= ${pd.add(f.from)} AND s.date <= ${pd.add(f.to)}`, pd.values);
   const periodDays = calculaPeriodDays(f.from, f.to, o.hoje, pv?.primeira ?? null);
 
   // Moeda específica → mantém só os itens dela, sem converter.
   // "Todas" → converte o custo de cada item pela taxa da sua moeda.
-  const converteInv = f.currency === "ALL" && Object.keys(f.rates).length > 0;
+  const converteInv = f.currency === "ALL";
 
   // ── Por que tabelas temporárias, e não um WITH gigante ────────────────────
   // O Postgres não tem estatística de CTE: ele estimava 8,3 MILHÕES de linhas
@@ -166,11 +166,13 @@ export async function getEstoqueData(
   const passos: { nome: string; sql: string; params: unknown[] }[] = [];
 
   const pInv = new Params();
-  const custoInvP = converteInv ? "i.cost_total_usd * COALESCE(ri.taxa, 1)" : "i.cost_total_usd";
+  // O snapshot não tem data de transação — é uma foto do estoque AGORA —, então
+  // aqui a conversão usa a cotação mais recente que existe em `cambio_diario`,
+  // não a do dia de cada linha. `MAX(data)` em vez de `CURRENT_DATE` para que um
+  // atraso do agente não jogue tudo silenciosamente no COALESCE(taxa, 1).
+  const custoInvP = converteInv ? `i.cost_total_usd * ${exprTaxa(f)}` : "i.cost_total_usd";
   const joinInvP = converteInv
-    ? `LEFT JOIN (VALUES ${Object.entries(f.rates)
-        .map(([cid, t]) => `(${pInv.add(cid)}::text, ${pInv.add(t)}::double precision)`)
-        .join(", ")}) AS ri(cid, taxa) ON ri.cid = i.currency_id`
+    ? joinCambio(f, pInv, "(SELECT MAX(data) FROM cambio_diario)", "i.currency_id")
     : "";
   const condInvP: string[] = [];
   if (f.empresaId !== "all") condInvP.push(`i.empresa_id = ${pInv.add(f.empresaId)}`);
@@ -199,7 +201,7 @@ export async function getEstoqueData(
     sql: `SELECT s.id, s.order_id, s.date, s.product_id, s.quantity,
                  s.total_orig * ${exprTaxa(f)} AS total,
                  s.cost_orig  * ${exprTaxa(f)} AS cost
-          FROM sale_items s ${joinTaxas(f, pL)}
+          FROM sale_items s ${joinCambio(f, pL, "s.date", "s.currency_id")}
           WHERE ${whereGraficos(f, pL)}
             AND s.date >= ${pL.add(f.from)} AND s.date <= ${pL.add(f.to)}`,
   });

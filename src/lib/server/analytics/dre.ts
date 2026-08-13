@@ -1,5 +1,5 @@
 import type { PrismaClient } from "@prisma/client";
-import { Params, consultaAnalitica, type AnalyticsFilters } from "./base";
+import { Params, consultaAnalitica, exprTaxa, joinCambio, type AnalyticsFilters } from "./base";
 
 /**
  * Agregações de Caixa & DRE (`caixa_items`).
@@ -49,14 +49,9 @@ export async function getDreData(
   f: AnalyticsFilters
 ): Promise<DreData> {
   const cte = (p: Params) => {
-    const linhas = Object.entries(f.rates);
-    const converte = f.currency === "ALL" && linhas.length > 0;
-    const join = converte
-      ? `LEFT JOIN (VALUES ${linhas
-          .map(([mid, t]) => `(${p.add(mid)}::text, ${p.add(t)}::double precision)`)
-          .join(", ")}) AS x(mid, taxa) ON x.mid = c.moeda_id`
-      : "";
-    const valor = converte ? "c.valor_documento * COALESCE(x.taxa, 1)" : "c.valor_documento";
+    // Cotação do dia do lançamento — ver joinCambio em base.ts.
+    const join = joinCambio(f, p, "c.date", "c.moeda_id");
+    const valor = `c.valor_documento * ${exprTaxa(f)}`;
 
     const cond = [`c.date >= ${p.add(f.from)}`, `c.date <= ${p.add(f.to)}`];
     if (f.empresaId !== "all") cond.push(`c.empresa_id = ${p.add(f.empresaId)}`);

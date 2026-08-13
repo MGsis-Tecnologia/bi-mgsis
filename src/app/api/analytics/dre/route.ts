@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { getSession } from "@/lib/server/auth";
-import { getTenantPrisma } from "@/lib/server/tenant";
+import { getTenantContext } from "@/lib/server/tenant";
 import { getDreData } from "@/lib/server/analytics/dre";
 import type { AnalyticsFilters } from "@/lib/server/analytics/base";
 
@@ -14,7 +14,6 @@ const corpoSchema = z.object({
   from: dataISO,
   to: dataISO,
   currency: z.enum(["ALL", "1", "2", "3"]).default("ALL"),
-  rates: z.record(z.string(), z.number().positive()).default({}),
   empresaId: z.string().default("all"),
 });
 
@@ -36,6 +35,8 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Período invertido: 'from' é maior que 'to'" }, { status: 400 });
   }
 
+  const { db, moedaPadrao } = await getTenantContext(session);
+
   // Canal, vendedor e subgrupo não existem em caixa_items.
   const filtros: AnalyticsFilters = {
     from: corpo.from,
@@ -43,14 +44,13 @@ export async function POST(req: NextRequest) {
     cmpFrom: null,
     cmpTo: null,
     currency: corpo.currency,
-    rates: corpo.rates,
+    moedaPadrao,
     empresaId: corpo.empresaId,
     channel: "all",
     sellerId: "all",
     subgroupId: "all",
   };
 
-  const db = await getTenantPrisma(session);
   const inicio = Date.now();
   const data = await getDreData(db, filtros);
 

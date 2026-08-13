@@ -1,5 +1,5 @@
 import type { PrismaClient } from "@prisma/client";
-import { Params, consultaAnalitica, type AnalyticsFilters } from "./base";
+import { Params, consultaAnalitica, exprTaxa, joinCambio, type AnalyticsFilters } from "./base";
 
 /**
  * Agregações de Contas a Receber (`receivable_items`).
@@ -123,14 +123,10 @@ export async function getReceberData(
    * meia-noite local, a subtração de datas dá o mesmo inteiro.
    */
   const ctes = (p: Params) => {
-    const linhas = Object.entries(f.rates);
-    const converte = f.currency === "ALL" && linhas.length > 0;
-    const join = converte
-      ? `LEFT JOIN (VALUES ${linhas
-          .map(([cid, t]) => `(${p.add(cid)}::text, ${p.add(t)}::double precision)`)
-          .join(", ")}) AS x(cid, taxa) ON x.cid = r.currency_id`
-      : "";
-    const valor = converte ? "r.amount_orig * COALESCE(x.taxa, 1)" : "r.amount_orig";
+    // Cotação da data de EMISSÃO, não do vencimento: é a emissão que define
+    // a que dia o título pertence — mesmo critério do período na ingestão.
+    const join = joinCambio(f, p, "r.issue_date", "r.currency_id");
+    const valor = `r.amount_orig * ${exprTaxa(f)}`;
 
     const cond = [`r.due_date >= ${p.add(f.from)}`];
     if (o.aplicarLimiteSuperior) cond.push(`r.due_date <= ${p.add(f.to)}`);

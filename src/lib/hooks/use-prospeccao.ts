@@ -1,7 +1,6 @@
 "use client";
 
 import * as React from "react";
-import { useExchangeRates } from "@/lib/store/exchange-rates";
 import { useFilters } from "@/lib/store/filters";
 import { EMPTY_RESUMO } from "@/lib/analytics/prospeccao";
 import type { ProspeccaoResumo } from "@/lib/analytics/prospeccao";
@@ -36,7 +35,6 @@ export function useProspeccao(): ProspeccaoResumo & { loading: boolean; error: s
   const preset = useFilters((s) => s.preset);
   const customRange = useFilters((s) => s.customRange);
   const getRange = useFilters((s) => s.getRange);
-  const rates = useExchangeRates((s) => s.rates);
 
   const [resposta, setResposta] = React.useState<RespostaApi | null>(null);
   const [loading, setLoading] = React.useState(true);
@@ -56,11 +54,10 @@ export function useProspeccao(): ProspeccaoResumo & { loading: boolean; error: s
       from: iso(range.from),
       to: iso(range.to),
       currency,
-      rates,
       empresaId,
       limitePerdido,
     };
-  }, [range, currency, rates, empresaId]);
+  }, [range, currency, empresaId]);
 
   React.useEffect(() => {
     const ctrl = new AbortController();

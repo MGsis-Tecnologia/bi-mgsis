@@ -30,11 +30,9 @@ export default async function DashboardLayout({
   // consulta banco, então sem esta checagem quem já estava logado continuaria
   // com o app na tela até o JWT expirar (30 dias). O master é exceção: precisa
   // conseguir entrar pra reativar a empresa.
-  if (!session.isMaster) {
-    const catalog = await getCatalogPrisma();
-    const empresa = await catalog.empresa.findUnique({ where: { id: session.empresaId } });
-    if (!empresa || empresa.status !== "ativa") redirect("/login");
-  }
+  const catalog = await getCatalogPrisma();
+  const empresa = await catalog.empresa.findUnique({ where: { id: session.empresaId } });
+  if (!session.isMaster && (!empresa || empresa.status !== "ativa")) redirect("/login");
 
   const initials = session.name
     .split(" ")
@@ -47,7 +45,13 @@ export default async function DashboardLayout({
     <TooltipProvider delayDuration={200}>
       {/* A sessão já está resolvida aqui; o provider evita que cada tela de
           cliente precise buscá-la de novo por uma rota de API. */}
-      <UsuarioProvider usuario={{ nome: session.name, email: session.email }}>
+      <UsuarioProvider
+        usuario={{
+          nome: session.name,
+          email: session.email,
+          moedaPadrao: empresa?.moedaPadrao ?? "1",
+        }}
+      >
         <div className="flex min-h-screen bg-background">
           <Sidebar isMaster={session.isMaster} role={session.role} allowedMenus={session.allowedMenus} />
           <div className="flex min-w-0 flex-1 flex-col">

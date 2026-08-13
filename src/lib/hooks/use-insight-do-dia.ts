@@ -3,7 +3,6 @@
 import * as React from "react";
 import { useFilters } from "@/lib/store/filters";
 import { comparisonRange } from "@/lib/utils/dates";
-import { useExchangeRates } from "@/lib/store/exchange-rates";
 import { insightsFromAggregates, type InsightInput } from "@/lib/analytics/insights-agg";
 import type { Insight } from "@/lib/analytics/insights";
 
@@ -31,7 +30,6 @@ export function useInsightDoDia(): { insight: Insight | null; carregando: boolea
   const channel = useFilters((s) => s.channel);
   const sellerId = useFilters((s) => s.sellerId);
   const subgroupId = useFilters((s) => s.subgroupId);
-  const rates = useExchangeRates((s) => s.rates);
 
   const [dados, setDados] = React.useState<InsightInput | null>(null);
   const [carregando, setCarregando] = React.useState(true);
@@ -47,13 +45,12 @@ export function useInsightDoDia(): { insight: Insight | null; carregando: boolea
       cmpFrom: cmp ? iso(cmp.from) : null,
       cmpTo: cmp ? iso(cmp.to) : null,
       currency,
-      rates,
       empresaId,
       channel,
       sellerId,
       subgroupId,
     }),
-    [range, cmp, currency, rates, empresaId, channel, sellerId, subgroupId]
+    [range, cmp, currency, empresaId, channel, sellerId, subgroupId]
   );
 
   React.useEffect(() => {

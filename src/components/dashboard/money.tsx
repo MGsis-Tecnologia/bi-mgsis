@@ -1,6 +1,6 @@
 "use client";
 
-import { useFilters } from "@/lib/store/filters";
+import { useMoedaExibicao } from "@/lib/hooks/use-moeda-exibicao";
 import { formatCurrency } from "@/lib/utils/format";
 
 interface MoneyProps {
@@ -10,6 +10,6 @@ interface MoneyProps {
 
 /** Renders a monetary value in the currently selected display currency. */
 export function Money({ value, compact }: MoneyProps) {
-  const currency = useFilters((s) => s.currency);
+  const currency = useMoedaExibicao();
   return <>{formatCurrency(value, currency, { compact })}</>;
 }

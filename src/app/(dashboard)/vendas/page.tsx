@@ -13,8 +13,8 @@ import { Heatmap } from "@/components/charts/heatmap";
 import { BarChartH } from "@/components/charts/bar-chart-h";
 import { Money } from "@/components/dashboard/money";
 import { useVendasAnalytics, type PedidoRecente } from "@/lib/hooks/use-vendas-analytics";
-import { useFilters } from "@/lib/store/filters";
 import { formatCurrency, formatNumber, formatPercent } from "@/lib/utils/format";
+import { useMoedaExibicao } from "@/lib/hooks/use-moeda-exibicao";
 import { useTranslation } from "@/lib/hooks/use-translation";
 
 const SalesHeatmapGeo = dynamic(() => import("@/components/charts/sales-heatmap-geo").then((mod) => ({ default: mod.SalesHeatmapGeo })), {
@@ -24,7 +24,7 @@ const SalesHeatmapGeo = dynamic(() => import("@/components/charts/sales-heatmap-
 
 export default function VendasPage() {
   const { t } = useTranslation();
-  const currency = useFilters((s) => s.currency);
+  const currency = useMoedaExibicao();
 
   // Tudo agregado no servidor: o navegador recebe números prontos, não linhas.
   const { data, loading, error } = useVendasAnalytics();

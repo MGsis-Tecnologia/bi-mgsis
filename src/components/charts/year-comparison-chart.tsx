@@ -12,8 +12,8 @@ import {
   ResponsiveContainer,
   Cell,
 } from "recharts";
-import { useFilters } from "@/lib/store/filters";
 import { formatCurrency } from "@/lib/utils/format";
+import { useMoedaExibicao } from "@/lib/hooks/use-moeda-exibicao";
 import type { YearlyResult } from "@/lib/analytics/yearly";
 
 // Up to 5 years, each with a distinct colour
@@ -31,7 +31,7 @@ interface Props {
 }
 
 export function YearComparisonChart({ data, className }: Props) {
-  const currency = useFilters((s) => s.currency);
+  const currency = useMoedaExibicao();
   const { years, rows } = data;
 
   const chartData = rows.map((r) => {

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { getSession } from "@/lib/server/auth";
-import { getTenantPrisma } from "@/lib/server/tenant";
+import { getTenantContext } from "@/lib/server/tenant";
 import { getVendasData } from "@/lib/server/analytics/vendas";
 import type { AnalyticsFilters } from "@/lib/server/analytics/base";
 
@@ -16,9 +16,6 @@ const filtrosSchema = z.object({
   cmpFrom: dataISO.nullable().default(null),
   cmpTo: dataISO.nullable().default(null),
   currency: z.enum(["ALL", "1", "2", "3"]).default("ALL"),
-  // Taxas ainda vêm do cliente para manter os números idênticos aos de hoje.
-  // Quando a tabela `cambio` existir (fase D), a origem passa a ser o banco.
-  rates: z.record(z.string(), z.number().positive()).default({}),
   empresaId: z.string().default("all"),
   channel: z.string().default("all"),
   sellerId: z.string().default("all"),
@@ -31,7 +28,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Não autenticado" }, { status: 401 });
   }
 
-  let filtros: AnalyticsFilters;
+  let filtros: Omit<AnalyticsFilters, "moedaPadrao">;
   try {
     filtros = filtrosSchema.parse(await req.json());
   } catch (err) {
@@ -43,9 +40,9 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Período invertido: 'from' é maior que 'to'" }, { status: 400 });
   }
 
-  const db = await getTenantPrisma(session);
+  const { db, moedaPadrao } = await getTenantContext(session);
   const inicio = Date.now();
-  const data = await getVendasData(db, filtros);
+  const data = await getVendasData(db, { ...filtros, moedaPadrao });
 
   return NextResponse.json({ ...data, ms: Date.now() - inicio });
 }

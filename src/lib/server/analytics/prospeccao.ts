@@ -1,6 +1,6 @@
 import type { PrismaClient } from "@prisma/client";
 import { MIN_PROPOSTAS, TOP_PRODUTOS } from "@/lib/analytics/prospeccao";
-import { consultaAnalitica, Params, type AnalyticsFilters } from "./base";
+import { Params, consultaAnalitica, exprTaxa, joinCambio, type AnalyticsFilters } from "./base";
 
 /**
  * Agregações da tela de Prospecção.
@@ -66,15 +66,10 @@ export const PROSPECCAO_VAZIA: ProspeccaoData = {
 
 /** Conversão de moeda: mesma regra do `valorItem` original. */
 function exprValor(f: AnalyticsFilters, p: Params): { join: string; expr: string } {
-  if (f.currency !== "ALL") return { join: "", expr: "o.item_total" };
-  const linhas = Object.entries(f.rates);
-  if (linhas.length === 0) return { join: "", expr: "o.item_total" };
-  const values = linhas
-    .map(([mid, t]) => `(${p.add(mid)}::text, ${p.add(t)}::double precision)`)
-    .join(", ");
   return {
-    join: `LEFT JOIN (VALUES ${values}) AS r(mid, taxa) ON r.mid = o.moeda_id`,
-    expr: "o.item_total * COALESCE(r.taxa, 1)",
+    // Cotação do dia do orçamento — ver joinCambio em base.ts.
+    join: joinCambio(f, p, "o.orcamento_data", "o.moeda_id"),
+    expr: `o.item_total * ${exprTaxa(f)}`,
   };
 }
 

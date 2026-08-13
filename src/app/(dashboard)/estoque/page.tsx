@@ -19,7 +19,6 @@ import { Badge } from "@/components/ui/badge";
 import { BarChartH } from "@/components/charts/bar-chart-h";
 import { LabeledDonut } from "@/components/charts/labeled-donut";
 import { Money } from "@/components/dashboard/money";
-import { useFilters } from "@/lib/store/filters";
 import type { AppCurrencyId } from "@/lib/types/dataset";
 import {
   statusLabel,
@@ -28,10 +27,11 @@ import {
   type StockStatus,
 } from "@/lib/hooks/use-estoque-analytics";
 import { formatCurrency, formatNumber, formatPercent } from "@/lib/utils/format";
+import { useMoedaExibicao } from "@/lib/hooks/use-moeda-exibicao";
 import { cn } from "@/lib/utils";
 
 export default function EstoquePage() {
-  const currency = useFilters((s) => s.currency);
+  const currency = useMoedaExibicao();
 
   const [statusFilter, setStatusFilter] = React.useState<StockStatus | "all">("all");
   const [query, setQuery] = React.useState("");
@@ -43,10 +43,7 @@ export default function EstoquePage() {
     busca: query,
   });
 
-  // Moeda de exibição do estoque: uma moeda específica exibe nela mesma; "ALL"
-  // (Todas) converte tudo para R$.
-  const displayCurrencyId: AppCurrencyId = currency === "ALL" ? "1" : currency;
-  const displayCode = displayCurrencyId === "2" ? "US$" : displayCurrencyId === "3" ? "G$" : "R$";
+  const displayCode = currency === "2" ? "US$" : currency === "3" ? "G$" : "R$";
 
   const cabecalho = (
     <PageHeader
@@ -125,7 +122,7 @@ export default function EstoquePage() {
       >
         <Badge variant="ghost" className="gap-1">
           <Boxes className="h-3 w-3" />
-          {formatNumber(totals.skus)} SKU(s) · {formatCurrency(totals.totalValueUSD, displayCurrencyId, { compact: true })}
+          {formatNumber(totals.skus)} SKU(s) · {formatCurrency(totals.totalValueUSD, currency, { compact: true })}
         </Badge>
       </PageHeader>
 
@@ -134,7 +131,7 @@ export default function EstoquePage() {
         <KpiCard
           label="Capital em estoque"
           caption={`${formatNumber(totals.totalUnits)} unidades`}
-          value={formatCurrency(totals.totalValueUSD, displayCurrencyId, { compact: true })}
+          value={formatCurrency(totals.totalValueUSD, currency, { compact: true })}
           accent="accent"
         />
         <KpiCard
@@ -145,12 +142,12 @@ export default function EstoquePage() {
         />
         <KpiCard
           label="Em risco"
-          caption={`${formatCurrency(valueAtRisk, displayCurrencyId, { compact: true })} sob risco`}
+          caption={`${formatCurrency(valueAtRisk, currency, { compact: true })} sob risco`}
           value={formatNumber(totals.risk)}
         />
         <KpiCard
           label="Sem giro + excesso"
-          caption={`${formatCurrency(valueDormant, displayCurrencyId, { compact: true })} parados`}
+          caption={`${formatCurrency(valueDormant, currency, { compact: true })} parados`}
           value={formatNumber(totals.noMovement + totals.excess)}
         />
       </section>
@@ -171,10 +168,10 @@ export default function EstoquePage() {
         <CardContent>
           <LabeledDonut
             data={coverage}
-            currencyId={displayCurrencyId}
+            currencyId={currency}
             height={280}
             centerLabel="Capital"
-            centerValue={formatCurrency(coverageTotal, displayCurrencyId, { compact: true })}
+            centerValue={formatCurrency(coverageTotal, currency, { compact: true })}
           />
         </CardContent>
       </Card>
@@ -213,7 +210,7 @@ export default function EstoquePage() {
                   status={s.key}
                   count={s.count}
                   valueUSD={s.valueUSD}
-                  displayCurrencyId={displayCurrencyId}
+                  displayCurrencyId={currency}
                   total={totals.skus}
                   active={statusFilter === s.key}
                   onClick={() =>
@@ -280,7 +277,7 @@ export default function EstoquePage() {
             </p>
           </CardHeader>
           <CardContent className="px-0">
-            <CompactList rows={rupture} mode="rupture" emptyMessage="Sem rupturas ou riscos no período." displayCurrencyId={displayCurrencyId} />
+            <CompactList rows={rupture} mode="rupture" emptyMessage="Sem rupturas ou riscos no período." displayCurrencyId={currency} />
           </CardContent>
         </Card>
 
@@ -300,7 +297,7 @@ export default function EstoquePage() {
             </p>
           </CardHeader>
           <CardContent className="px-0">
-            <CompactList rows={movers} mode="movers" emptyMessage="Sem movimentação no período." displayCurrencyId={displayCurrencyId} />
+            <CompactList rows={movers} mode="movers" emptyMessage="Sem movimentação no período." displayCurrencyId={currency} />
           </CardContent>
         </Card>
       </section>
@@ -314,7 +311,7 @@ export default function EstoquePage() {
               Capital parado · sem giro
             </CardTitle>
             <Badge variant="warning" className="gap-1">
-              {formatCurrency(valueDormant, displayCurrencyId, { compact: true })} parados
+              {formatCurrency(valueDormant, currency, { compact: true })} parados
             </Badge>
           </div>
           <p className="mt-1 text-[11px] text-muted-foreground">
@@ -322,7 +319,7 @@ export default function EstoquePage() {
           </p>
         </CardHeader>
         <CardContent className="px-0">
-          <CompactList rows={dormant} mode="dormant" emptyMessage="Sem itens parados no período." displayCurrencyId={displayCurrencyId} />
+          <CompactList rows={dormant} mode="dormant" emptyMessage="Sem itens parados no período." displayCurrencyId={currency} />
         </CardContent>
       </Card>
 
@@ -489,7 +486,7 @@ export default function EstoquePage() {
                       ) : "—"}
                     </td>
                     <td className="py-2 px-3 text-right tabular font-medium">
-                      {formatCurrency(r.costTotalUSD, displayCurrencyId, { compact: r.costTotalUSD >= 10000 })}
+                      {formatCurrency(r.costTotalUSD, currency, { compact: r.costTotalUSD >= 10000 })}
                     </td>
                     <td className="py-2 px-3 text-right tabular">
                       {r.unitsSold > 0 ? formatNumber(r.unitsSold) : "—"}

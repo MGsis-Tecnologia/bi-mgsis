@@ -1,8 +1,8 @@
 "use client";
 
 import * as React from "react";
-import { useFilters } from "@/lib/store/filters";
 import { formatCurrency, formatNumber } from "@/lib/utils/format";
+import { useMoedaExibicao } from "@/lib/hooks/use-moeda-exibicao";
 import { cn } from "@/lib/utils";
 
 interface Row {
@@ -28,7 +28,7 @@ export function BarChartH({
   showRank = true,
   maxRows = 10,
 }: Props) {
-  const currency = useFilters((s) => s.currency);
+  const currency = useMoedaExibicao();
   const display = rows.slice(0, maxRows);
   const max = Math.max(...display.map((r) => r.value), 1);
 

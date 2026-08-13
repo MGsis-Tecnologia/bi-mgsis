@@ -2,7 +2,6 @@
 
 import * as React from "react";
 import { useFilters } from "@/lib/store/filters";
-import { useExchangeRates } from "@/lib/store/exchange-rates";
 import { eachDayKey, eachMonthKey } from "@/lib/utils/dates";
 import { aggregateSalesByCityFrom, getMaxSales, type CityMetrics } from "@/lib/analytics/geo-sales";
 import type { TimePoint } from "@/lib/analytics/timeseries";
@@ -132,7 +131,6 @@ export function useVendasAnalytics(): {
   const sellerId = useFilters((s) => s.sellerId);
   const subgroupId = useFilters((s) => s.subgroupId);
   const getRange = useFilters((s) => s.getRange);
-  const rates = useExchangeRates((s) => s.rates);
 
   const [resposta, setResposta] = React.useState<RespostaApi | null>(null);
   const [loading, setLoading] = React.useState(true);
@@ -148,13 +146,12 @@ export function useVendasAnalytics(): {
       cmpFrom: null,
       cmpTo: null,
       currency,
-      rates,
       empresaId,
       channel,
       sellerId,
       subgroupId,
     }),
-    [range, currency, rates, empresaId, channel, sellerId, subgroupId]
+    [range, currency, empresaId, channel, sellerId, subgroupId]
   );
 
   React.useEffect(() => {

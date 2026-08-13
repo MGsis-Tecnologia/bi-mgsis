@@ -2,7 +2,6 @@
 
 import * as React from "react";
 import { useFilters } from "@/lib/store/filters";
-import { useExchangeRates } from "@/lib/store/exchange-rates";
 import { comparisonRange, eachDayKey, eachMonthKey } from "@/lib/utils/dates";
 import { insightsFromAggregates } from "@/lib/analytics/insights-agg";
 import type { Insight } from "@/lib/analytics/insights";
@@ -153,7 +152,6 @@ export function useDashboardAnalytics(): {
   const sellerId = useFilters((s) => s.sellerId);
   const subgroupId = useFilters((s) => s.subgroupId);
   const getRange = useFilters((s) => s.getRange);
-  const rates = useExchangeRates((s) => s.rates);
 
   const [resposta, setResposta] = React.useState<RespostaApi | null>(null);
   const [loading, setLoading] = React.useState(true);
@@ -170,13 +168,12 @@ export function useDashboardAnalytics(): {
       cmpFrom: cmp ? iso(cmp.from) : null,
       cmpTo: cmp ? iso(cmp.to) : null,
       currency,
-      rates,
       empresaId,
       channel,
       sellerId,
       subgroupId,
     }),
-    [range, cmp, currency, rates, empresaId, channel, sellerId, subgroupId]
+    [range, cmp, currency, empresaId, channel, sellerId, subgroupId]
   );
 
   React.useEffect(() => {

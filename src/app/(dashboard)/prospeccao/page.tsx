@@ -10,27 +10,22 @@ import { KpiCard } from "@/components/dashboard/kpi-card";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { LabeledDonut } from "@/components/charts/labeled-donut";
-import { useFilters } from "@/lib/store/filters";
-import { useExchangeRates } from "@/lib/store/exchange-rates";
 import { useProspeccao } from "@/lib/hooks/use-prospeccao";
 import { MIN_PROPOSTAS, TOP_PRODUTOS } from "@/lib/analytics/prospeccao";
 import { useTranslation } from "@/lib/hooks/use-translation";
 import { formatCurrency, formatNumber, formatPercent } from "@/lib/utils/format";
-import type { AppCurrencyId } from "@/lib/types/dataset";
+import { useMoedaExibicao } from "@/lib/hooks/use-moeda-exibicao";
 import { cn } from "@/lib/utils";
 
 export default function ProspeccaoPage() {
   const { t, language } = useTranslation();
-  const currency = useFilters((s) => s.currency);
-  const fetchRates = useExchangeRates((s) => s.fetchRates);
+  const currency = useMoedaExibicao();
 
-  React.useEffect(() => { fetchRates(); }, [fetchRates]);
 
   // Resumo agregado no servidor a partir de `orcamento_items`.
   const data = useProspeccao();
 
-  const displayCurrencyId: AppCurrencyId = currency === "ALL" ? "1" : currency;
-  const money = (v: number, compact = false) => formatCurrency(v, displayCurrencyId, { compact });
+  const money = (v: number, compact = false) => formatCurrency(v, currency, { compact });
   const monthLabel = (ym: string) => {
     const [y, m] = ym.split("-").map(Number);
     if (!y || !m) return ym;
@@ -102,7 +97,7 @@ export default function ProspeccaoPage() {
             <Card className="lg:col-span-2">
               <CardHeader><CardTitle>{t("prospeccao.status.title")}</CardTitle></CardHeader>
               <CardContent>
-                <LabeledDonut data={donutData} currencyId={displayCurrencyId} height={220} />
+                <LabeledDonut data={donutData} currencyId={currency} height={220} />
               </CardContent>
             </Card>
             <Card>

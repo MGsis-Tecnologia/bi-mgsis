@@ -239,10 +239,3 @@ export const CURRENCY_OPTIONS: CurrencyConfig[] = [
   { id: "ALL", code: "★",   name: "ALL", namePt: "Todas as Moedas",    decimals: 2 },
 ];
 
-// Fallback rates: 1 unit of currency → R$
-// G$: 100,000 G$ = 1,200 R$ → 1 G$ = 0.012 R$
-export const FALLBACK_RATES: Record<string, number> = {
-  "1": 1,
-  "2": 5.00,
-  "3": 0.012,
-};

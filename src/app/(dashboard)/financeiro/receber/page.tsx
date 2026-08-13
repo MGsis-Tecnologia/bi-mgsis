@@ -14,9 +14,9 @@ import { BarChartH } from "@/components/charts/bar-chart-h";
 import { ChartDefs } from "@/components/charts/chart-defs";
 import { ChartTooltip } from "@/components/charts/chart-tooltip";
 import { useReceberAnalytics, type AgingBucketId, type GroupRow } from "@/lib/hooks/use-receber-analytics";
-import { useFilters } from "@/lib/store/filters";
 import { formatCurrency, formatNumber, formatPercent } from "@/lib/utils/format";
 import { useTranslation } from "@/lib/hooks/use-translation";
+import { useMoedaExibicao } from "@/lib/hooks/use-moeda-exibicao";
 import { cn } from "@/lib/utils";
 
 const AGING_COLORS: Record<AgingBucketId, string> = {
@@ -29,7 +29,7 @@ const AGING_COLORS: Record<AgingBucketId, string> = {
 
 export default function ContasReceberPage() {
   const { t } = useTranslation();
-  const currency = useFilters((s) => s.currency);
+  const currency = useMoedaExibicao();
 
   // Tudo agregado no servidor a partir de `receivable_items`.
   const { data, loading, error } = useReceberAnalytics();
@@ -501,7 +501,7 @@ function GroupTable({
   maxRows?: number;
 }) {
   const { t } = useTranslation();
-  const currency = useFilters((s) => s.currency);
+  const currency = useMoedaExibicao();
   const display = rows.slice(0, maxRows);
 
   if (display.length === 0) {

@@ -17,6 +17,13 @@ import * as React from "react";
 export interface UsuarioLogado {
   nome: string;
   email: string;
+  /**
+   * Moeda de exibição da empresa ("1"|"2"|"3"). É só rótulo aqui: quem
+   * converte é o servidor, pela cotação do dia de cada linha. O cliente
+   * precisa dela para saber que símbolo escrever quando o filtro está em
+   * "todas as moedas".
+   */
+  moedaPadrao: string;
 }
 
 const Contexto = React.createContext<UsuarioLogado | null>(null);
@@ -31,8 +38,8 @@ export function UsuarioProvider({
   // O layout passa um objeto novo a cada render; memoizar pelos campos evita
   // que todo consumidor do contexto re-renderize à toa.
   const valor = React.useMemo<UsuarioLogado>(
-    () => ({ nome: usuario.nome, email: usuario.email }),
-    [usuario.nome, usuario.email]
+    () => ({ nome: usuario.nome, email: usuario.email, moedaPadrao: usuario.moedaPadrao }),
+    [usuario.nome, usuario.email, usuario.moedaPadrao]
   );
   return <Contexto.Provider value={valor}>{children}</Contexto.Provider>;
 }

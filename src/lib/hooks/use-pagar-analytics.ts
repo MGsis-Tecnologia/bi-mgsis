@@ -2,7 +2,6 @@
 
 import * as React from "react";
 import { useFilters } from "@/lib/store/filters";
-import { useExchangeRates } from "@/lib/store/exchange-rates";
 import type { AgingBucketId, GroupRow } from "@/lib/server/analytics/pagar";
 
 /**
@@ -68,7 +67,6 @@ export function usePagarAnalytics(): {
   const currency = useFilters((s) => s.currency);
   const empresaId = useFilters((s) => s.empresaId);
   const getRange = useFilters((s) => s.getRange);
-  const rates = useExchangeRates((s) => s.rates);
 
   const [resposta, setResposta] = React.useState<
     | (Omit<PagarView, "timeline" | "monthlyPayment"> & {
@@ -88,12 +86,11 @@ export function usePagarAnalytics(): {
       from: iso(range.from),
       to: iso(range.to),
       currency,
-      rates,
       empresaId,
       hoje: iso(new Date()),
       aplicarLimiteSuperior: preset === "custom",
     }),
-    [range, currency, rates, empresaId, preset]
+    [range, currency, empresaId, preset]
   );
 
   React.useEffect(() => {
