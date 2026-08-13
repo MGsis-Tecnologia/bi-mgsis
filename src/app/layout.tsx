@@ -61,6 +61,16 @@ export default function RootLayout({
           next-themes, conforme o tema escolhido (ver ThemeToggle). Fixá-la
           trava o app no escuro e torna o seletor inerte. */}
       <body className="min-h-screen bg-background font-sans antialiased grain">
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              try {
+                const theme = localStorage.getItem('theme') || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+                if (theme === 'dark') document.documentElement.classList.add('dark');
+              } catch {}
+            `,
+          }}
+        />
         <ThemeProvider
           attribute="class"
           defaultTheme="dark"
