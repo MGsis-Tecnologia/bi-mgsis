@@ -31,6 +31,12 @@ export default async function DashboardLayout({
   // com o app na tela até o JWT expirar (30 dias). O master é exceção: precisa
   // conseguir entrar pra reativar a empresa.
   const catalog = await getCatalogPrisma();
+
+  // Fallback para tokens antigos sem empresaId: redireciona para login
+  if (!session.empresaId) {
+    redirect("/login");
+  }
+
   const empresa = await catalog.empresa.findUnique({ where: { id: session.empresaId } });
   if (!session.isMaster && (!empresa || empresa.status !== "ativa")) redirect("/login");
 
