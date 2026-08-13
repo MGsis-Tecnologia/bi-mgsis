@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import Script from "next/script";
 import { GeistSans } from "geist/font/sans";
 import { GeistMono } from "geist/font/mono";
 import localFont from "next/font/local";
@@ -61,7 +62,9 @@ export default function RootLayout({
           next-themes, conforme o tema escolhido (ver ThemeToggle). Fixá-la
           trava o app no escuro e torna o seletor inerte. */}
       <body className="min-h-screen bg-background font-sans antialiased grain">
-        <script
+        <Script
+          id="theme-sync"
+          strategy="beforeInteractive"
           dangerouslySetInnerHTML={{
             __html: `
               try {
