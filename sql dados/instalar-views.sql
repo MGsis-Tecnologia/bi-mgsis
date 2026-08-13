@@ -1,5 +1,5 @@
 -- ============================================================================
--- Instala as seis views bi_* de uma vez.
+-- Instala as views bi_* de uma vez.
 --
 -- Use este arquivo se o seu cliente SQL (DBeaver, pgAdmin) reclamar ao rodar
 -- os arquivos separados: ele contém SÓ os comandos, sem comentário nenhum
@@ -197,4 +197,18 @@ WHERE p.produto_inativo = false
   AND p.produto_revenda = true
 GROUP BY e.produto_id, p.produto_descricao, p.produto_fabricante,
          e.empresa_id, p.moeda_id, m.moeda_sigla;
+
+-- ── bi_cambio ──
+CREATE OR REPLACE VIEW bi_cambio AS
+SELECT
+    c.cambio_data                              AS cambio_data,
+    COALESCE(c.moeda_id::text, '')             AS moeda_origem,
+    COALESCE(c.moeda_destino_id::text, '')     AS moeda_destino,
+    c.cambio_produto                           AS cambio_taxa
+FROM cambio c
+WHERE c.cambio_data IS NOT NULL
+  AND c.cambio_produto > 0
+  AND COALESCE(c.moeda_id::text, '') <> ''
+  AND COALESCE(c.moeda_destino_id::text, '') <> ''
+  AND c.moeda_id::text <> c.moeda_destino_id::text;
 

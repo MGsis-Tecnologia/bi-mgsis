@@ -14,6 +14,10 @@ interface Ctx {
 
 const STATUS_VALIDOS = new Set(["ativa", "suspensa", "pendente"]);
 
+// Trocar a moeda padrão muda o PIVÔ da tabela de câmbio, e a tabela densa é
+// derivada contra ele — depois de trocar, o câmbio precisa ser reenviado.
+const MOEDAS_VALIDAS = new Set(["1", "2", "3"]);
+
 async function requireMaster(): Promise<SessionPayload | null> {
   const session = await getSession();
   if (!session || !session.isMaster) return null;
@@ -56,9 +60,11 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
   let emailMaster: string | undefined;
   let status: string | undefined;
   let maxUsers: number | undefined;
+  let moedaPadrao: string | undefined;
   try {
     const body = (await req.json()) as {
       nome?: string;
+      moedaPadrao?: string;
       emailMaster?: string;
       status?: string;
       maxUsers?: number;
@@ -67,11 +73,12 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
     emailMaster = body.emailMaster?.trim().toLowerCase() || undefined;
     status = body.status && STATUS_VALIDOS.has(body.status) ? body.status : undefined;
     maxUsers = Number.isInteger(body.maxUsers) && (body.maxUsers as number) >= 1 ? body.maxUsers : undefined;
+    moedaPadrao = body.moedaPadrao && MOEDAS_VALIDAS.has(body.moedaPadrao) ? body.moedaPadrao : undefined;
   } catch {
     return NextResponse.json({ error: "Corpo inválido" }, { status: 400 });
   }
 
-  if (!nome && !emailMaster && !status && maxUsers === undefined) {
+  if (!nome && !emailMaster && !status && maxUsers === undefined && !moedaPadrao) {
     return NextResponse.json({ error: "Nada para atualizar" }, { status: 400 });
   }
 
@@ -96,6 +103,7 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
       ...(emailMaster && { emailMaster }),
       ...(status && { status }),
       ...(maxUsers !== undefined && { maxUsers }),
+      ...(moedaPadrao && { moedaPadrao }),
     },
   });
 

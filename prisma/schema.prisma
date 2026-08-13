@@ -70,6 +70,50 @@ model DatasetMeta {
   @@map("dataset_meta")
 }
 
+// Câmbio, camada 1 de 2: o que o ERP mandou, sem alteração.
+//
+// Fonte da verdade e trilha de auditoria — bate com o ERP linha a linha. As
+// consultas NÃO usam esta tabela: elas usam `cambio_diario`, densa e derivada.
+//
+// Uma linha por (data, par), com o par sempre no mesmo sentido: a ingestão
+// normaliza, então se o ERP mandar G$→U$ vira U$→G$ com a taxa invertida.
+//
+// `taxa` significa, sem ambiguidade: **1 unidade de origem equivale a `taxa`
+// unidades de destino**. É a definição que mais gera valor invertido em
+// relatório quando fica implícita.
+model Cambio {
+  data         String @default("") // YYYY-MM-DD
+  moedaOrigem  String @default("") @map("moeda_origem")
+  moedaDestino String @default("") @map("moeda_destino")
+  taxa         Float  @default(0)
+
+  @@id([data, moedaOrigem, moedaDestino])
+  @@index([data], map: "idx_cambio_data")
+  @@map("cambio")
+}
+
+// Câmbio, camada 2 de 2: densa, derivada, é nela que as consultas fazem JOIN.
+//
+// Uma linha para TODO dia do calendário e TODOS os sentidos, preenchendo os
+// dias sem cotação com a última conhecida (carry-forward). Reconstruída após
+// cada ingestão de câmbio.
+//
+// Por que ela existe: o ERP só grava cotação quando há movimento naquela moeda.
+// Neste cliente, dólar tem cotação em 98 de 1.673 dias — 5,9% do calendário.
+// Um INNER JOIN contra a tabela crua faria 94% das vendas em dólar sumirem do
+// relatório sem erro nenhum. Medido: apagar um mês de câmbio derrubou 27.540
+// vendas em silêncio.
+model CambioDiario {
+  data         String @default("") // YYYY-MM-DD
+  moedaOrigem  String @default("") @map("moeda_origem")
+  moedaDestino String @default("") @map("moeda_destino")
+  taxa         Float  @default(0)
+
+  @@id([data, moedaOrigem, moedaDestino])
+  @@index([data, moedaOrigem], map: "idx_cambio_diario_lookup")
+  @@map("cambio_diario")
+}
+
 // Importação de arquivo em andamento (fase E).
 //
 // O arquivo de vendas do cliente tem ~245 MB e 1,4 milhão de linhas: não cabe

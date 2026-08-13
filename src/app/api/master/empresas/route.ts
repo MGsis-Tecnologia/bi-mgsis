@@ -13,6 +13,15 @@ import type { SessionPayload } from "@/lib/server/auth-core";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
+/**
+ * Moeda em que a empresa lê os próprios números — "1" R$, "2" US$, "3" G$.
+ *
+ * É o destino da conversão quando o filtro está em "Todas as moedas", e o pivô
+ * da tabela de câmbio. Trocar depois exige reenviar o câmbio, porque a tabela
+ * densa é derivada contra ela.
+ */
+const MOEDAS_VALIDAS = new Set(["1", "2", "3"]);
+
 const INVITE_EXPIRATION_MS = 7 * 86_400_000;
 
 async function requireMaster(): Promise<SessionPayload | null> {
@@ -37,17 +46,22 @@ export async function POST(req: NextRequest) {
   }
 
   let nome: string, cnpjRucRaw: string, emailMaster: string, maxUsers: number;
+  let moedaPadrao: string;
   try {
     const body = (await req.json()) as {
       nome?: string;
       cnpjRuc?: string;
       emailMaster?: string;
       maxUsers?: number;
+      moedaPadrao?: string;
     };
     nome = (body.nome ?? "").trim();
     cnpjRucRaw = body.cnpjRuc ?? "";
     emailMaster = (body.emailMaster ?? "").trim().toLowerCase();
     maxUsers = Number.isInteger(body.maxUsers) ? (body.maxUsers as number) : 5;
+    // Padrão R$ para não mudar o comportamento de quem já existe; empresa
+    // paraguaia deve ser cadastrada com "3".
+    moedaPadrao = MOEDAS_VALIDAS.has(body.moedaPadrao ?? "") ? (body.moedaPadrao as string) : "1";
   } catch {
     return NextResponse.json({ error: "Corpo inválido" }, { status: 400 });
   }
@@ -106,7 +120,7 @@ export async function POST(req: NextRequest) {
 
   // 3. Registra a empresa e os tokens no catalog.
   const empresa = await catalog.empresa.create({
-    data: { cnpjRuc, nome, dbName, status: "pendente", emailMaster, maxUsers },
+    data: { cnpjRuc, nome, dbName, status: "pendente", emailMaster, maxUsers, moedaPadrao },
   });
 
   const integration = generateToken();

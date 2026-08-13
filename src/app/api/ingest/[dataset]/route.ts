@@ -10,6 +10,7 @@ import {
   substituiPeriodo,
 } from "@/lib/server/ingest/substituir";
 import { upsertMeta } from "@/lib/server/dataset-storage";
+import { detectaPivo, normaliza, reconstroiCambioDiario, type LinhaCambio, type ProblemaCambio } from "@/lib/server/ingest/cambio";
 import type { DatasetKind } from "@/lib/server/dataset-storage";
 
 export const runtime = "nodejs";
@@ -29,6 +30,9 @@ const KIND_DA_META: Record<NomeDataset, DatasetKind> = {
   pagar: "payable",
   caixa: "caixa",
   estoque: "inventory",
+  // Não é um kind da importação CSV — existe só para carimbar dataset_meta,
+  // que é o que invalida os caches de análise quando a cotação muda.
+  cambio: "cambio" as DatasetKind,
 };
 
 const corpoSchema = z.object({
@@ -123,11 +127,42 @@ export async function POST(req: Request, ctx: Ctx) {
     });
   }
 
+  // O câmbio tem um passo a mais nos dois lados: normaliza antes de gravar e
+  // reconstrói a tabela densa depois. Ver server/ingest/cambio.ts.
+  let problemasCambio: ProblemaCambio[] = [];
+  let linhasParaGravar = validas;
+  if (nome === "cambio") {
+    // O pivô vem dos DADOS (a moeda contra a qual o ERP cota), não da moeda de
+    // exibição da empresa — são independentes.
+    const brutas = validas as unknown as LinhaCambio[];
+    const r = normaliza(brutas, detectaPivo(brutas) ?? auth.moedaPadrao);
+    linhasParaGravar = r.validas as unknown as Record<string, unknown>[];
+    problemasCambio = r.problemas;
+
+    // Recusar o lote inteiro por uma cotação suspeita deixaria o cliente sem
+    // câmbio nenhum. As boas entram, as duvidosas voltam na resposta para o
+    // agente registrar — mas se NADA passou, é erro de configuração, não ruído.
+    if (linhasParaGravar.length === 0 && validas.length > 0) {
+      return erro(422, "Nenhuma cotação passou na validação.", {
+        moedaPadraoDaEmpresa: auth.moedaPadrao,
+        problemas: problemasCambio.slice(0, 20),
+        dica: "As cotações precisam envolver a moeda padrão da empresa — os demais sentidos são derivados.",
+      });
+    }
+  }
+
   try {
-    const r = await substituiPeriodo(auth.db, nome, periodo, validas);
+    const r = await substituiPeriodo(auth.db, nome, periodo, linhasParaGravar);
+
+    let densa: Awaited<ReturnType<typeof reconstroiCambioDiario>> | undefined;
+    if (nome === "cambio") {
+      densa = await reconstroiCambioDiario(auth.db);
+    }
 
     // Mantém `dataset_meta` coerente: as telas e a importação de CSV leem daí
-    // para saber se há dados e de quando são.
+    // para saber se há dados e de quando são. O câmbio entra aqui também
+    // porque é o carimbo que invalida os caches de análise — e mudar a cotação
+    // muda todo valor convertido na tela.
     await upsertMeta(auth.db, {
       kind: KIND_DA_META[nome],
       filename: `api:${periodo.rotulo}`,
@@ -143,6 +178,12 @@ export async function POST(req: Request, ctx: Ctx) {
       removidas: r.removidas,
       inseridas: r.inseridas,
       ms: r.ms,
+      ...(densa && {
+        cambioDiario: densa,
+        moedaPadraoDaEmpresa: auth.moedaPadrao,
+        recusadas: problemasCambio.length,
+        problemas: problemasCambio.slice(0, 20),
+      }),
     });
   } catch (e) {
     console.error(`[ingest] ${nome} ${periodo.rotulo} falhou:`, e);

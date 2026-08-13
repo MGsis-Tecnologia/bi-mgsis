@@ -30,6 +30,15 @@ model Empresa {
   status      String   @default("pendente") // pendente | ativa | suspensa
   emailMaster String   @default("") @map("email_master") // e-mail do admin da empresa, recebe o convite
   maxUsers    Int      @default(5) @map("max_users") // limite de licenças (usuários ativos + convites pendentes)
+  /// Moeda em que a empresa lê os próprios números: "1" R$, "2" US$, "3" G$.
+  ///
+  /// É o destino da conversão quando o filtro está em "Todas as moedas". Antes
+  /// o destino era R$ fixo no código, o que dava um painel em reais para uma
+  /// empresa paraguaia cujo movimento é 99,9% guarani.
+  ///
+  /// Também é o PIVÔ da tabela de câmbio: as cotações são guardadas contra ela,
+  /// e os demais sentidos saem por derivação — ver `cambio` no schema do tenant.
+  moedaPadrao String   @default("1") @map("moeda_padrao")
   createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
 
   inviteTokens      InviteToken[]

@@ -132,6 +132,19 @@ const linhaCaixa = z.object({
   empresaId: textoOpc,
 });
 
+// O câmbio é uma FOTO do histórico inteiro, como o estoque — vai sempre
+// completo (~10 mil linhas, menos de 1 MB), porque controlar período aqui só
+// traria o risco de um buraco por sincronismo parcial sem economizar nada.
+//
+// `taxa`: 1 unidade de origem equivale a `taxa` unidades de destino. Deixar
+// isso implícito é a ambiguidade que mais gera valor invertido em relatório.
+const linhaCambio = z.object({
+  data: dataISO,
+  moedaOrigem: texto,
+  moedaDestino: texto,
+  taxa: z.coerce.number().finite().positive(),
+});
+
 const linhaEstoque = z.object({
   productId: texto,
   description: textoOpc,
@@ -155,7 +168,7 @@ export interface DefinicaoDataset {
    */
   colunaData: string | null;
   /** Delegate do Prisma Client, para o createMany. */
-  delegate: "saleItem" | "orcamentoItem" | "receivableItem" | "payableItem" | "caixaItem" | "inventoryItem";
+  delegate: "saleItem" | "orcamentoItem" | "receivableItem" | "payableItem" | "caixaItem" | "inventoryItem" | "cambio";
   schema: z.ZodType;
   /** Só para a mensagem de erro quando o lote é grande demais. */
   linhasTipicasPorMes: number;
@@ -203,6 +216,13 @@ export const DATASETS = {
     delegate: "inventoryItem",
     schema: linhaEstoque,
     linhasTipicasPorMes: 112_000,
+  },
+  cambio: {
+    tabela: "cambio",
+    colunaData: null,
+    delegate: "cambio",
+    schema: linhaCambio,
+    linhasTipicasPorMes: 10_000,
   },
 } as const satisfies Record<string, DefinicaoDataset>;
 

@@ -18,6 +18,8 @@ import { hashToken } from "../tokens";
  */
 
 export interface ContextoIngestao {
+  /** Moeda padrão da empresa — é o PIVÔ da tabela de câmbio. */
+  moedaPadrao: string;
   empresaId: number;
   empresaNome: string;
   db: PrismaClient;
@@ -68,6 +70,7 @@ export async function autenticaIngestao(
   return {
     empresaId: empresa.id,
     empresaNome: empresa.nome,
+    moedaPadrao: empresa.moedaPadrao,
     db: await getPrisma(buildTenantUrl(empresa.dbName)),
   };
 }

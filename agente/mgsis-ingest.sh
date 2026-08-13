@@ -192,6 +192,24 @@ FROM (
 SQL
 }
 
+
+# Câmbio: vai INTEIRO a cada ciclo, sem recorte de período.
+#
+# São ~10 mil linhas, menos de 1 MB — controlar período aqui só traria o risco
+# de um buraco por sincronismo parcial sem economizar nada. O servidor
+# normaliza o sentido do par e reconstrói a tabela densa depois de gravar.
+sql_cambio() { cat <<'SQL'
+SELECT json_build_object('periodo', 'tudo', 'linhas', COALESCE(json_agg(x), '[]'::json))
+FROM (
+  SELECT to_char(cambio_data, 'YYYY-MM-DD') AS "data",
+         moeda_origem  AS "moedaOrigem",
+         moeda_destino AS "moedaDestino",
+         cambio_taxa   AS "taxa"
+  FROM bi_cambio
+) x
+SQL
+}
+
 conta_sql() {
   case "$1" in
     vendas)     echo "SELECT count(*) FROM bi_movimento  WHERE pedido_data        >= :'de' AND pedido_data        < :'ate'" ;;
@@ -200,6 +218,7 @@ conta_sql() {
     pagar)      echo "SELECT count(*) FROM bi_pagar      WHERE data_emissao       >= :'de' AND data_emissao       < :'ate'" ;;
     caixa)      echo "SELECT count(*) FROM bi_caixa      WHERE caixa_data_emissao >= :'de' AND caixa_data_emissao < :'ate'" ;;
     estoque)    echo "SELECT count(*) FROM bi_estoque" ;;
+    cambio)     echo "SELECT count(*) FROM bi_cambio" ;;
   esac
 }
 
@@ -290,6 +309,18 @@ envia() {
   done
 }
 
+  # Os dois datasets sem período: foto do momento (estoque) e histórico
+  # completo de cotações (câmbio). Vão inteiros, sempre.
+  envia_sem_periodo() {
+    local so="${1:-}" falhas=0
+    for ds in estoque cambio; do
+      [[ -n "$so" && "$so" != "$ds" ]] && continue
+      log "$ds (envio completo)"
+      envia "$ds" tudo || falhas=$(( falhas + 1 ))
+    done
+    return "$falhas"
+  }
+
 # envia_mes <YYYY-MM> [dataset]
 envia_mes() {
   local mes="$1" so="${2:-}"
@@ -325,7 +356,7 @@ done
 
 if [[ -n "$SO_DATASET" ]]; then
   case "$SO_DATASET" in
-    vendas|orcamentos|receber|pagar|caixa|estoque) ;;
+    vendas|orcamentos|receber|pagar|caixa|estoque|cambio) ;;
     *) erro "dataset inválido: $SO_DATASET"; exit 64 ;;
   esac
 fi
@@ -358,10 +389,7 @@ case "$MODO" in
     log "ciclo: $ANTERIOR e $CORRENTE"
     envia_mes "$ANTERIOR" "$SO_DATASET" || FALHAS=$(( FALHAS + $? ))
     envia_mes "$CORRENTE" "$SO_DATASET" || FALHAS=$(( FALHAS + $? ))
-    if [[ -z "$SO_DATASET" || "$SO_DATASET" == "estoque" ]]; then
-      log "estoque (foto completa)"
-      envia estoque tudo || FALHAS=$(( FALHAS + 1 ))
-    fi
+    envia_sem_periodo "$SO_DATASET" || FALHAS=$(( FALHAS + $? ))
     ;;
 
   inicial)
@@ -373,16 +401,13 @@ case "$MODO" in
       envia_mes "$MES" "$SO_DATASET" || FALHAS=$(( FALHAS + $? ))
       MES="$(desloca_mes "$MES-01" "+1 month" "%Y-%m")" || exit 1
     done
-    if [[ -z "$SO_DATASET" || "$SO_DATASET" == "estoque" ]]; then
-      log "estoque (foto completa)"
-      envia estoque tudo || FALHAS=$(( FALHAS + 1 ))
-    fi
+    envia_sem_periodo "$SO_DATASET" || FALHAS=$(( FALHAS + $? ))
     ;;
 
   periodo)
     [[ "$ARG" =~ ^[0-9]{4}-[0-9]{2}$ ]] || { erro "--periodo espera YYYY-MM"; exit 64; }
-    if [[ "$SO_DATASET" == "estoque" ]]; then
-      envia estoque tudo || FALHAS=1
+    if [[ "$SO_DATASET" == "estoque" || "$SO_DATASET" == "cambio" ]]; then
+      envia_sem_periodo "$SO_DATASET" || FALHAS=$(( FALHAS + $? ))
     else
       envia_mes "$ARG" "$SO_DATASET" || FALHAS=$(( FALHAS + $? ))
     fi
