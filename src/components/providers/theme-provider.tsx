@@ -1,20 +1,26 @@
 "use client";
 
-import * as React from "react";
-import { ThemeProvider as NextThemesProvider } from "next-themes";
+import React, { useEffect, useState } from "react";
 
 export function ThemeProvider({
   children,
-  ...props
-}: React.ComponentProps<typeof NextThemesProvider>) {
-  return (
-    <NextThemesProvider
-      suppressHydrationWarning
-      storageKey="theme"
-      enableColorScheme={false}
-      {...props}
-    >
-      {children}
-    </NextThemesProvider>
-  );
+}: {
+  children: React.ReactNode;
+}) {
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+    const theme = localStorage.getItem("theme") || "dark";
+    const isDark = theme === "dark" || (!theme && window.matchMedia("(prefers-color-scheme: dark)").matches);
+    if (isDark) {
+      document.documentElement.classList.add("dark");
+    } else {
+      document.documentElement.classList.remove("dark");
+    }
+  }, []);
+
+  if (!mounted) return <>{children}</>;
+
+  return <>{children}</>;
 }
