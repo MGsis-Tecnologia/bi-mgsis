@@ -26,6 +26,8 @@ interface Empresa {
   status: string;
   emailMaster: string;
   maxUsers: number;
+  /** Moeda em que a empresa lê os próprios números — ver MOEDAS. */
+  moedaPadrao: string;
   createdAt: string;
 }
 
@@ -36,6 +38,24 @@ interface CreateResult {
   emailSent: boolean;
   emailError?: string;
 }
+
+/**
+ * Moeda de EXIBIÇÃO da empresa: é para ela que "Todas as moedas" converte.
+ *
+ * Não confundir com o pivô da tabela de câmbio, que é deduzido dos dados (a
+ * moeda contra a qual o ERP cota). São independentes de propósito — uma
+ * empresa paraguaia pode querer ler o painel em reais.
+ */
+const MOEDAS: { id: string; sigla: string; nome: string }[] = [
+  { id: "1", sigla: "R$", nome: "Real" },
+  { id: "2", sigla: "US$", nome: "Dólar" },
+  { id: "3", sigla: "G$", nome: "Guarani" },
+];
+
+const moedaLabel = (id: string) => {
+  const m = MOEDAS.find((x) => x.id === id);
+  return m ? `${m.sigla} ${m.nome}` : id;
+};
 
 const STATUS_VARIANT: Record<string, "positive" | "warning" | "negative" | "default"> = {
   ativa: "positive",
@@ -206,6 +226,7 @@ function EmpresaEditor({
   const [nome, setNome] = React.useState(empresa.nome);
   const [emailMaster, setEmailMaster] = React.useState(empresa.emailMaster);
   const [maxUsers, setMaxUsers] = React.useState(empresa.maxUsers);
+  const [moedaPadrao, setMoedaPadrao] = React.useState(empresa.moedaPadrao);
   const [saving, setSaving] = React.useState(false);
   const [erro, setErro] = React.useState<string | null>(null);
   const [ok, setOk] = React.useState(false);
@@ -217,7 +238,8 @@ function EmpresaEditor({
   const alterado =
     nome.trim() !== empresa.nome ||
     emailMaster.trim() !== empresa.emailMaster ||
-    maxUsers !== empresa.maxUsers;
+    maxUsers !== empresa.maxUsers ||
+    moedaPadrao !== empresa.moedaPadrao;
 
   const salvar = async () => {
     setErro(null);
@@ -227,7 +249,7 @@ function EmpresaEditor({
       const res = await fetch(`/api/master/empresas/${empresa.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ nome: nome.trim(), emailMaster: emailMaster.trim(), maxUsers }),
+        body: JSON.stringify({ nome: nome.trim(), emailMaster: emailMaster.trim(), maxUsers, moedaPadrao }),
       });
       const data = (await res.json()) as { ok?: boolean; empresa?: Empresa; error?: string };
       if (!res.ok || !data.ok || !data.empresa) {
@@ -293,6 +315,25 @@ function EmpresaEditor({
             onChange={(e) => setMaxUsers(Math.max(1, Number(e.target.value) || 1))}
             disabled={saving}
           />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-foreground mb-1.5">Moeda padrão</label>
+          <select
+            value={moedaPadrao}
+            onChange={(e) => setMoedaPadrao(e.target.value)}
+            disabled={saving}
+            className="h-10 w-full rounded-md border border-border bg-surface px-3 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-accent disabled:opacity-60"
+          >
+            {MOEDAS.map((m) => (
+              <option key={m.id} value={m.id}>{m.sigla} — {m.nome}</option>
+            ))}
+          </select>
+          {moedaPadrao !== empresa.moedaPadrao && (
+            <p className="mt-1 text-xs text-warning">
+              Trocar a moeda muda todos os totais exibidos com o filtro em
+              &ldquo;Todas as moedas&rdquo;.
+            </p>
+          )}
         </div>
       </div>
 
@@ -388,7 +429,7 @@ function EmpresaEditor({
 export function EmpresasManager() {
   const [empresas, setEmpresas] = React.useState<Empresa[]>([]);
   const [loadingList, setLoadingList] = React.useState(true);
-  const [form, setForm] = React.useState({ nome: "", cnpjRuc: "", emailMaster: "", maxUsers: 5 });
+  const [form, setForm] = React.useState({ nome: "", cnpjRuc: "", emailMaster: "", maxUsers: 5, moedaPadrao: "3" });
   const [creating, setCreating] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
   const [lastCreated, setLastCreated] = React.useState<CreateResult | null>(null);
@@ -453,7 +494,7 @@ export function EmpresasManager() {
         return;
       }
       setLastCreated(data);
-      setForm({ nome: "", cnpjRuc: "", emailMaster: "", maxUsers: 5 });
+      setForm({ nome: "", cnpjRuc: "", emailMaster: "", maxUsers: 5, moedaPadrao: "3" });
       await loadEmpresas();
     } catch (err) {
       setError((err as Error).message);
@@ -521,6 +562,25 @@ export function EmpresasManager() {
                 required
                 disabled={creating}
               />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-1.5">
+                Moeda padrão
+              </label>
+              <select
+                value={form.moedaPadrao}
+                onChange={(e) => setForm((f) => ({ ...f, moedaPadrao: e.target.value }))}
+                disabled={creating}
+                className="h-10 w-full rounded-md border border-border bg-surface px-3 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-accent disabled:opacity-60"
+              >
+                {MOEDAS.map((m) => (
+                  <option key={m.id} value={m.id}>{m.sigla} — {m.nome}</option>
+                ))}
+              </select>
+              <p className="mt-1 text-xs text-muted-foreground">
+                É nela que o painel mostra os totais com o filtro em
+                &ldquo;Todas as moedas&rdquo;.
+              </p>
             </div>
 
             {error && (
@@ -602,7 +662,8 @@ export function EmpresasManager() {
                         <p className="text-sm font-medium truncate">{emp.nome}</p>
                         <p className="text-xs text-muted-foreground truncate">
                           <span className="font-mono">{emp.cnpjRuc}</span> · {emp.emailMaster} ·{" "}
-                          {emp.maxUsers} licença{emp.maxUsers === 1 ? "" : "s"}
+                          {emp.maxUsers} licença{emp.maxUsers === 1 ? "" : "s"} ·{" "}
+                          {moedaLabel(emp.moedaPadrao)}
                         </p>
                       </div>
                       <div className="flex items-center gap-2 shrink-0">
