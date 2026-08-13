@@ -1,4 +1,4 @@
-import { PrismaClient } from "@prisma/client";
+import { PrismaClient } from "@prisma/catalog-client";
 
 // SQL executado na primeira conexão para criar as tabelas do catalog se ainda
 // não existirem. Mesmo padrão idempotente usado em db.ts para o banco de tenant.
