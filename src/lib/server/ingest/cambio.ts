@@ -203,14 +203,28 @@ export async function reconstroiCambioDiario(
       const inseridas = await tx.$executeRawUnsafe(
         `
         WITH limites AS (
-          -- Vai até HOJE, não até a última cotação. O ERP só cota quando há
-          -- movimento: numa segunda-feira, a última pode ser de sexta, e as
-          -- vendas do fim de semana ficariam sem taxa — some a linha inteira
-          -- do relatório, sem erro. Medido no teste: as vendas depois da
-          -- última cotação não achavam par.
-          SELECT MIN(data) AS de,
-                 GREATEST(MAX(data), to_char(CURRENT_DATE, 'YYYY-MM-DD')) AS ate
-            FROM cambio
+          -- O calendário cobre do PRIMEIRO FATO até HOJE, não só o intervalo
+          -- das cotações.
+          --
+          -- Até hoje, porque o ERP só cota quando há movimento: numa
+          -- segunda-feira, a última pode ser de sexta, e as vendas do fim de
+          -- semana ficariam sem taxa — some a linha do relatório, sem erro.
+          --
+          -- Desde o primeiro fato, porque a cotação mais antiga do ERP costuma
+          -- ser posterior à venda mais antiga. Sem isso, a carga inicial teria
+          -- um bloco inteiro sem conversão logo no começo do histórico.
+          SELECT LEAST(
+                   COALESCE((SELECT MIN(data) FROM cambio), '9999'),
+                   COALESCE((SELECT MIN(date) FROM sale_items WHERE date <> ''), '9999'),
+                   COALESCE((SELECT MIN(issue_date) FROM receivable_items WHERE issue_date <> ''), '9999'),
+                   COALESCE((SELECT MIN(issue_date) FROM payable_items WHERE issue_date <> ''), '9999'),
+                   COALESCE((SELECT MIN(date) FROM caixa_items WHERE date <> ''), '9999'),
+                   COALESCE((SELECT MIN(orcamento_data) FROM orcamento_items WHERE orcamento_data <> ''), '9999')
+                 ) AS de,
+                 GREATEST(
+                   (SELECT MAX(data) FROM cambio),
+                   to_char(CURRENT_DATE, 'YYYY-MM-DD')
+                 ) AS ate
         ),
         -- Todo dia do calendário entre a primeira cotação e hoje.
         dias AS (
@@ -224,20 +238,44 @@ export async function reconstroiCambioDiario(
           SELECT DISTINCT moeda_origem AS moeda FROM cambio WHERE moeda_destino = $1
           UNION SELECT $1
         ),
-        -- Carry-forward: para cada dia e moeda, a cotação daquele dia ou a
-        -- última conhecida antes dele. É o que fecha os 94% de dias sem
-        -- cotação de dólar sem inventar número.
-        contra_pivo AS (
-          SELECT g.data, m.moeda AS origem,
-                 (SELECT c.taxa
-                    FROM cambio c
-                   WHERE c.moeda_origem = m.moeda
-                     AND c.moeda_destino = $1
-                     AND c.data <= g.data
-                   ORDER BY c.data DESC
-                   LIMIT 1) AS taxa
-            FROM dias g CROSS JOIN moedas m
+        -- Dia sem cotação usa a MAIS PRÓXIMA, em qualquer sentido.
+        --
+        -- Carry-forward puro (só olhar para trás) deixava sem taxa tudo que
+        -- fosse anterior à primeira cotação do ERP — e é justamente o começo
+        -- do histórico, onde a carga inicial mais tem linha.
+        --
+        -- Duas buscas com LIMIT 1 em vez de um ORDER BY abs(diferença): assim
+        -- cada uma usa o índice (moeda_origem, data) e faz uma leitura, em vez
+        -- de percorrer todas as cotações da moeda para cada dia do calendário.
+        vizinhas AS (
+          SELECT g.data, m.moeda AS origem, ant.taxa AS taxa_ant, ant.data AS data_ant,
+                 prox.taxa AS taxa_prox, prox.data AS data_prox
+            FROM dias g
+            CROSS JOIN moedas m
+            LEFT JOIN LATERAL (
+              SELECT c.taxa, c.data FROM cambio c
+               WHERE c.moeda_origem = m.moeda AND c.moeda_destino = $1 AND c.data <= g.data
+               ORDER BY c.data DESC LIMIT 1
+            ) ant ON true
+            LEFT JOIN LATERAL (
+              SELECT c.taxa, c.data FROM cambio c
+               WHERE c.moeda_origem = m.moeda AND c.moeda_destino = $1 AND c.data > g.data
+               ORDER BY c.data ASC LIMIT 1
+            ) prox ON true
            WHERE m.moeda <> $1
+        ),
+        contra_pivo AS (
+          SELECT data, origem,
+                 CASE
+                   WHEN taxa_ant IS NULL THEN taxa_prox
+                   WHEN taxa_prox IS NULL THEN taxa_ant
+                   -- Empate fica com a do passado: usar cotação futura para
+                   -- transação passada é o menos defensável dos dois.
+                   WHEN (data::date - data_ant::date) <= (data_prox::date - data::date)
+                     THEN taxa_ant
+                   ELSE taxa_prox
+                 END AS taxa
+            FROM vizinhas
         ),
         -- O pivô contra ele mesmo é 1, sempre.
         base AS (
