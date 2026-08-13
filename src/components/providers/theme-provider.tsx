@@ -8,7 +8,12 @@ export function ThemeProvider({
   ...props
 }: React.ComponentProps<typeof NextThemesProvider>) {
   return (
-    <NextThemesProvider suppressHydrationWarning {...props}>
+    <NextThemesProvider
+      suppressHydrationWarning
+      storageKey="theme"
+      enableColorScheme={false}
+      {...props}
+    >
       {children}
     </NextThemesProvider>
   );
