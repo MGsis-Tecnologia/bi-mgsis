@@ -96,6 +96,7 @@ export function conferePertinencia(
 /** Campo (camelCase, como chega no JSON) que carrega a data de emissão. */
 const CAMPO_DE_DATA: Record<NomeDataset, string> = {
   vendas: "date",
+  compras: "pedidoData",
   orcamentos: "orcamentoData",
   receber: "issueDate",
   pagar: "issueDate",

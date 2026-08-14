@@ -261,11 +261,12 @@ enviar() {              # $1 = dataset, $2 = período
   echo "ok $1 $2: $(head -n-1 <<<"$resposta")"
 }
 
-for ds in vendas orcamentos receber pagar caixa; do
+for ds in vendas compras orcamentos receber pagar caixa; do
   enviar "$ds" "$MES_ANTERIOR"
   enviar "$ds" "$MES_ATUAL"
 done
 enviar estoque tudo
+enviar cambio tudo
 ```
 
 Como cada envio é atômico e idempotente, **falhar é seguro**: o período fica

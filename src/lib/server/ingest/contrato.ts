@@ -117,6 +117,24 @@ const linhaPagar = z.object({
   empresaId: textoOpc,
 });
 
+// Compras: nomes em português porque a tabela `compra_items` também está —
+// ela espelha a view `bi_compras`, e traduzir no meio do caminho só criaria
+// mais um dicionário para consultar. Ver o model CompraItem.
+const linhaCompra = z.object({
+  pedidoData: dataISO,
+  pedidoDocumento: texto,
+  pedidoTipo: textoOpc,
+  fornecedorId: textoOpc,
+  fornecedorNome: textoOpc,
+  produtoId: textoOpc,
+  produtoDescricao: textoOpc,
+  produtoQuantidade: numeroOpc,
+  produtoValorTotal: numeroOpc,
+  moedaId: textoOpc,
+  moedaSigla: textoOpc,
+  empresaId: textoOpc,
+});
+
 const linhaCaixa = z.object({
   date: dataISO,
   centroCustoId: textoOpc,
@@ -168,7 +186,9 @@ export interface DefinicaoDataset {
    */
   colunaData: string | null;
   /** Delegate do Prisma Client, para o createMany. */
-  delegate: "saleItem" | "orcamentoItem" | "receivableItem" | "payableItem" | "caixaItem" | "inventoryItem" | "cambio";
+  delegate:
+    | "saleItem" | "orcamentoItem" | "receivableItem" | "payableItem"
+    | "caixaItem" | "inventoryItem" | "cambio" | "compraItem";
   schema: z.ZodType;
   /** Só para a mensagem de erro quando o lote é grande demais. */
   linhasTipicasPorMes: number;
@@ -202,6 +222,14 @@ export const DATASETS = {
     delegate: "payableItem",
     schema: linhaPagar,
     linhasTipicasPorMes: 700,
+  },
+  compras: {
+    tabela: "compra_items",
+    // A data da FATURA da compra, que é o equivalente da emissão nos demais.
+    colunaData: "pedido_data",
+    delegate: "compraItem",
+    schema: linhaCompra,
+    linhasTipicasPorMes: 2_500,
   },
   caixa: {
     tabela: "caixa_items",

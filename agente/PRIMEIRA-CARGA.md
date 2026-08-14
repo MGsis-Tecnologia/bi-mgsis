@@ -177,7 +177,7 @@ grep ERRO /tmp/carga-inicial.log
 ## 9. Conferir antes de automatizar
 
 ```bash
-for ds in vendas orcamentos receber pagar caixa estoque; do
+for ds in vendas compras orcamentos receber pagar caixa estoque cambio; do
   echo "── $ds"
   curl -sS -H "Authorization: Bearer $(sudo cat /etc/mgsis-token)" \
     "https://analytics.mgsis.com/api/ingest/$ds"

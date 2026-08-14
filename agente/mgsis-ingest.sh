@@ -99,6 +99,29 @@ FROM (
 SQL
 }
 
+# Compras: uma linha por item comprado. Não há custo nem desconto — a compra É
+# o custo — nem vendedor ou canal, porque quem compra é a empresa.
+sql_compras() { cat <<'SQL'
+SELECT json_build_object('periodo', :'periodo', 'linhas', COALESCE(json_agg(x), '[]'::json))
+FROM (
+  SELECT to_char(pedido_data, 'YYYY-MM-DD') AS "pedidoData",
+         pedido_documento   AS "pedidoDocumento",
+         pedido_tipo        AS "pedidoTipo",
+         fornecedor_id      AS "fornecedorId",
+         fornecedor_nome    AS "fornecedorNome",
+         produto_id         AS "produtoId",
+         produto_descricao  AS "produtoDescricao",
+         produto_quantidade AS "produtoQuantidade",
+         produto_valor_total AS "produtoValorTotal",
+         moeda_id           AS "moedaId",
+         moeda_sigla        AS "moedaSigla",
+         empresa_id         AS "empresaId"
+  FROM bi_compras
+  WHERE pedido_data >= :'de' AND pedido_data < :'ate'
+) x
+SQL
+}
+
 sql_orcamentos() { cat <<'SQL'
 SELECT json_build_object('periodo', :'periodo', 'linhas', COALESCE(json_agg(x), '[]'::json))
 FROM (
@@ -213,6 +236,7 @@ SQL
 conta_sql() {
   case "$1" in
     vendas)     echo "SELECT count(*) FROM bi_movimento  WHERE pedido_data        >= :'de' AND pedido_data        < :'ate'" ;;
+    compras)    echo "SELECT count(*) FROM bi_compras    WHERE pedido_data        >= :'de' AND pedido_data        < :'ate'" ;;
     orcamentos) echo "SELECT count(*) FROM bi_orcamentos WHERE orcamento_data     >= :'de' AND orcamento_data     < :'ate'" ;;
     receber)    echo "SELECT count(*) FROM bi_receber    WHERE data_emissao       >= :'de' AND data_emissao       < :'ate'" ;;
     pagar)      echo "SELECT count(*) FROM bi_pagar      WHERE data_emissao       >= :'de' AND data_emissao       < :'ate'" ;;
@@ -222,7 +246,7 @@ conta_sql() {
   esac
 }
 
-DATASETS_PERIODO=(vendas orcamentos receber pagar caixa)
+DATASETS_PERIODO=(vendas compras orcamentos receber pagar caixa)
 
 # ─── Envio ───────────────────────────────────────────────────────────────────
 
@@ -356,7 +380,7 @@ done
 
 if [[ -n "$SO_DATASET" ]]; then
   case "$SO_DATASET" in
-    vendas|orcamentos|receber|pagar|caixa|estoque|cambio) ;;
+    vendas|compras|orcamentos|receber|pagar|caixa|estoque|cambio) ;;
     *) erro "dataset inválido: $SO_DATASET"; exit 64 ;;
   esac
 fi

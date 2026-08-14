@@ -25,6 +25,7 @@ interface Ctx {
 /** Nome na API → kind usado pelo `dataset_meta`, que é herança da importação CSV. */
 const KIND_DA_META: Record<NomeDataset, DatasetKind> = {
   vendas: "sales",
+  compras: "compras",
   orcamentos: "orcamento",
   receber: "receivable",
   pagar: "payable",
