@@ -9,12 +9,24 @@
 --
 -- Notas sobre o comando abaixo:
 --   `cambio_taxa` significa "1 unidade de moeda_origem equivale a cambio_taxa
---   unidades de moeda_destino". Se o ERP guardar ao contrário, NÃO é preciso
---   corrigir aqui: o servidor aceita o par em qualquer sentido e normaliza.
---   E se o sentido estiver invertido de fato, ele recusa a cotação e diz —
---   há uma checagem de ordem de grandeza por par (US$→G$ precisa cair entre
---   1.000 e 50.000), justamente porque taxa invertida não gera erro nenhum no
---   banco, só um relatório milhares de vezes maior ou menor.
+--   unidades de moeda_destino".
+--
+--   **As colunas do ERP entram TROCADAS, e é de propósito.** Neste ERP a
+--   cotação está expressa em guaranis: a linha (moeda_id=3, moeda_destino_id=2,
+--   cambio_produto=7350) quer dizer "1 dólar custa 7.350 guaranis" — o
+--   `moeda_destino_id` é a moeda ESTRANGEIRA e o `moeda_id` é a moeda em que o
+--   preço está. Copiando na ordem das colunas, a view afirmava que 1 guarani
+--   valia 7.350 dólares.
+--
+--   Como conferir na sua base, sem depender desta explicação: rode
+--   `SELECT moeda_id, moeda_destino_id, min(cambio_produto), max(cambio_produto)
+--    FROM cambio GROUP BY 1,2`. O par que mostrar 6.000–9.000 é o dólar, e a
+--   coluna que contém a moeda do dólar é a que tem que virar `moeda_origem`.
+--
+--   Se o sentido estiver invertido, o servidor recusa a cotação e diz — há uma
+--   checagem de ordem de grandeza por par (US$→G$ precisa cair entre 1.000 e
+--   50.000), justamente porque taxa invertida não gera erro nenhum no banco, só
+--   um relatório milhares de vezes maior ou menor.
 --
 --   A origem é `cambio_produto`, que no ERP é a cotação de venda. Se existir
 --   também uma de compra, a escolha está feita: o plano decidiu UMA cotação
@@ -27,8 +39,8 @@
 CREATE OR REPLACE VIEW bi_cambio AS
 SELECT
     c.cambio_data                              AS cambio_data,
-    COALESCE(c.moeda_id::text, '')             AS moeda_origem,
-    COALESCE(c.moeda_destino_id::text, '')     AS moeda_destino,
+    COALESCE(c.moeda_destino_id::text, '')     AS moeda_origem,
+    COALESCE(c.moeda_id::text, '')             AS moeda_destino,
     c.cambio_produto                           AS cambio_taxa
 FROM cambio c
 WHERE c.cambio_data IS NOT NULL

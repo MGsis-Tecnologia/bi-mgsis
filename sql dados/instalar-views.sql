@@ -202,8 +202,8 @@ GROUP BY e.produto_id, p.produto_descricao, p.produto_fabricante,
 CREATE OR REPLACE VIEW bi_cambio AS
 SELECT
     c.cambio_data                              AS cambio_data,
-    COALESCE(c.moeda_id::text, '')             AS moeda_origem,
-    COALESCE(c.moeda_destino_id::text, '')     AS moeda_destino,
+    COALESCE(c.moeda_destino_id::text, '')     AS moeda_origem,
+    COALESCE(c.moeda_id::text, '')             AS moeda_destino,
     c.cambio_produto                           AS cambio_taxa
 FROM cambio c
 WHERE c.cambio_data IS NOT NULL

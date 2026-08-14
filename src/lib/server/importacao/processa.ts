@@ -232,6 +232,21 @@ export async function processaArquivo(
             const cru = extraido.itens as LinhaCambio[];
             pivo ??= detectaPivo(cru);
             const { validas, problemas } = normaliza(cru, pivo ?? "");
+
+            // Recusa em massa é problema de leiaute, não de linha solta: o
+            // arquivo veio com origem e destino trocados. Importar o resto
+            // seria pior do que não importar nada — as moedas que a checagem
+            // de faixa não conhece passariam invertidas, e ninguém veria.
+            // Como está tudo numa transação, recusar aqui não deixa metade.
+            if (problemas.length > 0 && problemas.length >= cru.length / 4) {
+              throw new ErroImportacao(
+                `${problemas.length} de ${cru.length} cotações recusadas por ordem de grandeza — ` +
+                  `o arquivo parece estar com origem e destino trocados. Confira a view ` +
+                  `bi_cambio (a coluna do dólar é que tem de virar moeda_origem). ` +
+                  `Exemplo: ${problemas[0]!.motivo}`
+              );
+            }
+
             extraido.itens = validas;
             ignoradas += problemas.length;
             for (const p of problemas.slice(0, 5)) {

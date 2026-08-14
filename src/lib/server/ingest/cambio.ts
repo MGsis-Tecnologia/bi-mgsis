@@ -47,10 +47,27 @@ const FAIXAS: Record<string, [number, number]> = {
   "2>3": [1_000, 50_000], // 1 US$ em guaranis
   "1>3": [200, 10_000], // 1 R$  em guaranis
   "2>1": [0.5, 50], // 1 US$ em reais
+  // Os mesmos pares no sentido oposto. Sem eles, uma tabela inteira invertida
+  // não encostava em faixa nenhuma: as três acima só falam do sentido certo,
+  // então a cotação errada passava justamente por estar errada.
+  "3>2": [0.00002, 0.001], // 1 G$ em dólares
+  "3>1": [0.0001, 0.005], // 1 G$ em reais
+  "1>2": [0.02, 2], // 1 R$ em dólares
 };
 
 function chaveFaixa(origem: string, destino: string): string {
   return `${origem}>${destino}`;
+}
+
+/** Motivo da recusa, ou `null` quando a taxa está numa ordem de grandeza plausível. */
+function foraDaFaixa(l: LinhaCambio): string | null {
+  const faixa = FAIXAS[chaveFaixa(l.moedaOrigem, l.moedaDestino)];
+  if (!faixa || (l.taxa >= faixa[0] && l.taxa <= faixa[1])) return null;
+  return (
+    `taxa ${l.taxa} fora da faixa esperada para ` +
+    `${l.moedaOrigem}→${l.moedaDestino} (${faixa[0]}–${faixa[1]}) — ` +
+    `sentido invertido ou erro de escala`
+  );
 }
 
 /**
@@ -65,9 +82,23 @@ function chaveFaixa(origem: string, destino: string): string {
  * exibição funciona sobre o mesmo pivô.
  */
 export function detectaPivo(linhas: LinhaCambio[]): string | null {
+  // Conta os DOIS lados, não só o destino.
+  //
+  // O pivô é o eixo da tabela: a moeda que aparece em todas as cotações,
+  // enquanto as outras aparecem só na sua. Contar só o destino supõe que a
+  // origem do arquivo já veio no sentido certo — e quando ela vem trocada, as
+  // moedas estrangeiras empatam no destino e o desempate escolhe uma delas.
+  // Foi o que aconteceu com a primeira exportação deste cliente: 4 pares com
+  // 1.503 cotações cada, guarani sempre na origem, e o pivô saiu Real. A
+  // reconstrução então derivou só um par e o dólar ficou sem cotação nenhuma.
+  //
+  // Contando os dois lados, o eixo ganha por 4 a 1 e o sentido trocado vira
+  // problema de normalização — que a checagem de faixa recusa e relata —, em
+  // vez de virar uma tabela errada e silenciosa.
   const contagem = new Map<string, number>();
   for (const l of linhas) {
     contagem.set(l.moedaDestino, (contagem.get(l.moedaDestino) ?? 0) + 1);
+    contagem.set(l.moedaOrigem, (contagem.get(l.moedaOrigem) ?? 0) + 1);
   }
   let pivo: string | null = null;
   let melhor = -1;
@@ -117,7 +148,17 @@ export function normaliza(
     // bater com o ERP. A `cambio_diario` o ignora e deriva aquele sentido do
     // pivô — é o que impede dois caminhos de conversão darem números
     // diferentes. Ver a nota no topo.
+    //
+    // Mas passa pela faixa igual: era o buraco por onde entrava cotação
+    // invertida sem ninguém ver. A linha não vai para a `cambio_diario`, e
+    // mesmo assim é a trilha de auditoria — guardar um número que se sabe
+    // impossível não ajuda ninguém.
     if (l.moedaOrigem !== pivo && l.moedaDestino !== pivo) {
+      const fora = foraDaFaixa(l);
+      if (fora) {
+        problemas.push({ indice: i, motivo: fora });
+        continue;
+      }
       validas.push(l);
       continue;
     }
@@ -128,15 +169,9 @@ export function normaliza(
         ? l
         : { data: l.data, moedaOrigem: l.moedaDestino, moedaDestino: pivo, taxa: 1 / l.taxa };
 
-    const faixa = FAIXAS[chaveFaixa(canonica.moedaOrigem, canonica.moedaDestino)];
-    if (faixa && (canonica.taxa < faixa[0] || canonica.taxa > faixa[1])) {
-      problemas.push({
-        indice: i,
-        motivo:
-          `taxa ${canonica.taxa} fora da faixa esperada para ` +
-          `${canonica.moedaOrigem}→${canonica.moedaDestino} (${faixa[0]}–${faixa[1]}) — ` +
-          `sentido invertido ou erro de escala`,
-      });
+    const fora = foraDaFaixa(canonica);
+    if (fora) {
+      problemas.push({ indice: i, motivo: fora });
       continue;
     }
 
