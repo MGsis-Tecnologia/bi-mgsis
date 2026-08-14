@@ -63,7 +63,42 @@ export async function deleteMeta(db: PrismaClient, kind: DatasetKind): Promise<v
 // Row operations — clear
 // ---------------------------------------------------------------------------
 
+/**
+ * Nome do delegate do Prisma para cada dataset — só para a checagem abaixo.
+ * As operações continuam no `switch`, que é o que dá tipo a cada `createMany`.
+ */
+const DELEGATE: Record<DatasetKind, string> = {
+  sales: "saleItem",
+  receivable: "receivableItem",
+  payable: "payableItem",
+  inventory: "inventoryItem",
+  caixa: "caixaItem",
+  orcamento: "orcamentoItem",
+  compras: "compraItem",
+  cambio: "cambio",
+};
+
+/**
+ * Falha cedo e com instrução quando o Prisma Client não conhece o model.
+ *
+ * Acontece toda vez que um dataset novo entra: o `prisma generate` não rodou,
+ * ou rodou com o servidor no ar e o processo ficou com o client velho em
+ * memória. Sem isto, a importação morre em "Cannot read properties of
+ * undefined (reading 'deleteMany')" — que não diz nem qual model falta nem o
+ * que fazer, e some assim que o servidor reinicia.
+ */
+function exigeDelegate(db: PrismaClient, kind: DatasetKind): void {
+  const nome = DELEGATE[kind];
+  if (!(db as unknown as Record<string, unknown>)[nome]) {
+    throw new Error(
+      `O Prisma Client não tem o model "${nome}" (dataset ${kind}). ` +
+        `Rode "npx prisma generate" e reinicie o servidor.`
+    );
+  }
+}
+
 export async function clearRows(db: PrismaClient, kind: DatasetKind): Promise<void> {
+  exigeDelegate(db, kind);
   switch (kind) {
     case "sales":      await db.saleItem.deleteMany({}); break;
     case "receivable": await db.receivableItem.deleteMany({}); break;

@@ -109,13 +109,28 @@ const COMPRAS_REQUIRED_COLS = [
   "moeda_id",
 ] as const;
 
-// Required column names for the CAMBIO layout (cotações do ERP)
-const CAMBIO_REQUIRED_COLS = [
-  "cambio_data",
-  "moeda_origem",
-  "moeda_destino",
-  "cambio_taxa",
-] as const;
+/**
+ * Câmbio: cada campo aceita mais de um nome de coluna.
+ *
+ * A view `bi_cambio` do repositório exporta `cambio_data / moeda_origem /
+ * moeda_destino / cambio_taxa`, mas a que está instalada no ERP do cliente é
+ * anterior a ela e usa `data / moedaorigem / moedadestino / cambiovenda`.
+ * Exigir uma grafia só obrigaria a reinstalar a view antes de qualquer
+ * importação — e o arquivo que já está no disco não serviria para nada.
+ *
+ * A ordem importa: o primeiro nome encontrado vence.
+ */
+const CAMBIO_COLS = {
+  data: ["cambio_data", "data", "fecha"],
+  moedaOrigem: ["moeda_origem", "moedaorigem", "moeda_id"],
+  moedaDestino: ["moeda_destino", "moedadestino", "moeda_destino_id"],
+  taxa: ["cambio_taxa", "cambiovenda", "cambio_produto", "taxa"],
+} as const;
+
+/** Primeira coluna presente no arquivo, entre os nomes aceitos. */
+function primeiraColuna(colMap: Record<string, string>, nomes: readonly string[]): string | null {
+  return nomes.find((n) => n in colMap) ?? null;
+}
 
 export type DatasetKind =
   | "sales" | "receivable" | "payable" | "inventory" | "caixa" | "orcamento"
@@ -246,7 +261,10 @@ export function processRows(rawRows: Record<string, unknown>[], filename: string
   //    que separa os dois é o `fornecedor_id`. Testado depois de vendas, todo
   //    arquivo de compras seria lido como venda — com fornecedor virando
   //    cliente e a compra entrando como faturamento.
-  if ("cambio_taxa" in colMap || ("moeda_origem" in colMap && "moeda_destino" in colMap)) {
+  const temTaxa = primeiraColuna(colMap, CAMBIO_COLS.taxa);
+  const temOrigem = primeiraColuna(colMap, CAMBIO_COLS.moedaOrigem);
+  const temDestino = primeiraColuna(colMap, CAMBIO_COLS.moedaDestino);
+  if (temTaxa && temOrigem && temDestino) {
     return processCambioRows(rawRows, colMap, filename);
   }
   if ("fornecedor_id" in colMap && ("pedido_documento" in colMap || "pedido_data" in colMap)) {
@@ -272,9 +290,19 @@ export function processRows(rawRows: Record<string, unknown>[], filename: string
     return processCaixaRows(rawRows, colMap, filename);
   }
 
-  console.warn("[csv-parser] leiaute NÃO reconhecido. Colunas:", Object.keys(colMap));
+  // As colunas do arquivo vão na mensagem: sem elas, "não reconhecido" manda
+  // conferir o leiaute sem dizer o que foi lido — e a diferença costuma ser
+  // uma coluna com outro nome, que se vê de relance quando as duas listas
+  // estão lado a lado.
+  const encontradas = Object.keys(colMap);
+  console.warn("[csv-parser] leiaute NÃO reconhecido. Colunas:", encontradas);
   return errorResult([
-    "Leiaute não reconhecido. O arquivo deve conter colunas de Vendas (pedido_documento), Compras (fornecedor_id), Contas a Receber (pessoa_cliente_id), Contas a Pagar (pessoa_fornecedor_id), Estoque (estoque_item), Caixa (caixa_valor_documento), Orçamentos (orcamento_id) ou Câmbio (cambio_taxa).",
+    "Leiaute não reconhecido. O arquivo deve conter colunas de Vendas (pedido_documento), " +
+      "Compras (fornecedor_id), Contas a Receber (pessoa_cliente_id), Contas a Pagar " +
+      "(pessoa_fornecedor_id), Estoque (estoque_item), Caixa (caixa_valor_documento), " +
+      "Orçamentos (orcamento_id) ou Câmbio (cambio_taxa). " +
+      `Colunas encontradas no arquivo: ${encontradas.slice(0, 30).join(", ")}` +
+      (encontradas.length > 30 ? `, … (+${encontradas.length - 30})` : ""),
   ]);
 }
 
@@ -940,9 +968,17 @@ function processCambioRows(
   colMap: Record<string, string>,
   filename: string
 ): ParseResult {
-  const missing = CAMBIO_REQUIRED_COLS.filter((c) => !(c in colMap));
-  if (missing.length > 0) {
-    return errorResult([`Colunas obrigatórias ausentes (Câmbio): ${missing.join(", ")}`]);
+  const col = {
+    data: primeiraColuna(colMap, CAMBIO_COLS.data),
+    moedaOrigem: primeiraColuna(colMap, CAMBIO_COLS.moedaOrigem),
+    moedaDestino: primeiraColuna(colMap, CAMBIO_COLS.moedaDestino),
+    taxa: primeiraColuna(colMap, CAMBIO_COLS.taxa),
+  };
+  const faltando = Object.entries(col)
+    .filter(([, c]) => c === null)
+    .map(([campo]) => `${campo} (${CAMBIO_COLS[campo as keyof typeof CAMBIO_COLS].join(" ou ")})`);
+  if (faltando.length > 0) {
+    return errorResult([`Colunas obrigatórias ausentes (Câmbio): ${faltando.join(", ")}`]);
   }
 
   const items: CambioLinha[] = [];
@@ -954,24 +990,24 @@ function processCambioRows(
     rowNum++;
     const row = mapRow(rawRow, colMap);
 
-    const data = parseDate(String(row["cambio_data"] ?? ""));
+    const data = parseDate(String(row[col.data!] ?? ""));
     if (!data) {
-      warnings.push(`Linha ${rowNum}: data inválida "${row["cambio_data"]}" — ignorada.`);
+      warnings.push(`Linha ${rowNum}: data inválida "${row[col.data!]}" — ignorada.`);
       skipped++;
       continue;
     }
 
-    const moedaOrigem = String(row["moeda_origem"] ?? "").trim();
-    const moedaDestino = String(row["moeda_destino"] ?? "").trim();
+    const moedaOrigem = String(row[col.moedaOrigem!] ?? "").trim();
+    const moedaDestino = String(row[col.moedaDestino!] ?? "").trim();
     if (!moedaOrigem || !moedaDestino) {
       warnings.push(`Linha ${rowNum}: moeda de origem ou destino vazia — ignorada.`);
       skipped++;
       continue;
     }
 
-    const taxa = parseNumber(row["cambio_taxa"] as string);
+    const taxa = parseNumber(row[col.taxa!] as string);
     if (!(taxa > 0)) {
-      warnings.push(`Linha ${rowNum}: taxa "${row["cambio_taxa"]}" não é positiva — ignorada.`);
+      warnings.push(`Linha ${rowNum}: taxa "${row[col.taxa!]}" não é positiva — ignorada.`);
       skipped++;
       continue;
     }
