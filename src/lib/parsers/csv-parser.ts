@@ -2,6 +2,8 @@ import Papa from "papaparse";
 import * as XLSX from "xlsx";
 import type {
   CaixaItem,
+  CambioLinha,
+  CompraLineItem,
   InventoryItem,
   OrcamentoLineItem,
   OrderLineItem,
@@ -9,6 +11,8 @@ import type {
   PayableItem,
   ReceivableItem,
   StoredCaixa,
+  StoredCambio,
+  StoredCompras,
   StoredDataset,
   StoredInventory,
   StoredOrcamento,
@@ -94,16 +98,44 @@ const ORCAMENTO_REQUIRED_COLS = [
   "item_total",
 ] as const;
 
-export type DatasetKind = "sales" | "receivable" | "payable" | "inventory" | "caixa" | "orcamento";
+// Required column names for the COMPRAS layout (movimento de compra)
+const COMPRAS_REQUIRED_COLS = [
+  "pedido_data",
+  "pedido_documento",
+  "fornecedor_id",
+  "produto_id",
+  "produto_quantidade",
+  "produto_valor_total",
+  "moeda_id",
+] as const;
 
+// Required column names for the CAMBIO layout (cotações do ERP)
+const CAMBIO_REQUIRED_COLS = [
+  "cambio_data",
+  "moeda_origem",
+  "moeda_destino",
+  "cambio_taxa",
+] as const;
+
+export type DatasetKind =
+  | "sales" | "receivable" | "payable" | "inventory" | "caixa" | "orcamento"
+  | "compras" | "cambio";
+
+/**
+ * Um resultado carrega UM payload só — o que corresponde ao `kind`. Os demais
+ * campos são omitidos, e é por isso que são opcionais: obrigá-los a existir
+ * como `null` só encheria cada `return` de ruído.
+ */
 export interface ParseResult {
   kind: DatasetKind | null;
-  dataset: StoredDataset | null;          // populated when kind === "sales"
-  receivables: StoredReceivables | null;  // populated when kind === "receivable"
-  payables: StoredPayables | null;        // populated when kind === "payable"
-  inventory: StoredInventory | null;      // populated when kind === "inventory"
-  caixa: StoredCaixa | null;             // populated when kind === "caixa"
-  orcamento: StoredOrcamento | null;      // populated when kind === "orcamento"
+  dataset?: StoredDataset | null;          // populated when kind === "sales"
+  receivables?: StoredReceivables | null;  // populated when kind === "receivable"
+  payables?: StoredPayables | null;        // populated when kind === "payable"
+  inventory?: StoredInventory | null;      // populated when kind === "inventory"
+  caixa?: StoredCaixa | null;             // populated when kind === "caixa"
+  orcamento?: StoredOrcamento | null;      // populated when kind === "orcamento"
+  compras?: StoredCompras | null;          // populated when kind === "compras"
+  cambio?: StoredCambio | null;            // populated when kind === "cambio"
   errors: string[];
   warnings: string[];
   skipped: number;
@@ -206,6 +238,20 @@ export function processRows(rawRows: Record<string, unknown>[], filename: string
   console.debug("[csv-parser] colunas detectadas:", Object.keys(colMap));
 
   // Layout detection — discriminate by key columns
+  //
+  // Câmbio e compras vêm ANTES dos demais de propósito:
+  //  - câmbio não compartilha coluna com ninguém, então sai na frente e não
+  //    depende da ordem do resto;
+  //  - compras usa `pedido_documento`/`pedido_tipo` iguais aos de vendas, e o
+  //    que separa os dois é o `fornecedor_id`. Testado depois de vendas, todo
+  //    arquivo de compras seria lido como venda — com fornecedor virando
+  //    cliente e a compra entrando como faturamento.
+  if ("cambio_taxa" in colMap || ("moeda_origem" in colMap && "moeda_destino" in colMap)) {
+    return processCambioRows(rawRows, colMap, filename);
+  }
+  if ("fornecedor_id" in colMap && ("pedido_documento" in colMap || "pedido_data" in colMap)) {
+    return processComprasRows(rawRows, colMap, filename);
+  }
   if ("pessoa_fornecedor_id" in colMap) {
     return processPayableRows(rawRows, colMap, filename);
   }
@@ -228,7 +274,7 @@ export function processRows(rawRows: Record<string, unknown>[], filename: string
 
   console.warn("[csv-parser] leiaute NÃO reconhecido. Colunas:", Object.keys(colMap));
   return errorResult([
-    "Leiaute não reconhecido. O arquivo deve conter colunas de Vendas (pedido_documento), Contas a Receber (pessoa_cliente_id), Contas a Pagar (pessoa_fornecedor_id), Estoque (estoque_item), Caixa (caixa_valor_documento) ou Orçamentos (orcamento_id).",
+    "Leiaute não reconhecido. O arquivo deve conter colunas de Vendas (pedido_documento), Compras (fornecedor_id), Contas a Receber (pessoa_cliente_id), Contas a Pagar (pessoa_fornecedor_id), Estoque (estoque_item), Caixa (caixa_valor_documento), Orçamentos (orcamento_id) ou Câmbio (cambio_taxa).",
   ]);
 }
 
@@ -805,6 +851,141 @@ function processOrcamentoRows(
       filename,
       rowCount: items.length,
     },
+    errors: [],
+    warnings: warnings.slice(0, 20),
+    skipped,
+  };
+}
+
+// ─── COMPRAS (movimento de compra) ───────────────────────────────────────────
+
+function processComprasRows(
+  rawRows: Record<string, unknown>[],
+  colMap: Record<string, string>,
+  filename: string
+): ParseResult {
+  const missing = COMPRAS_REQUIRED_COLS.filter((c) => !(c in colMap));
+  if (missing.length > 0) {
+    return errorResult([`Colunas obrigatórias ausentes (Compras): ${missing.join(", ")}`]);
+  }
+
+  const items: CompraLineItem[] = [];
+  const warnings: string[] = [];
+  let skipped = 0;
+  let rowNum = 1;
+
+  for (const rawRow of rawRows) {
+    rowNum++;
+    const row = mapRow(rawRow, colMap);
+
+    // A view já filtra os tipos que interessam; aqui só normalizamos a grafia
+    // (acento, caixa) para o filtro de devolução da tela funcionar sempre.
+    const tipo = String(row["pedido_tipo"] ?? "COMPRA")
+      .trim().toUpperCase().normalize("NFD").replace(/[^\x20-\x7E]/g, "") || "COMPRA";
+
+    const pedidoDocumento = String(row["pedido_documento"] ?? "").trim();
+    const produtoId = String(row["produto_id"] ?? "").trim();
+    if (!pedidoDocumento || !produtoId) {
+      warnings.push(`Linha ${rowNum}: compra ou produto vazio — ignorada.`);
+      skipped++;
+      continue;
+    }
+
+    const pedidoData = parseDate(String(row["pedido_data"] ?? ""));
+    if (!pedidoData) {
+      warnings.push(`Linha ${rowNum}: data inválida "${row["pedido_data"]}" — ignorada.`);
+      skipped++;
+      continue;
+    }
+
+    items.push({
+      pedidoData,
+      pedidoDocumento,
+      pedidoTipo: tipo,
+      fornecedorId:      String(row["fornecedor_id"] ?? "").trim(),
+      fornecedorNome:    String(row["fornecedor_nome"] ?? "").trim(),
+      produtoId,
+      produtoDescricao:  String(row["produto_descricao"] ?? "").trim(),
+      produtoQuantidade: parseNumber(row["produto_quantidade"] as string),
+      produtoValorTotal: parseNumber(row["produto_valor_total"] as string),
+      moedaId:           String(row["moeda_id"] ?? "1").trim(),
+      moedaSigla:        String(row["moeda_sigla"] ?? "R$").trim(),
+      empresaId:         String(row["empresa_id"] ?? "").trim(),
+    });
+  }
+
+  if (items.length === 0) {
+    return errorResult(["Nenhum item de compra válido encontrado."], warnings, skipped);
+  }
+
+  return {
+    kind: "compras",
+    compras: { items, importedAt: new Date().toISOString(), filename, rowCount: items.length },
+    errors: [],
+    warnings: warnings.slice(0, 20),
+    skipped,
+  };
+}
+
+// ─── CAMBIO (cotações do ERP) ────────────────────────────────────────────────
+
+/**
+ * Só lê e valida a forma. A normalização de sentido (X → pivô), o descarte de
+ * taxa fora de faixa e a reconstrução da tabela densa ficam no servidor, em
+ * `server/ingest/cambio.ts` — é lá que existe a visão do arquivo inteiro, que é
+ * o que a dedução do pivô exige. Aqui, cada lote é só um pedaço.
+ */
+function processCambioRows(
+  rawRows: Record<string, unknown>[],
+  colMap: Record<string, string>,
+  filename: string
+): ParseResult {
+  const missing = CAMBIO_REQUIRED_COLS.filter((c) => !(c in colMap));
+  if (missing.length > 0) {
+    return errorResult([`Colunas obrigatórias ausentes (Câmbio): ${missing.join(", ")}`]);
+  }
+
+  const items: CambioLinha[] = [];
+  const warnings: string[] = [];
+  let skipped = 0;
+  let rowNum = 1;
+
+  for (const rawRow of rawRows) {
+    rowNum++;
+    const row = mapRow(rawRow, colMap);
+
+    const data = parseDate(String(row["cambio_data"] ?? ""));
+    if (!data) {
+      warnings.push(`Linha ${rowNum}: data inválida "${row["cambio_data"]}" — ignorada.`);
+      skipped++;
+      continue;
+    }
+
+    const moedaOrigem = String(row["moeda_origem"] ?? "").trim();
+    const moedaDestino = String(row["moeda_destino"] ?? "").trim();
+    if (!moedaOrigem || !moedaDestino) {
+      warnings.push(`Linha ${rowNum}: moeda de origem ou destino vazia — ignorada.`);
+      skipped++;
+      continue;
+    }
+
+    const taxa = parseNumber(row["cambio_taxa"] as string);
+    if (!(taxa > 0)) {
+      warnings.push(`Linha ${rowNum}: taxa "${row["cambio_taxa"]}" não é positiva — ignorada.`);
+      skipped++;
+      continue;
+    }
+
+    items.push({ data, moedaOrigem, moedaDestino, taxa });
+  }
+
+  if (items.length === 0) {
+    return errorResult(["Nenhuma cotação válida encontrada."], warnings, skipped);
+  }
+
+  return {
+    kind: "cambio",
+    cambio: { items, importedAt: new Date().toISOString(), filename, rowCount: items.length },
     errors: [],
     warnings: warnings.slice(0, 20),
     skipped,

@@ -217,6 +217,53 @@ export interface StoredOrcamento {
   rowCount: number;
 }
 
+// ─── Compras (movimento de compra) ───────────────────────────────────────────
+// Uma linha por ITEM comprado, igual ao leiaute da view bi_compras. Os nomes
+// espelham o model Prisma CompraItem — a linha vai do parser ao banco sem
+// mapeamento intermediário, como nos demais datasets.
+export interface CompraLineItem {
+  pedidoData: string;        // ISO YYYY-MM-DD
+  pedidoDocumento: string;
+  pedidoTipo: string;        // COMPRA | DEVOLUCAO COMPRA | …
+  fornecedorId: string;
+  fornecedorNome: string;
+  produtoId: string;
+  produtoDescricao: string;
+  produtoQuantidade: number;
+  produtoValorTotal: number; // na moeda de moedaId
+  moedaId: string;           // "1" | "2" | "3"
+  moedaSigla: string;
+  empresaId: string;
+}
+
+export interface StoredCompras {
+  items: CompraLineItem[];
+  importedAt: string;    // ISO
+  filename: string;
+  rowCount: number;
+}
+
+// ─── Câmbio (cotações do ERP) ────────────────────────────────────────────────
+// Camada de auditoria: o que o ERP mandou, sem alteração. A tabela densa que as
+// consultas usam (`cambio_diario`) é derivada daqui — ver server/ingest/cambio.
+//
+// `taxa`: 1 unidade de `moedaOrigem` equivale a `taxa` unidades de
+// `moedaDestino`. Deixar isso implícito é a ambiguidade que mais gera valor
+// invertido em relatório.
+export interface CambioLinha {
+  data: string;          // ISO YYYY-MM-DD
+  moedaOrigem: string;
+  moedaDestino: string;
+  taxa: number;
+}
+
+export interface StoredCambio {
+  items: CambioLinha[];
+  importedAt: string;    // ISO
+  filename: string;
+  rowCount: number;
+}
+
 // ─── Empresa (matriz / filiais) ──────────────────────────────────────────────
 // O rótulo exibido é montado no idioma ativo (chaves filters.empresa.*).
 export type EmpresaFilter = "all" | string;

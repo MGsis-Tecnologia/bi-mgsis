@@ -292,3 +292,34 @@ model OrcamentoItem {
   @@index([vendedorId], map: "idx_orcamento_vendedor")
   @@map("orcamento_items")
 }
+
+// Movimento de compras — uma linha por ITEM comprado, espelhando bi_compras.
+//
+// Os nomes das colunas são os da view do ERP (`pedido_data`, `fornecedor_id`,
+// …), como em `orcamento_items` e ao contrário de `sale_items`, que traduz.
+// É deliberado: o módulo de análise de compras já foi escrito contra esse
+// vocabulário, e traduzir aqui só criaria um dicionário a mais para consultar.
+//
+// Não há custo nem desconto: a compra É o custo. Também não há vendedor nem
+// canal — quem compra é a empresa.
+model CompraItem {
+  id                Int    @id @default(autoincrement())
+  pedidoData        String @default("") @map("pedido_data")
+  pedidoDocumento   String @default("") @map("pedido_documento")
+  pedidoTipo        String @default("COMPRA") @map("pedido_tipo")
+  fornecedorId      String @default("") @map("fornecedor_id")
+  fornecedorNome    String @default("") @map("fornecedor_nome")
+  produtoId         String @default("") @map("produto_id")
+  produtoDescricao  String @default("") @map("produto_descricao")
+  produtoQuantidade Float  @default(0) @map("produto_quantidade")
+  produtoValorTotal Float  @default(0) @map("produto_valor_total")
+  moedaId           String @default("1") @map("moeda_id")
+  moedaSigla        String @default("R$") @map("moeda_sigla")
+  empresaId         String @default("") @map("empresa_id")
+
+  @@index([pedidoData], map: "idx_compra_data")
+  @@index([fornecedorId], map: "idx_compra_fornecedor")
+  @@index([produtoId], map: "idx_compra_produto")
+  @@index([empresaId], map: "idx_compra_empresa")
+  @@map("compra_items")
+}

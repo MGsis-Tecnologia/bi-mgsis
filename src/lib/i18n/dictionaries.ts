@@ -458,7 +458,7 @@ export const dictionaries = {
     "importacao.status.error": "Falhou",
 
     // Importação — upload, fila e dados importados
-    "importacao.upload.kinds": "Vendas, Contas a Receber, Contas a Pagar, Estoque, Caixa/Banco e Orçamentos — o tipo é identificado automaticamente pelas colunas.",
+    "importacao.upload.kinds": "Vendas, Compras, Contas a Receber, Contas a Pagar, Estoque, Caixa/Banco, Orçamentos e Câmbio — o tipo é identificado automaticamente pelas colunas.",
     "importacao.upload.multi": "Selecione vários arquivos de uma vez para importar em fila.",
     "importacao.queue.title": "Fila de importação",
     "importacao.queue.progress": "{{done}}/{{total}} concluídos",
@@ -481,12 +481,16 @@ export const dictionaries = {
     "importacao.kind.inventory": "Estoque",
     "importacao.kind.caixa": "Caixa / Banco",
     "importacao.kind.orcamento": "Orçamentos",
+    "importacao.kind.compras": "Compras",
+    "importacao.kind.cambio": "Câmbio",
     "importacao.unit.sales": "linhas",
     "importacao.unit.receivable": "títulos",
     "importacao.unit.payable": "títulos",
     "importacao.unit.inventory": "SKUs",
     "importacao.unit.caixa": "movimentações",
     "importacao.unit.orcamento": "itens",
+    "importacao.unit.compras": "itens",
+    "importacao.unit.cambio": "cotações",
 
     // Importação — tabelas de leiaute
     "importacao.schema.col": "Coluna",
@@ -509,12 +513,16 @@ export const dictionaries = {
     "importacao.schema.heading.inventory": "Leiaute · Estoque",
     "importacao.schema.heading.caixa": "Leiaute · Caixa / Banco",
     "importacao.schema.heading.orcamento": "Leiaute · Orçamentos (Prospecção)",
+    "importacao.schema.heading.compras": "Leiaute · Compras",
+    "importacao.schema.heading.cambio": "Leiaute · Câmbio (moedas)",
     "importacao.schema.note.sales": "Datas: DD/MM/AAAA · Decimais: vírgula (padrão BR) · moeda_id: 1=R$ 2=US$ 3=G$ · importa linhas com pedido_tipo = VENDA e DEVOLUCAO VENDA (as devoluções ficam armazenadas, mas todos os indicadores atuais consideram apenas VENDA). empresa_id identifica a matriz/filial e alimenta o filtro global de empresa (presente em todos os leiautes). item_desconto (opcional) é o desconto da linha; produto_valor_total já é líquido, então a venda bruta = total + desconto.",
     "importacao.schema.note.receivable": "Cada linha é um título. data_recebimento preenchida = título recebido; vazia = pendente. pessoa_cidade é opcional.",
     "importacao.schema.note.payable": "Cada linha é uma obrigação de pagamento. data_pagamento preenchida = pago; vazia = pendente.",
     "importacao.schema.note.inventory": "Snapshot do inventário (uma linha por SKU/empresa). produto_id liga ao item de venda. valor_estoque é o custo total do estoque na moeda indicada por moeda_id (1=R$ 2=US$ 3=G$); respeita o seletor global de moeda como as demais áreas. Se moeda_id ausente, assume R$.",
     "importacao.schema.note.caixa": "Cada linha é uma movimentação. caixa_valor_documento negativo = saída (despesa); positivo = entrada (ingresso). Suporta hierarquia de plano de contas pelo campo plano_conta_codigo (ex: 1.1.01).",
     "importacao.schema.note.orcamento": "Cada linha é um item de orçamento. O status vem de status_orcamento (Confirmado/Pendente) ou de orcamento_confirmado (true/false) — a exportação padrão da view bi_orcamentos usa status_orcamento. orcamento_data_confirmacao é preenchida quando confirmado. item_quantidade_confirmada = quantidade que virou venda. produto_fabricante é opcional: quando ausente, a Prospecção busca o código pelo produto_id no dataset de Estoque.",
+    "importacao.schema.note.compras": "Cada linha é um item comprado — o cabeçalho da compra se repete em cada uma, como na view bi_compras. pedido_data é a data da fatura. produto_valor_total já é o custo da linha na moeda de moeda_id; não há desconto nem vendedor. empresa_id identifica a matriz/filial. O que separa este leiaute do de Vendas é o fornecedor_id.",
+    "importacao.schema.note.cambio": "Uma linha por cotação: em cambio_data, 1 unidade de moeda_origem valia cambio_taxa unidades de moeda_destino. Não separe compra e venda — o sentido inverso é calculado como 1/taxa. O arquivo substitui o câmbio inteiro e a tabela de cotações diárias é reconstruída ao final, preenchendo os dias sem movimento com a cotação mais próxima.",
   },
   "es-PY": {
     // Sidebar
@@ -974,7 +982,7 @@ export const dictionaries = {
     "importacao.status.error": "Falló",
 
     // Importación — upload, cola y datos importados
-    "importacao.upload.kinds": "Ventas, Cuentas por Cobrar, Cuentas por Pagar, Stock, Caja/Banco y Presupuestos — el tipo se identifica automáticamente por las columnas.",
+    "importacao.upload.kinds": "Ventas, Compras, Cuentas por Cobrar, Cuentas por Pagar, Stock, Caja/Banco, Presupuestos y Cambio — el tipo se identifica automáticamente por las columnas.",
     "importacao.upload.multi": "Seleccione varios archivos a la vez para importar en cola.",
     "importacao.queue.title": "Cola de importación",
     "importacao.queue.progress": "{{done}}/{{total}} concluidos",
@@ -997,12 +1005,16 @@ export const dictionaries = {
     "importacao.kind.inventory": "Stock",
     "importacao.kind.caixa": "Caja / Banco",
     "importacao.kind.orcamento": "Presupuestos",
+    "importacao.kind.compras": "Compras",
+    "importacao.kind.cambio": "Cambio",
     "importacao.unit.sales": "líneas",
     "importacao.unit.receivable": "títulos",
     "importacao.unit.payable": "títulos",
     "importacao.unit.inventory": "SKUs",
     "importacao.unit.caixa": "movimientos",
     "importacao.unit.orcamento": "ítems",
+    "importacao.unit.compras": "ítems",
+    "importacao.unit.cambio": "cotizaciones",
 
     // Importación — tablas de diseño
     "importacao.schema.col": "Columna",
@@ -1025,12 +1037,16 @@ export const dictionaries = {
     "importacao.schema.heading.inventory": "Diseño · Stock",
     "importacao.schema.heading.caixa": "Diseño · Caja / Banco",
     "importacao.schema.heading.orcamento": "Diseño · Presupuestos (Prospección)",
+    "importacao.schema.heading.compras": "Diseño · Compras",
+    "importacao.schema.heading.cambio": "Diseño · Cambio (monedas)",
     "importacao.schema.note.sales": "Fechas: DD/MM/AAAA · Decimales: coma (estándar BR) · moeda_id: 1=R$ 2=US$ 3=G$ · importa filas con pedido_tipo = VENDA y DEVOLUCAO VENDA (las devoluciones quedan almacenadas, pero todos los indicadores actuales consideran solo VENDA). empresa_id identifica la matriz/sucursal y alimenta el filtro global de empresa (presente en todos los diseños). item_desconto (opcional) es el descuento de la línea; produto_valor_total ya es neto, por lo tanto la venta bruta = total + descuento.",
     "importacao.schema.note.receivable": "Cada fila es un título. data_recebimento completada = título cobrado; vacía = pendiente. pessoa_cidade es opcional.",
     "importacao.schema.note.payable": "Cada fila es una obligación de pago. data_pagamento completada = pagado; vacía = pendiente.",
     "importacao.schema.note.inventory": "Snapshot del inventario (una fila por SKU/empresa). produto_id enlaza con el ítem de venta. valor_estoque es el costo total del stock en la moneda indicada por moeda_id (1=R$ 2=US$ 3=G$); respeta el selector global de moneda como las demás áreas. Si moeda_id está ausente, asume R$.",
     "importacao.schema.note.caixa": "Cada fila es un movimiento. caixa_valor_documento negativo = salida (gasto); positivo = entrada (ingreso). Soporta jerarquía de plan de cuentas por el campo plano_conta_codigo (ej: 1.1.01).",
     "importacao.schema.note.orcamento": "Cada fila es un ítem de presupuesto. El estado viene de status_orcamento (Confirmado/Pendente) o de orcamento_confirmado (true/false) — la exportación estándar de la vista bi_orcamentos usa status_orcamento. orcamento_data_confirmacao se completa cuando está confirmado. item_quantidade_confirmada = cantidad que se convirtió en venta. produto_fabricante es opcional: cuando falta, la Prospección busca el código por produto_id en el dataset de Stock.",
+    "importacao.schema.note.compras": "Cada fila es un ítem comprado — el encabezado de la compra se repite en cada una, como en la vista bi_compras. pedido_data es la fecha de la factura. produto_valor_total ya es el costo de la línea en la moneda de moeda_id; no hay descuento ni vendedor. empresa_id identifica la matriz/sucursal. Lo que separa este diseño del de Ventas es el fornecedor_id.",
+    "importacao.schema.note.cambio": "Una fila por cotización: en cambio_data, 1 unidad de moeda_origem equivalía a cambio_taxa unidades de moeda_destino. No separe compra y venta — el sentido inverso se calcula como 1/tasa. El archivo reemplaza el cambio entero y la tabla de cotizaciones diarias se reconstruye al final, completando los días sin movimiento con la cotización más cercana.",
   }
 };
 

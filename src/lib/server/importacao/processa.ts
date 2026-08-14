@@ -5,6 +5,7 @@ import * as XLSX from "xlsx";
 import type { PrismaClient } from "@prisma/client";
 import { processRows, type ParseResult } from "@/lib/parsers/csv-parser";
 import { clearRows, insertRows, upsertMeta, type DatasetKind } from "@/lib/server/dataset-storage";
+import { detectaPivo, normaliza, reconstroiCambioDiario, type LinhaCambio } from "@/lib/server/ingest/cambio";
 import { atualizaJob } from "./jobs";
 
 /**
@@ -56,6 +57,8 @@ function itensDe(r: ParseResult): { kind: DatasetKind; itens: unknown[] } | null
   if (r.kind === "inventory" && r.inventory) return { kind: "inventory", itens: r.inventory.items };
   if (r.kind === "caixa" && r.caixa) return { kind: "caixa", itens: r.caixa.items };
   if (r.kind === "orcamento" && r.orcamento) return { kind: "orcamento", itens: r.orcamento.items };
+  if (r.kind === "compras" && r.compras) return { kind: "compras", itens: r.compras.items };
+  if (r.kind === "cambio" && r.cambio) return { kind: "cambio", itens: r.cambio.items };
   return null;
 }
 
@@ -180,6 +183,13 @@ export async function processaArquivo(
   let ignoradas = 0;
   const avisos: string[] = [];
   let ultimoAviso = 0;
+  /**
+   * Pivô do câmbio — a moeda contra a qual o ERP cota. É deduzido do PRIMEIRO
+   * lote e reusado nos demais, pela mesma razão que o leiaute é: é uma
+   * propriedade do arquivo, não do lote, e reduzi-lo por lote faria a
+   * normalização mudar de sentido no meio da importação.
+   */
+  let pivo: string | null = null;
 
   try {
     await db.$transaction(
@@ -213,6 +223,22 @@ export async function processaArquivo(
           lidas += linhas.length;
           ignoradas += r.skipped;
           for (const a of r.warnings) if (!avisos.includes(a) && avisos.length < 20) avisos.push(a);
+
+          // Câmbio passa pela mesma normalização da ingestão por API: sentido
+          // canônico (X → pivô) e recusa de taxa fora de faixa. Sem isso, um
+          // par invertido no arquivo viraria relatório com valor milhares de
+          // vezes maior, sem erro nenhum no caminho.
+          if (extraido.kind === "cambio") {
+            const cru = extraido.itens as LinhaCambio[];
+            pivo ??= detectaPivo(cru);
+            const { validas, problemas } = normaliza(cru, pivo ?? "");
+            extraido.itens = validas;
+            ignoradas += problemas.length;
+            for (const p of problemas.slice(0, 5)) {
+              const a = `Cotação recusada: ${p.motivo}`;
+              if (!avisos.includes(a) && avisos.length < 20) avisos.push(a);
+            }
+          }
 
           if (extraido.itens.length > 0) {
             gravadas += await insertRows(txDb, extraido.kind, extraido.itens);
@@ -254,6 +280,18 @@ export async function processaArquivo(
     });
     await unlink(caminho).catch(() => {});
     throw err;
+  }
+
+  // `cambio_diario` é derivada de `cambio`, e a reconstrução só pode vir DEPOIS
+  // do commit: ela lê a tabela inteira e, de dentro da transação, enxergaria o
+  // estado antigo. Fica fora do rollback de propósito — se ela falhar, o câmbio
+  // novo já está gravado e basta reimportar o mesmo arquivo.
+  if (kind === "cambio") {
+    const cob = await reconstroiCambioDiario(db);
+    avisos.push(
+      `Cotações diárias reconstruídas: ${cob.linhas} linhas cobrindo ${cob.dias} dias ` +
+        `(${cob.de} a ${cob.ate}), pivô ${cob.pivo}.`
+    );
   }
 
   await atualizaJob(db, jobId, {

@@ -22,6 +22,11 @@ import {
  * - Os agrupamentos principais são por data, fornecedor, produto
  *
  * KPIs: valor total, quantidade de itens, média de valor, fornecedores únicos
+ *
+ * A tabela é `compra_items`, populada pela importação — e não `bi_compras`,
+ * que é a view do ERP e existe do outro lado, no servidor do cliente. Os nomes
+ * das colunas são os mesmos da view de propósito, para o leiaute do arquivo, a
+ * tabela e estas consultas falarem uma língua só.
  */
 
 export interface ComprasKpis {
@@ -67,11 +72,17 @@ interface KpiRow {
   orders_count: number;
 }
 
-const KPI_SELECT = `
-  COALESCE(SUM(produto_valor_total), 0)    AS total_value,
-  COALESCE(SUM(produto_quantidade), 0)     AS items_count,
-  COUNT(DISTINCT fornecedor_id)::int       AS unique_suppliers,
-  COUNT(DISTINCT pedido_documento)::int    AS orders_count`;
+/**
+ * `taxa` entra aqui, e não só no filtro: sem ela o cartão de KPI somava as
+ * moedas cruas — uma compra de US$ 100 valia 100 ao lado de 1.000.000 em
+ * guaranis, e o total ficava indistinguível do total só em G$. Os gráficos
+ * logo abaixo já convertiam, então os dois se contradiziam na mesma tela.
+ */
+const kpiSelect = (taxa: string) => `
+  COALESCE(SUM(produto_valor_total * ${taxa}), 0) AS total_value,
+  COALESCE(SUM(produto_quantidade), 0)            AS items_count,
+  COUNT(DISTINCT fornecedor_id)::int              AS unique_suppliers,
+  COUNT(DISTINCT pedido_documento)::int           AS orders_count`;
 
 function montaKpi(r: KpiRow | undefined): ComprasKpis {
   const totalValue = Number(r?.total_value ?? 0);
@@ -98,8 +109,8 @@ export async function getComprasData(
     const cambio = joinCambio(f, p, "bc.pedido_data", "bc.moeda_id");
     const where = whereCompras(f, p);
     const sql = `
-      SELECT ${KPI_SELECT}
-      FROM bi_compras bc
+      SELECT ${kpiSelect(taxa)}
+      FROM compra_items bc
       ${cambio}
       WHERE ${where}
         AND bc.pedido_data >= ${p.add(f.from)}
@@ -120,7 +131,7 @@ export async function getComprasData(
              0                                                      AS cost,
              0                                                      AS discount,
              COUNT(DISTINCT bc.pedido_documento)::int             AS orders
-      FROM bi_compras bc
+      FROM compra_items bc
       ${cambio}
       WHERE ${where}
         AND bc.pedido_data >= ${p.add(f.from)}
@@ -140,7 +151,7 @@ export async function getComprasData(
              LEAST(5, (EXTRACT(DAY FROM bc.pedido_data::date)::int - 1
                       + EXTRACT(DOW FROM date_trunc('month', bc.pedido_data::date))::int) / 7)::int AS week,
              COALESCE(SUM(bc.produto_valor_total * ${taxa}), 0) AS value
-      FROM bi_compras bc
+      FROM compra_items bc
       ${cambio}
       WHERE ${where}
         AND bc.pedido_data >= ${p.add(f.from)}
@@ -165,7 +176,7 @@ export async function getComprasData(
              bc.moeda_id AS currency_id,
              COALESCE(SUM(bc.produto_valor_total * ${taxa}), 0) AS total_purchases,
              COUNT(DISTINCT bc.pedido_documento)::int AS order_count
-      FROM bi_compras bc
+      FROM compra_items bc
       ${cambio}
       WHERE ${where}
         AND bc.pedido_data >= ${p.add(f.from)}
@@ -199,7 +210,7 @@ export async function getComprasData(
              COUNT(*)::int AS items,
              COALESCE(SUM(bc.produto_valor_total * ${taxa}), 0) AS total,
              MAX(bc.pedido_data) AS date
-      FROM bi_compras bc
+      FROM compra_items bc
       ${cambio}
       WHERE ${where}
         AND bc.pedido_data >= ${p.add(f.from)}
@@ -227,7 +238,7 @@ export async function getComprasData(
 
   const temAlgumDado = async (): Promise<boolean> => {
     const [row] = await db.$queryRawUnsafe<{ existe: boolean }[]>(
-      "SELECT EXISTS (SELECT 1 FROM bi_compras WHERE pedido_tipo = 'COMPRA') AS existe"
+      "SELECT EXISTS (SELECT 1 FROM compra_items WHERE pedido_tipo = 'COMPRA') AS existe"
     );
     return row?.existe ?? false;
   };

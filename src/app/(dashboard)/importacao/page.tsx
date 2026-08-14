@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { Boxes, CheckCircle2, CircleDollarSign, Clock, CreditCard, FileSpreadsheet, Landmark, Loader2, ShoppingCart, Trash2, Upload, XCircle } from "lucide-react";
+import { ArrowLeftRight, Boxes, CheckCircle2, CircleDollarSign, Clock, CreditCard, FileSpreadsheet, Landmark, Loader2, PackagePlus, ShoppingCart, Trash2, Upload, XCircle } from "lucide-react";
 import { PageHeader } from "@/components/layout/page-header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -148,6 +148,8 @@ export default function ImportacaoPage() {
     inventory: <Boxes className="h-4 w-4 text-accent" />,
     caixa: <Landmark className="h-4 w-4 text-accent" />,
     orcamento: <FileSpreadsheet className="h-4 w-4 text-accent" />,
+    compras: <PackagePlus className="h-4 w-4 text-accent" />,
+    cambio: <ArrowLeftRight className="h-4 w-4 text-accent" />,
   };
   const presentes = datasets.filter(d => d.present);
 
@@ -251,6 +253,8 @@ export default function ImportacaoPage() {
           <SchemaTable kind="inventory" cols={INVENTORY_SCHEMA} />
           <SchemaTable kind="caixa" cols={CAIXA_SCHEMA} />
           <SchemaTable kind="orcamento" cols={ORCAMENTO_SCHEMA} />
+          <SchemaTable kind="compras" cols={COMPRAS_SCHEMA} />
+          <SchemaTable kind="cambio" cols={CAMBIO_SCHEMA} />
         </CardContent>
       </Card>
     </div>
@@ -514,4 +518,26 @@ const ORCAMENTO_SCHEMA: SchemaCol[] = [
   { name: "item_quantidade",             type: "number",   example: "5" },
   { name: "item_quantidade_confirmada",  type: "number",   example: "3" },
   { name: "item_total",                  type: "decimal",  example: "5000,00" },
+];
+
+const COMPRAS_SCHEMA: SchemaCol[] = [
+  { name: "pedido_data",         type: "date",     example: "15/01/2024" },
+  { name: "pedido_documento",    type: "key",      example: "CMP-001" },
+  { name: "pedido_tipo",         type: "text",     example: "COMPRA" },
+  { name: "fornecedor_id",       type: "key",      example: "FOR-001" },
+  { name: "fornecedor_nome",     type: "text",     example: "Distribuidora XYZ" },
+  { name: "produto_id",          type: "key",      example: "PROD-042" },
+  { name: "produto_descricao",   type: "text",     example: "Notebook Pro 15" },
+  { name: "produto_quantidade",  type: "number",   example: "10" },
+  { name: "produto_valor_total", type: "decimal",  example: "12500,00" },
+  { name: "moeda_id",            type: "currency", example: "1" },
+  { name: "moeda_sigla",         type: "text",     example: "R$" },
+  { name: "empresa_id",          type: "key",      example: "1 / 2" },
+];
+
+const CAMBIO_SCHEMA: SchemaCol[] = [
+  { name: "cambio_data",   type: "date",     example: "15/01/2024" },
+  { name: "moeda_origem",  type: "currency", example: "2" },
+  { name: "moeda_destino", type: "currency", example: "3" },
+  { name: "cambio_taxa",   type: "decimal",  example: "7350,00" },
 ];

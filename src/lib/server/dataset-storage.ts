@@ -6,11 +6,17 @@ import type {
   InventoryItem,
   CaixaItem,
   OrcamentoLineItem,
+  CompraLineItem,
+  CambioLinha,
 } from "@/lib/types/dataset";
 
-export type DatasetKind = "sales" | "receivable" | "payable" | "inventory" | "caixa" | "orcamento";
+export type DatasetKind =
+  | "sales" | "receivable" | "payable" | "inventory" | "caixa" | "orcamento"
+  | "compras" | "cambio";
 
-const VALID_KINDS = new Set<DatasetKind>(["sales", "receivable", "payable", "inventory", "caixa", "orcamento"]);
+const VALID_KINDS = new Set<DatasetKind>([
+  "sales", "receivable", "payable", "inventory", "caixa", "orcamento", "compras", "cambio",
+]);
 
 export function isValidKind(s: string): s is DatasetKind {
   return VALID_KINDS.has(s as DatasetKind);
@@ -65,6 +71,11 @@ export async function clearRows(db: PrismaClient, kind: DatasetKind): Promise<vo
     case "inventory":  await db.inventoryItem.deleteMany({}); break;
     case "caixa":      await db.caixaItem.deleteMany({}); break;
     case "orcamento":  await db.orcamentoItem.deleteMany({}); break;
+    case "compras":    await db.compraItem.deleteMany({}); break;
+    // `cambio_diario` não é limpa aqui: ela é reconstruída inteira depois da
+    // importação (ver server/ingest/cambio.ts). Apagá-la agora deixaria as
+    // telas sem cotação nenhuma no intervalo entre o DELETE e a reconstrução.
+    case "cambio":     await db.cambio.deleteMany({}); break;
   }
 }
 
@@ -99,6 +110,15 @@ export async function insertRows(db: PrismaClient, kind: DatasetKind, rows: unkn
         return (await db.caixaItem.createMany({ data: rows as CaixaItem[] })).count;
       case "orcamento":
         return (await db.orcamentoItem.createMany({ data: rows as OrcamentoLineItem[] })).count;
+      case "compras":
+        return (await db.compraItem.createMany({ data: rows as CompraLineItem[] })).count;
+      case "cambio":
+        // `skipDuplicates`: a chave é (data, origem, destino), e o ERP repete a
+        // mesma cotação em lotes diferentes do mesmo arquivo. A normalização
+        // por lote não enxerga isso — só o banco enxerga.
+        return (
+          await db.cambio.createMany({ data: rows as CambioLinha[], skipDuplicates: true })
+        ).count;
     }
   } catch (e) {
     console.error(`❌ Erro ao inserir ${kind}:`, e);
@@ -136,6 +156,18 @@ export async function getRows(db: PrismaClient, kind: DatasetKind, skip: number,
       return (await db.orcamentoItem.findMany({ skip, take, orderBy: { id: "asc" } })).map(
         ({ id: _id, ...rest }) => rest
       );
+    case "compras":
+      return (await db.compraItem.findMany({ skip, take, orderBy: { id: "asc" } })).map(
+        ({ id: _id, ...rest }) => rest
+      );
+    // Câmbio não tem `id`: a chave é (data, origem, destino), e é por ela que a
+    // paginação ordena — sem uma ordem total, `skip` repetiria linhas.
+    case "cambio":
+      return db.cambio.findMany({
+        skip,
+        take,
+        orderBy: [{ data: "asc" }, { moedaOrigem: "asc" }, { moedaDestino: "asc" }],
+      });
   }
 }
 
