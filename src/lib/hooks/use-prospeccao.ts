@@ -3,6 +3,7 @@
 import * as React from "react";
 import { useFilters } from "@/lib/store/filters";
 import { EMPTY_RESUMO } from "@/lib/analytics/prospeccao";
+import { leJson } from "@/lib/utils/resposta-json";
 import type { ProspeccaoResumo } from "@/lib/analytics/prospeccao";
 
 /**
@@ -71,9 +72,7 @@ export function useProspeccao(): ProspeccaoResumo & { loading: boolean; error: s
       signal: ctrl.signal,
     })
       .then(async (res) => {
-        const json = await res.json();
-        if (!res.ok) throw new Error(json.error ?? `Erro ${res.status}`);
-        setResposta(json as RespostaApi);
+        setResposta(await leJson<RespostaApi>(res));
       })
       .catch((err: Error) => {
         if (err.name !== "AbortError") setError(err.message);

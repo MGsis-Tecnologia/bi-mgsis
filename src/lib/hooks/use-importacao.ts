@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import type { DatasetKind } from "@/lib/parsers/csv-parser";
+import { leJson } from "@/lib/utils/resposta-json";
 import { invalidaOpcoesFiltro } from "./use-opcoes-filtro";
 
 /**
@@ -48,16 +49,12 @@ export async function enviaArquivo(file: File): Promise<string> {
     headers: { "Content-Type": "application/octet-stream" },
     body: file,
   });
-  const json = await res.json();
-  if (!res.ok) throw new Error(json.error ?? `Falha no envio (${res.status})`);
-  return json.id as string;
+  return (await leJson<{ id: string }>(res)).id;
 }
 
 export async function buscaJob(id: string): Promise<EstadoJob> {
   const res = await fetch(`/api/importacao/${id}`, { cache: "no-store" });
-  const json = await res.json();
-  if (!res.ok) throw new Error(json.error ?? `Falha ao consultar (${res.status})`);
-  return json as EstadoJob;
+  return leJson<EstadoJob>(res);
 }
 
 /**

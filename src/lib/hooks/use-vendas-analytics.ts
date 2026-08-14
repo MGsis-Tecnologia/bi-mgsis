@@ -4,6 +4,7 @@ import * as React from "react";
 import { useFilters } from "@/lib/store/filters";
 import { eachDayKey, eachMonthKey } from "@/lib/utils/dates";
 import { aggregateSalesByCityFrom, getMaxSales, type CityMetrics } from "@/lib/analytics/geo-sales";
+import { leJson } from "@/lib/utils/resposta-json";
 import type { TimePoint } from "@/lib/analytics/timeseries";
 
 /**
@@ -166,9 +167,7 @@ export function useVendasAnalytics(): {
       signal: ctrl.signal,
     })
       .then(async (res) => {
-        const json = await res.json();
-        if (!res.ok) throw new Error(json.error ?? `Erro ${res.status}`);
-        setResposta(json as RespostaApi);
+        setResposta(await leJson<RespostaApi>(res));
       })
       .catch((err: Error) => {
         if (err.name !== "AbortError") setError(err.message);

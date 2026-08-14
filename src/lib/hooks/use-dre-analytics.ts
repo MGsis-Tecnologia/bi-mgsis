@@ -3,6 +3,7 @@
 import * as React from "react";
 import { useFilters } from "@/lib/store/filters";
 import type { DreData } from "@/lib/server/analytics/dre";
+import { leJson } from "@/lib/utils/resposta-json";
 import type {
   CashflowKpis,
   CentroCustoRow,
@@ -155,9 +156,7 @@ export function useDreAnalytics(): {
       signal: ctrl.signal,
     })
       .then(async (res) => {
-        const json = await res.json();
-        if (!res.ok) throw new Error(json.error ?? `Erro ${res.status}`);
-        setResposta(json);
+        setResposta(await leJson(res));
       })
       .catch((err: Error) => {
         if (err.name !== "AbortError") setError(err.message);

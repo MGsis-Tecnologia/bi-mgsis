@@ -7,6 +7,7 @@ import { insightsFromAggregates } from "@/lib/analytics/insights-agg";
 import type { Insight } from "@/lib/analytics/insights";
 import type { TimePoint } from "@/lib/analytics/timeseries";
 import type { ABCEntry } from "@/lib/analytics/abc";
+import { leJson } from "@/lib/utils/resposta-json";
 import type { ImportedProduct } from "@/lib/types/dataset";
 
 /**
@@ -190,9 +191,7 @@ export function useDashboardAnalytics(): {
       signal: ctrl.signal,
     })
       .then(async (res) => {
-        const json = await res.json();
-        if (!res.ok) throw new Error(json.error ?? `Erro ${res.status}`);
-        setResposta(json as RespostaApi);
+        setResposta(await leJson<RespostaApi>(res));
       })
       .catch((err: Error) => {
         if (err.name !== "AbortError") setError(err.message);
