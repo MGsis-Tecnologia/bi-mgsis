@@ -21,6 +21,13 @@ const PUBLIC_PREFIXES = [
   "/api/ingest/",
 ];
 
+/**
+ * Rotas que saem do matcher por TAMANHO, e não por serem públicas — ver a nota
+ * no `config` no fim do arquivo. Elas nem chegam aqui; a lista existe para que
+ * quem mexer no matcher saiba que a proteção delas está no próprio handler.
+ */
+export const FORA_POR_TAMANHO = ["/api/ingest/", "/api/importacao"];
+
 function isPublic(pathname: string): boolean {
   if (PUBLIC_EXACT.has(pathname)) return true;
   return PUBLIC_PREFIXES.some((prefix) => pathname.startsWith(prefix));
@@ -56,15 +63,28 @@ export async function proxy(req: NextRequest) {
   return NextResponse.next();
 }
 
-// `/api/ingest/` fica FORA do matcher, não só na lista de públicas. O motivo é
-// tamanho: quando há proxy configurado, o Next bufferiza o corpo da requisição
-// e aplica `proxyClientMaxBodySize` (10 MB por padrão) — a foto de estoque tem
-// 21 MB e um mês de vendas, 12 MB, então ambos eram recusados com um erro de
-// JSON enganoso. Sem passar pelo proxy, não há buffer nem limite.
-// A entrada em PUBLIC_PREFIXES continua ali de propósito, para o dia em que
-// alguém mexer neste matcher.
+// `/api/ingest/` e o POST de `/api/importacao` ficam FORA do matcher, não só na
+// lista de públicas. O motivo é tamanho: quando há proxy configurado, o Next
+// bufferiza o corpo da requisição e aplica `proxyClientMaxBodySize` (10 MB por
+// padrão) — a foto de estoque tem 21 MB e um mês de vendas, 12 MB, então ambos
+// eram recusados com um erro de JSON enganoso.
+//
+// Na importação por arquivo é pior, porque o corte é SILENCIOSO: o upload de
+// 1,4 milhão de linhas chegava com exatos 10.485.760 bytes, o parser lia as
+// 53.996 linhas que couberam e o job terminava "concluído". O que denunciou foi
+// o `bytes` do import_jobs — 10 MiB redondos em dois arquivos de tamanhos
+// diferentes.
+//
+// Passar 245 MB por um buffer não é opção nem com o limite aumentado: a rota
+// existe para escrever o upload em disco em streaming. Fora do matcher não há
+// buffer nem limite. As duas rotas se autoprotegem — `/api/ingest/` pelo Bearer
+// do token de integração, `/api/importacao` pelo `getSession()` na primeira
+// linha do handler.
+//
+// `/api/importacao/<id>` (o progresso) continua passando pelo proxy: é um GET
+// minúsculo e não ganha nada em sair.
 export const config = {
   matcher: [
-    "/((?!api/ingest/|_next/static|_next/image|favicon.ico|logo-mgsis.png|teste_mgsis.csv).*)",
+    "/((?!api/ingest/|api/importacao$|_next/static|_next/image|favicon.ico|logo-mgsis.png|teste_mgsis.csv).*)",
   ],
 };

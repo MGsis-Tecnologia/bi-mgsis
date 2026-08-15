@@ -67,6 +67,31 @@ export async function POST(req: NextRequest) {
     );
   }
 
+  // Confere o que chegou contra o que o navegador disse que ia mandar.
+  //
+  // Um upload truncado é um CSV perfeitamente válido, só menor: o parser lê o
+  // que veio, o job termina "concluído" e o número na tela parece razoável.
+  // Foi o que aconteceu com um arquivo de 1,4 milhão de linhas cortado em
+  // 10 MiB por um buffer no caminho — entraram 53.996 e ninguém viu.
+  //
+  // O `content-length` não é confiável para autorizar nada, mas para ESTA
+  // comparação serve: quem o mandou foi o mesmo lado que mandou os bytes, e a
+  // divergência entre os dois só acontece quando alguém no meio cortou.
+  const declarado = Number(req.headers.get("content-length"));
+  if (Number.isFinite(declarado) && declarado > 0 && bytes !== declarado) {
+    await unlink(caminho).catch(() => {});
+    const mb = (n: number) => (n / 1024 / 1024).toFixed(1);
+    return NextResponse.json(
+      {
+        error:
+          `Arquivo truncado no caminho: chegaram ${mb(bytes)} MB dos ${mb(declarado)} MB enviados. ` +
+          `Nada foi importado. Se houver proxy (nginx, Traefik) na frente, aumente o limite de ` +
+          `corpo da requisição para esta rota.`,
+      },
+      { status: 400 }
+    );
+  }
+
   await criaJob(db, id, filename, bytes);
 
   // Deliberadamente sem await: a resposta sai agora e o trabalho continua no
