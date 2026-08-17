@@ -133,6 +133,12 @@ const linhaCompra = z.object({
   moedaId: textoOpc,
   moedaSigla: textoOpc,
   empresaId: textoOpc,
+  // Emissão no fornecedor. Opcional, e `dataOpc` (não `dataISO`) porque o ERP
+  // frequentemente não tem: exigi-la devolveria 422 e derrubaria o lote todo
+  // por um campo que não decide período nenhum — quem decide é `pedidoData`.
+  pedidoEmissao: dataOpc,
+  subgrupoId: textoOpc,
+  subgrupoDescricao: textoOpc,
 });
 
 const linhaCaixa = z.object({

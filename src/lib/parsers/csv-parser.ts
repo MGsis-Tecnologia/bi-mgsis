@@ -939,6 +939,11 @@ function processComprasRows(
       moedaId:           String(row["moeda_id"] ?? "1").trim(),
       moedaSigla:        String(row["moeda_sigla"] ?? "R$").trim(),
       empresaId:         String(row["empresa_id"] ?? "").trim(),
+      // Opcionais: data inválida ou coluna ausente viram "", nunca derrubam a
+      // linha — o que define o período é `pedido_data`, que já foi validada.
+      pedidoEmissao:     parseDate(String(row["pedido_emissao"] ?? "")) ?? "",
+      subgrupoId:        String(row["subgrupo_id"] ?? "").trim(),
+      subgrupoDescricao: String(row["subgrupo_descricao"] ?? "").trim(),
     });
   }
 

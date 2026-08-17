@@ -115,7 +115,12 @@ FROM (
          produto_valor_total AS "produtoValorTotal",
          moeda_id           AS "moedaId",
          moeda_sigla        AS "moedaSigla",
-         empresa_id         AS "empresaId"
+         empresa_id         AS "empresaId",
+         -- Já vem como texto da view ('' quando ausente ou fora de 1990–2035),
+         -- então NÃO leva to_char: aplicá-lo de novo em texto é erro de tipo.
+         pedido_emissao     AS "pedidoEmissao",
+         subgrupo_id        AS "subgrupoId",
+         subgrupo_descricao AS "subgrupoDescricao"
   FROM bi_compras
   WHERE pedido_data >= :'de' AND pedido_data < :'ate'
 ) x

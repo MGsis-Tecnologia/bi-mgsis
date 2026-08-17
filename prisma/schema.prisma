@@ -316,7 +316,15 @@ model CompraItem {
   moedaId           String @default("1") @map("moeda_id")
   moedaSigla        String @default("R$") @map("moeda_sigla")
   empresaId         String @default("") @map("empresa_id")
+  /// Emissão do documento NO FORNECEDOR — não confundir com `pedidoData`, que é
+  /// a data da fatura e continua sendo a que define o período da linha.
+  /// "" quando o ERP não tem, e é comum não ter.
+  pedidoEmissao     String @default("") @map("pedido_emissao")
+  /// Categoria do produto comprado, para cruzar compra e venda pelo mesmo eixo.
+  subgrupoId        String @default("") @map("subgrupo_id")
+  subgrupoDescricao String @default("") @map("subgrupo_descricao")
 
+  @@index([subgrupoId], map: "idx_compra_subgrupo")
   @@index([pedidoData], map: "idx_compra_data")
   @@index([fornecedorId], map: "idx_compra_fornecedor")
   @@index([produtoId], map: "idx_compra_produto")

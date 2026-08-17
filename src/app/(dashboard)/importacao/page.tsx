@@ -522,12 +522,17 @@ const ORCAMENTO_SCHEMA: SchemaCol[] = [
 
 const COMPRAS_SCHEMA: SchemaCol[] = [
   { name: "pedido_data",         type: "date",     example: "15/01/2024" },
+  // Emissão no fornecedor: opcional, e é `pedido_data` (a fatura) que continua
+  // definindo a que período a linha pertence.
+  { name: "pedido_emissao",      type: "date_opt", example: "10/01/2024" },
   { name: "pedido_documento",    type: "key",      example: "CMP-001" },
   { name: "pedido_tipo",         type: "text",     example: "COMPRA" },
   { name: "fornecedor_id",       type: "key",      example: "FOR-001" },
   { name: "fornecedor_nome",     type: "text",     example: "Distribuidora XYZ" },
   { name: "produto_id",          type: "key",      example: "PROD-042" },
   { name: "produto_descricao",   type: "text",     example: "Notebook Pro 15" },
+  { name: "subgrupo_id",         type: "key",      example: "SG-01" },
+  { name: "subgrupo_descricao",  type: "text",     example: "Informática" },
   { name: "produto_quantidade",  type: "number",   example: "10" },
   { name: "produto_valor_total", type: "decimal",  example: "12500,00" },
   { name: "moeda_id",            type: "currency", example: "1" },

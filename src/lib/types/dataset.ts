@@ -222,7 +222,7 @@ export interface StoredOrcamento {
 // espelham o model Prisma CompraItem — a linha vai do parser ao banco sem
 // mapeamento intermediário, como nos demais datasets.
 export interface CompraLineItem {
-  pedidoData: string;        // ISO YYYY-MM-DD
+  pedidoData: string;        // data da FATURA — é ela que define o período
   pedidoDocumento: string;
   pedidoTipo: string;        // COMPRA | DEVOLUCAO COMPRA | …
   fornecedorId: string;
@@ -234,6 +234,10 @@ export interface CompraLineItem {
   moedaId: string;           // "1" | "2" | "3"
   moedaSigla: string;
   empresaId: string;
+  /** Emissão do documento NO FORNECEDOR. "" quando o ERP não tem. */
+  pedidoEmissao: string;
+  subgrupoId: string;
+  subgrupoDescricao: string;
 }
 
 export interface StoredCompras {

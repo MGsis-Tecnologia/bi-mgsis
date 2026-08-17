@@ -213,6 +213,20 @@ WHERE c.cambio_data IS NOT NULL
   AND c.moeda_id::text <> c.moeda_destino_id::text;
 
 -- ── bi_compras ──
+-- Esta é a view do ERP, lida pelo agente. (O arquivo `bi_compras.sql` desta
+-- pasta tem OUTRA view de mesmo nome, do lado do Analytics, sobre a tabela
+-- `compra_items` já importada — não confunda as duas.)
+--
+-- CONFIRA `compra_data_emissao`: é a emissão do documento no fornecedor, e o
+-- nome da coluna foi deduzido do padrão do ERP (`pagar_data_emissao` etc.), não
+-- verificado nesta base. Se o comando falhar em "column does not exist", ache o
+-- nome certo com:
+--   SELECT column_name FROM information_schema.columns
+--    WHERE table_name = 'compra' AND column_name LIKE '%data%';
+--
+-- Colunas novas entram no FIM da lista de propósito: CREATE OR REPLACE VIEW
+-- aceita acrescentar coluna no fim, mas recusa mudar nome ou ordem das que já
+-- existem — e aqui a view costuma ser recriada sobre uma já instalada.
 CREATE OR REPLACE VIEW bi_compras AS
 SELECT
     p.compra_data_fatura                          AS pedido_data,
@@ -226,13 +240,19 @@ SELECT
     COALESCE(i.item_compra_total, 0)              AS produto_valor_total,
     COALESCE(p.moeda_id::text, '')                AS moeda_id,
     COALESCE(moeda.moeda_sigla, '')               AS moeda_sigla,
-    COALESCE(p.empresa_id::text, '')              AS empresa_id
+    COALESCE(p.empresa_id::text, '')              AS empresa_id,
+    CASE WHEN p.compra_data_emissao >= DATE '1990-01-01' AND p.compra_data_emissao < DATE '2036-01-01'
+             THEN TO_CHAR(p.compra_data_emissao, 'YYYY-MM-DD') ELSE '' END
+                                                  AS pedido_emissao,
+    COALESCE(subgrupo.subgrupo_id::text, '')      AS subgrupo_id,
+    COALESCE(subgrupo.subgrupo_descricao, '')     AS subgrupo_descricao
 
 FROM item_compra i
     JOIN      compra     p          ON p.compra_id = i.compra_id
     LEFT JOIN pessoa     c          ON c.pessoa_id = p.fornecedor_id
     LEFT JOIN produto    pr         ON pr.produto_id = i.produto_id
     LEFT JOIN moeda                 ON moeda.moeda_id = p.moeda_id
+    LEFT JOIN subgrupo              ON subgrupo.subgrupo_id = pr.subgrupo_id
 WHERE p.compra_tipo::text IN ('COMPRA', 'DEVOLUCAO COMPRA', 'TRANSFERENCIA COMPRA', 'EXPORTACAO COMPRA')
   AND p.compra_data_fatura IS NOT NULL;
 
