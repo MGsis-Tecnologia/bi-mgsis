@@ -224,36 +224,8 @@ export async function processaArquivo(
           ignoradas += r.skipped;
           for (const a of r.warnings) if (!avisos.includes(a) && avisos.length < 20) avisos.push(a);
 
-          // Câmbio passa pela mesma normalização da ingestão por API: sentido
-          // canônico (X → pivô) e recusa de taxa fora de faixa. Sem isso, um
-          // par invertido no arquivo viraria relatório com valor milhares de
-          // vezes maior, sem erro nenhum no caminho.
-          if (extraido.kind === "cambio") {
-            const cru = extraido.itens as LinhaCambio[];
-            pivo ??= detectaPivo(cru);
-            const { validas, problemas } = normaliza(cru, pivo ?? "");
-
-            // Recusa em massa é problema de leiaute, não de linha solta: o
-            // arquivo veio com origem e destino trocados. Importar o resto
-            // seria pior do que não importar nada — as moedas que a checagem
-            // de faixa não conhece passariam invertidas, e ninguém veria.
-            // Como está tudo numa transação, recusar aqui não deixa metade.
-            if (problemas.length > 0 && problemas.length >= cru.length / 4) {
-              throw new ErroImportacao(
-                `${problemas.length} de ${cru.length} cotações recusadas por ordem de grandeza — ` +
-                  `o arquivo parece estar com origem e destino trocados. Confira a view ` +
-                  `bi_cambio (a coluna do dólar é que tem de virar moeda_origem). ` +
-                  `Exemplo: ${problemas[0]!.motivo}`
-              );
-            }
-
-            extraido.itens = validas;
-            ignoradas += problemas.length;
-            for (const p of problemas.slice(0, 5)) {
-              const a = `Cotação recusada: ${p.motivo}`;
-              if (!avisos.includes(a) && avisos.length < 20) avisos.push(a);
-            }
-          }
+          // Câmbio: apenas grava RAW, sem validação ou normalização
+          // Transformações de dados ficam para quando os dados forem usados (convertido na API)
 
           if (extraido.itens.length > 0) {
             gravadas += await insertRows(txDb, extraido.kind, extraido.itens);
