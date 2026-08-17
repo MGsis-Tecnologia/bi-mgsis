@@ -42,12 +42,7 @@ SELECT
     COALESCE(c.moeda_id::text, '')             AS moeda_origem,
     COALESCE(c.moeda_destino_id::text, '')     AS moeda_destino,
     ROUND(c.cambio_produto::numeric, 2)        AS cambio_taxa
-FROM cambio c
-WHERE c.cambio_data IS NOT NULL
-  AND c.cambio_produto > 0
-  AND COALESCE(c.moeda_id::text, '') <> ''
-  AND COALESCE(c.moeda_destino_id::text, '') <> ''
-  AND c.moeda_id::text <> c.moeda_destino_id::text;
+FROM cambio c;
 
 -- ── CONFIRA ANTES DE ENVIAR ────────────────────────────────────────────────
 --
