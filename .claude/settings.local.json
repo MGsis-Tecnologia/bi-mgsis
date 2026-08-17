@@ -41,7 +41,8 @@
       "Bash(DATABASE_URL='postgresql://postgres:mgsis=postgres@localhost:5432/bi_cambio_teste?schema=public' npx prisma migrate deploy)",
       "PowerShell(Get-Process node -ErrorAction SilentlyContinue)",
       "PowerShell(Stop-Process -Force)",
-      "Bash(git commit -m 'feat: Fase 1 — Dashboard de Compras \\(UI + i18n\\) *)"
+      "Bash(git commit -m 'feat: Fase 1 — Dashboard de Compras \\(UI + i18n\\) *)",
+      "PowerShell(npm run dev 2>&1)"
     ]
   }
 }

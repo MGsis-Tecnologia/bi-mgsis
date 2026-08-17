@@ -24,6 +24,7 @@ export const MENU_CATALOG: MenuCatalogGroup[] = [
       { key: "/produtos", label: "Produtos" },
       { key: "/estoque", label: "Estoque" },
       { key: "/clientes", label: "Clientes" },
+      { key: "/fornecedores", label: "Fornecedores" },
       { key: "/vendedores", label: "Vendedores" },
     ],
   },
