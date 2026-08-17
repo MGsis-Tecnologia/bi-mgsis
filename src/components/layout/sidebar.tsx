@@ -62,7 +62,6 @@ const NAV: NavGroup[] = [
       { href: "/produtos", labelKey: "sidebar.nav.products", icon: Package },
       { href: "/estoque", labelKey: "sidebar.nav.stock", icon: Boxes },
       { href: "/clientes", labelKey: "sidebar.nav.customers", icon: Users },
-      { href: "/fornecedores", labelKey: "sidebar.nav.suppliers", icon: TrendingDown },
       { href: "/vendedores", labelKey: "sidebar.nav.sellers", icon: UserSquare2 },
     ],
   },
