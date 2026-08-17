@@ -7,13 +7,6 @@ import {
   type AnalyticsFilters,
 } from "./base";
 
-/**
- * Agregações da tela de Fornecedores.
- *
- * Segue o padrão de clientes.ts, mas sem segmentação RFM — apenas ranking
- * por gasto total, curva ABC, e informações de recência.
- */
-
 export interface FornecedorMetrica {
   id: string;
   name: string;
@@ -48,167 +41,100 @@ export async function getFornecedoresData(
   f: AnalyticsFilters,
   hoje: string
 ): Promise<FornecedoresData> {
-  /**
-   * Ranking de fornecedores por gasto total, já com curva ABC.
-   * Espelha a lógica de topClients em clientes.ts.
-   */
-  const porFornecedor = async (): Promise<{
-    suppliers: FornecedorMetrica[];
-    totalRevenue: number;
-    avgTicket: number;
-  }> => {
+  const porFornecedor = async (): Promise<FornecedorMetrica[]> => {
     const p = new Params();
     const taxa = exprTaxa(f);
     const cambio = joinCambio(f, p, "bc.pedido_data", "bc.moeda_id");
     const where = whereFornecedores(f, p);
-    const dia = p.add(hoje);
-    const limite = p.add(18);
 
     const sql = `
-      WITH agg AS (
-        SELECT bc.fornecedor_id AS id,
-               MIN(bc.fornecedor_nome) AS name,
-               COUNT(DISTINCT bc.pedido_documento)::int AS orders,
-               COALESCE(SUM(bc.produto_valor_total * ${taxa}), 0) AS revenue,
-               MAX(bc.pedido_data) AS last_date
-        FROM compra_items bc
-        ${cambio}
-        WHERE ${where}
-          AND bc.pedido_data >= ${p.add(f.from)}
-          AND bc.pedido_data <= ${p.add(f.to)}
-          AND bc.fornecedor_nome <> ''
-        GROUP BY bc.fornecedor_id
-      ),
-      mx AS (
-        SELECT COALESCE(MAX(revenue), 0) AS max_revenue,
-               NULLIF(SUM(revenue), 0) AS total_revenue,
-               COALESCE(SUM(orders), 0)::int AS total_orders,
-               COUNT(*)::int AS ativos
-        FROM agg
-      ),
-      classificado AS (
-        SELECT a.*,
-               m.max_revenue,
-               m.total_revenue,
-               (${dia}::date - a.last_date::date) AS recency_days,
-               COALESCE(a.revenue / m.total_revenue, 0) AS share,
-               COALESCE(SUM(a.revenue) OVER (ORDER BY a.revenue DESC, a.id), 0) /
-                 NULLIF(m.total_revenue, 0) AS cum
-        FROM agg a
-        CROSS JOIN mx m
-      ),
-      topo AS (
-        SELECT id, name, orders, revenue, last_date, recency_days, share, cum,
-               CASE WHEN cum <= 0.8 THEN 'A' WHEN cum <= 0.95 THEN 'B' ELSE 'C' END AS curve
-        FROM classificado
-        ORDER BY revenue DESC, id
-        LIMIT ${limite}
-      ),
-      resumo AS (
-        SELECT COALESCE(SUM(revenue), 0) AS total_revenue,
-               COALESCE(SUM(orders), 0)::int AS total_orders,
-               COUNT(*)::int AS ativos
-        FROM agg
-      )
       SELECT
-        (SELECT row_to_json(r) FROM resumo r) AS resumo,
-        (SELECT COALESCE(json_agg(x), '[]'::json) FROM (
-          SELECT id, name, orders, revenue, last_date, recency_days, share, cum AS cumulative_share, curve
-          FROM topo
-        ) x) AS topo`;
+        bc.fornecedor_id AS id,
+        MIN(bc.fornecedor_nome) AS name,
+        COUNT(DISTINCT bc.pedido_documento)::int AS orders,
+        COALESCE(SUM(bc.produto_valor_total * ${taxa}), 0) AS revenue,
+        MAX(bc.pedido_data) AS last_date
+      FROM compra_items bc
+      ${cambio}
+      WHERE ${where}
+        AND bc.pedido_data >= ${p.add(f.from)}
+        AND bc.pedido_data <= ${p.add(f.to)}
+        AND bc.fornecedor_nome <> ''
+      GROUP BY bc.fornecedor_id
+      ORDER BY revenue DESC
+      LIMIT 18`;
 
-    console.log("🔍 SQL porFornecedor:", sql.substring(0, 200));
-    const [row] = await consultaAnalitica<{
-      resumo: { total_revenue: unknown; total_orders: number; ativos: number };
-      topo: {
-        id: string;
-        name: string;
-        orders: number;
-        revenue: unknown;
-        last_date: string;
-        recency_days: number;
-        share: unknown;
-        cumulative_share: unknown;
-        curve: string;
-      }[];
+    const rows = await consultaAnalitica<{
+      id: string;
+      name: string;
+      orders: number;
+      revenue: unknown;
+      last_date: string;
     }>(db, sql, p.values);
 
-    const resumo = row?.resumo ?? { total_revenue: 0, total_orders: 0, ativos: 0 };
-    const topo = row?.topo ?? [];
-    const totalRevenue = Number(resumo.total_revenue);
-    const totalOrders = resumo.total_orders;
+    const totalRevenue = rows.reduce((sum, r) => sum + Number(r.revenue), 0);
 
-    return {
-      suppliers: topo.map((r) => {
-        const revenue = Number(r.revenue);
-        return {
-          id: r.id,
-          name: r.name,
-          orders: r.orders,
-          revenue,
-          averageTicket: r.orders > 0 ? revenue / r.orders : 0,
-          lastPurchaseDate: r.last_date || null,
-          recencyDays: r.recency_days,
-          share: Number(r.share),
-          cumulativeShare: Number(r.cumulative_share),
-          curve: r.curve as "A" | "B" | "C",
-        };
-      }),
-      totalRevenue,
-      avgTicket: totalOrders > 0 ? totalRevenue / totalOrders : 0,
-    };
+    return rows.map((r, idx) => {
+      const revenue = Number(r.revenue);
+      const share = totalRevenue > 0 ? revenue / totalRevenue : 0;
+      const cumulativeShare = rows
+        .slice(0, idx + 1)
+        .reduce((sum, s) => sum + (totalRevenue > 0 ? Number(s.revenue) / totalRevenue : 0), 0);
+      const curve = cumulativeShare <= 0.8 ? "A" : cumulativeShare <= 0.95 ? "B" : "C";
+
+      const hojeDate = new Date(hoje).getTime();
+      const lastDate = new Date(r.last_date).getTime();
+      const recencyDays = Math.floor((hojeDate - lastDate) / (1000 * 60 * 60 * 24));
+
+      return {
+        id: r.id,
+        name: r.name,
+        orders: r.orders,
+        revenue,
+        averageTicket: r.orders > 0 ? revenue / r.orders : 0,
+        lastPurchaseDate: r.last_date || null,
+        recencyDays,
+        share,
+        cumulativeShare,
+        curve: curve as "A" | "B" | "C",
+      };
+    });
   };
 
-  /**
-   * Fornecedores oficiais por produto: a última compra em quantidade ≥ mediana.
-   * Descarta reposições pontuais pequenas no mercado local.
-   */
   const fornecedoresOficiais = async (): Promise<FornecedorOficial[]> => {
     const p = new Params();
-    const taxa = exprTaxa(f);
-    const cambio = joinCambio(f, p, "bc.pedido_data", "bc.moeda_id");
     const where = whereFornecedores(f, p);
 
     const sql = `
-      WITH mediana_por_produto AS (
-        SELECT bc.produto_id,
-               PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY bc.produto_quantidade) AS mediana
-        FROM compra_items bc
-        ${cambio}
+      WITH produtos_fornecedor AS (
+        SELECT DISTINCT fornecedor_id, produto_id
+        FROM compra_items
         WHERE ${where}
-          AND bc.produto_id <> ''
-        GROUP BY bc.produto_id
-      ),
-      elegivel AS (
-        SELECT bc.produto_id, bc.fornecedor_id, bc.fornecedor_nome, bc.pedido_data, bc.produto_quantidade,
-               ROW_NUMBER() OVER (PARTITION BY bc.produto_id ORDER BY bc.pedido_data DESC) AS rn
-        FROM compra_items bc
-        INNER JOIN mediana_por_produto m ON m.produto_id = bc.produto_id
-        ${cambio}
-        WHERE ${where}
-          AND bc.produto_id <> ''
-          AND bc.fornecedor_nome <> ''
-          AND bc.produto_quantidade >= m.mediana
+          AND pedido_data >= ${p.add(f.from)}
+          AND pedido_data <= ${p.add(f.to)}
       )
-      SELECT bc.fornecedor_id, MIN(bc.fornecedor_nome) AS fornecedor_nome,
-             COUNT(DISTINCT elegivel.produto_id)::int AS produtos_count
-      FROM compra_items bc
-      INNER JOIN elegivel ON elegivel.fornecedor_id = bc.fornecedor_id
-                         AND elegivel.produto_id = bc.produto_id
-                         AND elegivel.rn = 1
-      GROUP BY bc.fornecedor_id
+      SELECT fornecedor_id, COUNT(*) AS produtos_count
+      FROM produtos_fornecedor
+      GROUP BY fornecedor_id
       ORDER BY produtos_count DESC
       LIMIT 25`;
 
     const rows = await consultaAnalitica<{
       fornecedor_id: string;
-      fornecedor_nome: string;
       produtos_count: number;
     }>(db, sql, p.values);
 
+    // Buscar nomes
+    const nomes = await db.$queryRawUnsafe<{ id: string; nome: string }[]>(
+      `SELECT DISTINCT fornecedor_id AS id, fornecedor_nome AS nome FROM compra_items WHERE fornecedor_id = ANY($1)`,
+      rows.map((r) => r.fornecedor_id)
+    );
+
+    const nomeMap = new Map(nomes.map((n) => [n.id, n.nome]));
+
     return rows.map((r) => ({
       supplierId: r.fornecedor_id,
-      supplierName: r.fornecedor_nome,
+      supplierName: nomeMap.get(r.fornecedor_id) || "",
       productsCount: r.produtos_count,
     }));
   };
@@ -220,31 +146,32 @@ export async function getFornecedoresData(
     return row?.existe ?? false;
   };
 
-  const [base, oficiais, hasData] = await Promise.all([
+  const [suppliers, oficiais, hasData] = await Promise.all([
     porFornecedor(),
     fornecedoresOficiais(),
     temAlgumDado(),
   ]);
 
-  // Contar total de fornecedores distintos (não filtrados por top 18)
   const totalSuppliers = await (async () => {
     const p = new Params();
     const where = whereFornecedores(f, p);
-    const sql = `
-      SELECT COUNT(DISTINCT fornecedor_id)::int AS n
-      FROM bi_compras
-      WHERE ${where}
-        AND fornecedor_nome <> ''`;
-    const [row] = await consultaAnalitica<{ n: number }>(db, sql, p.values);
+    const [row] = await consultaAnalitica<{ n: number }>(
+      db,
+      `SELECT COUNT(DISTINCT fornecedor_id) AS n FROM compra_items WHERE ${where}`,
+      p.values
+    );
     return row?.n ?? 0;
   })();
 
+  const totalRevenue = suppliers.reduce((sum, s) => sum + s.revenue, 0);
+  const totalOrders = suppliers.reduce((sum, s) => sum + s.orders, 0);
+
   return {
-    topSuppliers: base.suppliers,
+    topSuppliers: suppliers,
     totalSuppliers,
-    totalRevenue: base.totalRevenue,
-    avgTicket: base.avgTicket,
-    suppliersCount: base.suppliers.length,
+    totalRevenue,
+    avgTicket: totalOrders > 0 ? totalRevenue / totalOrders : 0,
+    suppliersCount: suppliers.length,
     officialSuppliers: oficiais,
     hasData,
   };
