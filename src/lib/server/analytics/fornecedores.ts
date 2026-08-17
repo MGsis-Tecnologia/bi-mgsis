@@ -71,7 +71,7 @@ export async function getFornecedoresData(
                COUNT(DISTINCT bc.pedido_documento)::int AS orders,
                COALESCE(SUM(bc.produto_valor_total * ${taxa}), 0) AS revenue,
                MAX(bc.pedido_data) AS last_date
-        FROM compra_items bc
+        FROM bi_compras bc
         ${cambio}
         WHERE ${where}
           AND bc.pedido_data >= ${p.add(f.from)}
@@ -172,28 +172,26 @@ export async function getFornecedoresData(
       WITH mediana_por_produto AS (
         SELECT bc.produto_id,
                PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY bc.produto_quantidade) AS mediana
-        FROM compra_items bc
+        FROM bi_compras bc
         ${cambio}
         WHERE ${where}
-          AND bc.pedido_tipo = 'COMPRA'
           AND bc.produto_id <> ''
         GROUP BY bc.produto_id
       ),
       elegivel AS (
         SELECT bc.produto_id, bc.fornecedor_id, bc.fornecedor_nome, bc.pedido_data, bc.produto_quantidade,
                ROW_NUMBER() OVER (PARTITION BY bc.produto_id ORDER BY bc.pedido_data DESC) AS rn
-        FROM compra_items bc
+        FROM bi_compras bc
         INNER JOIN mediana_por_produto m ON m.produto_id = bc.produto_id
         ${cambio}
         WHERE ${where}
-          AND bc.pedido_tipo = 'COMPRA'
           AND bc.produto_id <> ''
           AND bc.fornecedor_nome <> ''
           AND bc.produto_quantidade >= m.mediana
       )
       SELECT bc.fornecedor_id, MIN(bc.fornecedor_nome) AS fornecedor_nome,
              COUNT(DISTINCT elegivel.produto_id)::int AS produtos_count
-      FROM compra_items bc
+      FROM bi_compras bc
       INNER JOIN elegivel ON elegivel.fornecedor_id = bc.fornecedor_id
                          AND elegivel.produto_id = bc.produto_id
                          AND elegivel.rn = 1
@@ -216,7 +214,7 @@ export async function getFornecedoresData(
 
   const temAlgumDado = async (): Promise<boolean> => {
     const [row] = await db.$queryRawUnsafe<{ existe: boolean }[]>(
-      "SELECT EXISTS (SELECT 1 FROM compra_items WHERE pedido_tipo = 'COMPRA') AS existe"
+      "SELECT EXISTS (SELECT 1 FROM bi_compras) AS existe"
     );
     return row?.existe ?? false;
   };
@@ -233,9 +231,8 @@ export async function getFornecedoresData(
     const where = whereFornecedores(f, p);
     const sql = `
       SELECT COUNT(DISTINCT fornecedor_id)::int AS n
-      FROM compra_items
+      FROM bi_compras
       WHERE ${where}
-        AND pedido_tipo = 'COMPRA'
         AND fornecedor_nome <> ''`;
     const [row] = await consultaAnalitica<{ n: number }>(db, sql, p.values);
     return row?.n ?? 0;
