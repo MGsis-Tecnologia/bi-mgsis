@@ -269,17 +269,8 @@ export async function processaArquivo(
     throw err;
   }
 
-  // `cambio_diario` é derivada de `cambio`, e a reconstrução só pode vir DEPOIS
-  // do commit: ela lê a tabela inteira e, de dentro da transação, enxergaria o
-  // estado antigo. Fica fora do rollback de propósito — se ela falhar, o câmbio
-  // novo já está gravado e basta reimportar o mesmo arquivo.
-  if (kind === "cambio") {
-    const cob = await reconstroiCambioDiario(db);
-    avisos.push(
-      `Cotações diárias reconstruídas: ${cob.linhas} linhas cobrindo ${cob.dias} dias ` +
-        `(${cob.de} a ${cob.ate}), pivô ${cob.pivo}.`
-    );
-  }
+  // Reconstrução de cambio_diario desabilitada: fica para depois
+  // (pode ser feita manualmente ou via API quando necessário)
 
   await atualizaJob(db, jobId, {
     status: "concluido",
