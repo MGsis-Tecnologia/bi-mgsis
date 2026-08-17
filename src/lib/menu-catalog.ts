@@ -13,6 +13,7 @@ export const MENU_CATALOG: MenuCatalogGroup[] = [
     items: [
       { key: "/dashboard", label: "Executivo" },
       { key: "/vendas", label: "Análise de Vendas" },
+      { key: "/compras", label: "Análise de Compras" },
       { key: "/comparativo", label: "Comparativo Anual" },
       { key: "/prospeccao", label: "Prospecção" },
     ],

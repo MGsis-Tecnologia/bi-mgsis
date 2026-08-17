@@ -38,7 +38,10 @@
       "Bash(npm run *)",
       "Bash(npx --yes eslint src/components/filters/date-range-picker.tsx src/lib/store/filters.ts)",
       "Bash(node -e \"const p=require\\('./package.json'\\);console.log\\(Object.keys\\(p.devDependencies||{}\\).join\\(' '\\)\\);console.log\\('--- scripts'\\);console.log\\(JSON.stringify\\(p.scripts,null,1\\)\\)\")",
-      "Bash(DATABASE_URL='postgresql://postgres:mgsis=postgres@localhost:5432/bi_cambio_teste?schema=public' npx prisma migrate deploy)"
+      "Bash(DATABASE_URL='postgresql://postgres:mgsis=postgres@localhost:5432/bi_cambio_teste?schema=public' npx prisma migrate deploy)",
+      "PowerShell(Get-Process node -ErrorAction SilentlyContinue)",
+      "PowerShell(Stop-Process -Force)",
+      "Bash(git commit -m 'feat: Fase 1 — Dashboard de Compras \\(UI + i18n\\) *)"
     ]
   }
 }

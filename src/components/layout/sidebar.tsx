@@ -51,6 +51,7 @@ const NAV: NavGroup[] = [
     items: [
       { href: "/dashboard", labelKey: "sidebar.nav.executive", icon: Activity },
       { href: "/vendas", labelKey: "sidebar.nav.sales_analysis", icon: BarChart3 },
+      { href: "/compras", labelKey: "sidebar.nav.purchases_analysis", icon: TrendingDown },
       { href: "/comparativo", labelKey: "sidebar.nav.annual", icon: CalendarRange },
       { href: "/prospeccao", labelKey: "sidebar.nav.prospection", icon: Receipt },
     ],
