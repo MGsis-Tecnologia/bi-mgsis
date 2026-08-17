@@ -214,7 +214,7 @@ export async function getFornecedoresData(
 
   const temAlgumDado = async (): Promise<boolean> => {
     const [row] = await db.$queryRawUnsafe<{ existe: boolean }[]>(
-      "SELECT EXISTS (SELECT 1 FROM bi_compras) AS existe"
+      "SELECT EXISTS (SELECT 1 FROM compra_items WHERE pedido_tipo IN ('COMPRA', 'DEVOLUCAO COMPRA', 'TRANSFERENCIA COMPRA', 'EXPORTACAO COMPRA')) AS existe"
     );
     return row?.existe ?? false;
   };
