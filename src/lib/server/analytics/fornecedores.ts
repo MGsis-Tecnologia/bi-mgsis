@@ -117,6 +117,7 @@ export async function getFornecedoresData(
           FROM topo
         ) x) AS topo`;
 
+    console.log("🔍 SQL porFornecedor:", sql.substring(0, 200));
     const [row] = await consultaAnalitica<{
       resumo: { total_revenue: unknown; total_orders: number; ativos: number };
       topo: {

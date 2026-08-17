@@ -42,7 +42,8 @@
       "PowerShell(Get-Process node -ErrorAction SilentlyContinue)",
       "PowerShell(Stop-Process -Force)",
       "Bash(git commit -m 'feat: Fase 1 — Dashboard de Compras \\(UI + i18n\\) *)",
-      "PowerShell(npm run dev 2>&1)"
+      "PowerShell(npm run dev 2>&1)",
+      "Bash(curl -s http://localhost:3000/api/debug/fornecedores)"
     ]
   }
 }
