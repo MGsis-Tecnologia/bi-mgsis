@@ -41,7 +41,7 @@ SELECT
     c.cambio_data                              AS cambio_data,
     COALESCE(c.moeda_id::text, '')             AS moeda_origem,
     COALESCE(c.moeda_destino_id::text, '')     AS moeda_destino,
-    ROUND(c.cambio_produto::numeric, 2)        AS cambio_taxa
+    c.cambio_produto                           AS cambio_taxa
 FROM cambio c;
 
 -- ── CONFIRA ANTES DE ENVIAR ────────────────────────────────────────────────
