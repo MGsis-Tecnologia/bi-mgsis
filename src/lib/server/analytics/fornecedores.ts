@@ -71,7 +71,7 @@ export async function getFornecedoresData(
                COUNT(DISTINCT bc.pedido_documento)::int AS orders,
                COALESCE(SUM(bc.produto_valor_total * ${taxa}), 0) AS revenue,
                MAX(bc.pedido_data) AS last_date
-        FROM bi_compras bc
+        FROM compra_items bc
         ${cambio}
         WHERE ${where}
           AND bc.pedido_data >= ${p.add(f.from)}
@@ -172,7 +172,7 @@ export async function getFornecedoresData(
       WITH mediana_por_produto AS (
         SELECT bc.produto_id,
                PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY bc.produto_quantidade) AS mediana
-        FROM bi_compras bc
+        FROM compra_items bc
         ${cambio}
         WHERE ${where}
           AND bc.produto_id <> ''
@@ -181,7 +181,7 @@ export async function getFornecedoresData(
       elegivel AS (
         SELECT bc.produto_id, bc.fornecedor_id, bc.fornecedor_nome, bc.pedido_data, bc.produto_quantidade,
                ROW_NUMBER() OVER (PARTITION BY bc.produto_id ORDER BY bc.pedido_data DESC) AS rn
-        FROM bi_compras bc
+        FROM compra_items bc
         INNER JOIN mediana_por_produto m ON m.produto_id = bc.produto_id
         ${cambio}
         WHERE ${where}
@@ -191,7 +191,7 @@ export async function getFornecedoresData(
       )
       SELECT bc.fornecedor_id, MIN(bc.fornecedor_nome) AS fornecedor_nome,
              COUNT(DISTINCT elegivel.produto_id)::int AS produtos_count
-      FROM bi_compras bc
+      FROM compra_items bc
       INNER JOIN elegivel ON elegivel.fornecedor_id = bc.fornecedor_id
                          AND elegivel.produto_id = bc.produto_id
                          AND elegivel.rn = 1

@@ -3,7 +3,6 @@ import type { SessionPayload } from "./auth-core";
 import { getCatalogPrisma } from "./catalog-db";
 import { getPrisma } from "./db";
 import { buildTenantUrl } from "./db-config";
-import { initializeViews } from "./init-views";
 
 /** Lançado quando a empresa da sessão existe mas não está mais ativa. */
 export class EmpresaInativaError extends Error {
@@ -52,12 +51,8 @@ export async function getTenantContext(
   if (empresa.status !== "ativa" && !session.isMaster) {
     throw new EmpresaInativaError(empresa.status);
   }
-  const db = await getPrisma(buildTenantUrl(empresa.dbName));
-  await initializeViews(db).catch(() => {
-    // Falha silenciosa — a view pode já existir ou o banco pode estar fora
-  });
   return {
-    db,
+    db: await getPrisma(buildTenantUrl(empresa.dbName)),
     moedaPadrao: empresa.moedaPadrao,
   };
 }
