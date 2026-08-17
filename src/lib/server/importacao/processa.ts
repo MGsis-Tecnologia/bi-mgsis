@@ -65,6 +65,24 @@ function itensDe(r: ParseResult): { kind: DatasetKind; itens: unknown[] } | null
 class ErroImportacao extends Error {}
 
 /**
+ * Encurta a mensagem guardada no job — mantendo o FIM.
+ *
+ * O Prisma despeja o lote inteiro dentro da mensagem de erro: uma falha de
+ * validação num lote de 5.000 linhas gerou 3,3 MB de texto, com a única frase
+ * que importava ("Unknown argument `pedidoEmissao`") na última linha. Foi para
+ * o banco, foi para a tela, e ninguém conseguiu ler a causa.
+ *
+ * Corta o miolo, não o fim: no Prisma a explicação vem depois do despejo.
+ */
+function encurtaErro(msg: string, limite = 4_000): string {
+  if (msg.length <= limite) return msg;
+  const inicio = msg.slice(0, Math.floor(limite / 4));
+  const fim = msg.slice(-Math.floor((limite * 3) / 4));
+  const cortado = msg.length - inicio.length - fim.length;
+  return `${inicio}\n\n[… ${cortado.toLocaleString("pt-BR")} caracteres omitidos — o despejo dos dados fica no log do servidor …]\n\n${fim}`;
+}
+
+/**
  * Lê o arquivo linha a linha e entrega lotes de linhas CRUAS.
  *
  * `aoLote` pode demorar (é ele que grava no banco): o stream é pausado enquanto
@@ -258,7 +276,7 @@ export async function processaArquivo(
     const msg = err instanceof ErroImportacao ? err.message : (err as Error).message;
     await atualizaJob(db, jobId, {
       status: "erro",
-      erro: msg,
+      erro: encurtaErro(msg),
       lidas,
       gravadas: 0, // a transação voltou atrás: nada foi gravado
       ignoradas,

@@ -157,8 +157,32 @@ export async function insertRows(db: PrismaClient, kind: DatasetKind, rows: unkn
     }
   } catch (e) {
     console.error(`❌ Erro ao inserir ${kind}:`, e);
-    throw e;
+    throw traduzErroDePrisma(e, kind);
   }
+}
+
+/**
+ * Erros do Prisma que só um `generate` resolve, ditos em português.
+ *
+ * "Unknown argument `pedidoEmissao`" seguido de um despejo de 5.000 linhas não
+ * diz o que fazer — e a causa é sempre a mesma: o processo subiu antes do
+ * `prisma generate` e ficou com o schema antigo em memória. A coluna existe no
+ * banco, o campo existe no código, e mesmo assim a gravação falha.
+ *
+ * `exigeDelegate` já cobre o model INTEIRO faltando; isto cobre o model que
+ * existe mas está velho, que é o caso de todo campo novo.
+ */
+function traduzErroDePrisma(e: unknown, kind: DatasetKind): Error {
+  const msg = e instanceof Error ? e.message : String(e);
+  const campo = msg.match(/Unknown argument [`'"]?(\w+)/)?.[1];
+  if (!campo) return e instanceof Error ? e : new Error(msg);
+
+  return new Error(
+    `O Prisma Client em memória não conhece o campo "${campo}" de ${kind}, ` +
+      `embora ele exista no schema. É o servidor rodando com o client antigo: ` +
+      `pare o servidor, rode "npx prisma generate" (com ele PARADO, senão o ` +
+      `Windows não deixa trocar o engine) e suba de novo.`
+  );
 }
 
 // ---------------------------------------------------------------------------
