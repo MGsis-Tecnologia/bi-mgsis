@@ -45,7 +45,9 @@
       "PowerShell(npm run dev 2>&1)",
       "Bash(curl -s http://localhost:3000/api/debug/fornecedores)",
       "Bash(curl -s http://localhost:3000/api/debug/direct-query)",
-      "Bash(bash -n agente/mgsis-ingest.sh)"
+      "Bash(bash -n agente/mgsis-ingest.sh)",
+      "Bash(node -)",
+      "Bash(rm -rf __TRACKED_VAR__/b7)"
     ]
   }
 }
