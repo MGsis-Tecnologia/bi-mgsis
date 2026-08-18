@@ -204,6 +204,11 @@ GROUP BY e.produto_id, p.produto_descricao, p.produto_fabricante,
 -- coluna nova no FIM, recusa renomear/reordenar as que já existem. Sem o
 -- DROP, quem já tinha a view diária instalada recebe erro do Postgres em vez
 -- de atualizar. Detalhe de cada coluna e das taxas em bi_cambio.sql.
+--
+-- moeda_origem/moeda_destino saem TROCADOS em relação às colunas cruas:
+-- `moeda_id` é o pivô fixo da cotação no ERP (o dólar), não a moeda local —
+-- confirmado com o ERP. `cambio_produto` é "quantas moeda_destino_id por 1
+-- moeda_id". Ver a explicação completa em bi_cambio.sql.
 DROP VIEW IF EXISTS bi_cambio;
 CREATE VIEW bi_cambio AS
 WITH cambio_diario AS (
@@ -221,8 +226,8 @@ WITH cambio_diario AS (
     GROUP BY moeda_id, moeda_destino_id, cambio_data
 )
 SELECT
-    moeda_id                                              AS moeda_origem,
-    moeda_destino_id                                      AS moeda_destino,
+    moeda_destino_id                                      AS moeda_origem,
+    moeda_id                                              AS moeda_destino,
     DATE_TRUNC('month', cambio_data)::date                AS mes_referencia,
     TO_CHAR(DATE_TRUNC('month', cambio_data), 'MM-YYYY')  AS mes_ano,
     ROUND(AVG(cambio_medio_dia), 4)                       AS cambio_medio,

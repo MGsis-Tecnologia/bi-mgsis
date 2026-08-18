@@ -26,10 +26,25 @@
 -- calculado como 1/taxa. Da consulta em diante é sempre multiplicação, o que
 -- elimina a classe de erro "multipliquei onde devia dividir".
 --
+-- ── moeda_id NA TABELA `cambio` É O PIVÔ FIXO, NÃO A MOEDA LOCAL ────────────
+--
+-- Confirmado com o ERP: `moeda_id` é sempre a moeda de REFERÊNCIA da cotação
+-- (o dólar, fixo — não varia linha a linha), e `cambio_produto` é "quantas
+-- unidades de `moeda_destino_id` valem 1 unidade de `moeda_id`". Ou seja,
+-- pra `moeda_id=2, moeda_destino_id=3, cambio_produto=7350`, a leitura do
+-- ERP é "1 dólar custa 7.350 guaranis" — o dólar é o "1", o guarani é quem é
+-- contado.
+--
+-- Isso é o OPOSTO do que este cabeçalho define para `moeda_origem`/
+-- `moeda_destino` (onde origem é quem é contado, destino é o "1"). Por isso
+-- a view abaixo TROCA as duas colunas na saída: `moeda_destino_id` (a moeda
+-- contada, que varia) vira `moeda_origem`, e `moeda_id` (o pivô fixo) vira
+-- `moeda_destino`. Sem a troca, a checagem de ordem de grandeza da ingestão
+-- recusa por comparar um número grande (guaranis por dólar) com a faixa
+-- pensada pro sentido inverso (dólares por guarani).
+--
 -- Por isso `moeda.moeda_multiplica` não precisa ser enviado: a regra está na
--- ordem do par, e o inverso é derivado. Se algum dia aparecer linha em que
--- `moeda_id` NÃO seja a moeda local, a checagem de ordem de grandeza da
--- ingestão recusa e aponta — é o sinal de que o flag passou a ser necessário.
+-- ordem do par, e o inverso é derivado.
 --
 -- ── Colunas ────────────────────────────────────────────────────────────────
 --   moeda_origem / moeda_destino  o par (ver acima o sentido)
@@ -66,8 +81,8 @@ WITH cambio_diario AS (
     GROUP BY moeda_id, moeda_destino_id, cambio_data
 )
 SELECT
-    moeda_id                                              AS moeda_origem,
-    moeda_destino_id                                      AS moeda_destino,
+    moeda_destino_id                                      AS moeda_origem,
+    moeda_id                                              AS moeda_destino,
     DATE_TRUNC('month', cambio_data)::date                AS mes_referencia,
     TO_CHAR(DATE_TRUNC('month', cambio_data), 'MM-YYYY')  AS mes_ano,
     ROUND(AVG(cambio_medio_dia), 4)                       AS cambio_medio,
