@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { Bell, Search, LogOut } from "lucide-react";
+import { Bell, LogOut } from "lucide-react";
 import { DateRangePicker } from "@/components/filters/date-range-picker";
 import { CurrencySwitcher } from "@/components/filters/currency-switcher";
 import { EmpresaSwitcher } from "@/components/filters/empresa-switcher";
@@ -14,9 +14,10 @@ import { useTranslation } from "@/lib/hooks/use-translation";
 
 interface TopbarProps {
   user?: { name: string; initials: string };
+  empresaNome?: string;
 }
 
-export function Topbar({ user }: TopbarProps) {
+export function Topbar({ user, empresaNome }: TopbarProps) {
   const { t } = useTranslation();
   const [showLogoutMenu, setShowLogoutMenu] = React.useState(false);
 
@@ -35,17 +36,11 @@ export function Topbar({ user }: TopbarProps) {
           <BrandMark showWord={false} />
         </div>
 
-        <div className="hidden md:flex relative items-center min-w-0 flex-1 max-w-md">
-          <Search className="absolute left-3 h-3.5 w-3.5 text-muted-foreground" />
-          <input
-            type="search"
-            placeholder={t("topbar.search.placeholder")}
-            className="h-8 w-full rounded-md border border-border bg-surface/60 pl-8 pr-12 text-xs placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring/30"
-          />
-          <kbd className="absolute right-2 hidden md:inline-flex items-center rounded border border-border bg-muted/60 px-1.5 py-0.5 text-[10px] font-mono text-muted-foreground">
-            ⌘K
-          </kbd>
-        </div>
+        {empresaNome && (
+          <span className="hidden md:block truncate text-sm font-medium text-foreground">
+            {empresaNome}
+          </span>
+        )}
 
         <div className="ml-auto flex items-center gap-2">
           <ClientMounted fallback={<div className="h-8 w-64 animate-pulse bg-muted/40 rounded-md" />}>

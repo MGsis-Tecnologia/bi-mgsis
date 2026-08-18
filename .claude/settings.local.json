@@ -47,7 +47,9 @@
       "Bash(curl -s http://localhost:3000/api/debug/direct-query)",
       "Bash(bash -n agente/mgsis-ingest.sh)",
       "Bash(node -)",
-      "Bash(rm -rf __TRACKED_VAR__/b7)"
+      "Bash(rm -rf __TRACKED_VAR__/b7)",
+      "Bash(curl -s http://localhost:3000/health)",
+      "Bash(curl -s -o /dev/null -w \"GET /login -> %{http_code}\\\\n\" http://localhost:3000/login)"
     ]
   }
 }

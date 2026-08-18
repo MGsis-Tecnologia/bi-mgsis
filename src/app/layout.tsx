@@ -58,17 +58,10 @@ export default function RootLayout({
       }
     >
       {/* A classe `dark` NÃO é fixada aqui: quem a aplica no <html> é o
-          next-themes, conforme o tema escolhido (ver ThemeToggle). Fixá-la
-          trava o app no escuro e torna o seletor inerte. */}
+          ThemeProvider nativo, conforme o tema escolhido (ver ThemeToggle).
+          Fixá-la trava o app no escuro e torna o seletor inerte. */}
       <body className="min-h-screen bg-background font-sans antialiased grain">
-        <ThemeProvider
-          attribute="class"
-          defaultTheme="dark"
-          enableSystem
-          disableTransitionOnChange
-        >
-          {children}
-        </ThemeProvider>
+        <ThemeProvider>{children}</ThemeProvider>
       </body>
     </html>
   );

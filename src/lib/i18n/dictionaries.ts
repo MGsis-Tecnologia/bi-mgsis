@@ -32,7 +32,6 @@ export const dictionaries = {
     "sidebar.insight.empty.noHighlights": "Sem destaques relevantes no período selecionado.",
 
     // Topbar
-    "topbar.search.placeholder": "Buscar pedido, cliente, produto…",
     "topbar.currency.title": "Moeda de exibição",
     "topbar.currency.note": "Todas as moedas convertem, pela cotação do dia, para",
     "topbar.language.title": "Idioma",
@@ -580,7 +579,6 @@ export const dictionaries = {
     "sidebar.insight.empty.noHighlights": "Sin destaques relevantes en el período seleccionado.",
     
     // Topbar
-    "topbar.search.placeholder": "Buscar pedido, cliente, producto…",
     "topbar.currency.title": "Moneda de visualización",
     "topbar.currency.note": "Todas las monedas se convierten, a la cotización del día, a",
     "topbar.language.title": "Idioma",

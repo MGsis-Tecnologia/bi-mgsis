@@ -171,55 +171,57 @@ export default function FornecedoresPage() {
 
       {/* ── Evolução ───────────────────────────────────────────────────── */}
       <Card>
-        <CardHeader>
-          <div className="flex items-start justify-between gap-4">
-            <div>
-              <CardTitle>Evolução do gasto</CardTitle>
-              <p className="mt-1 text-[11px] text-muted-foreground">
-                Pela data de <strong>chegada</strong> da mercadoria — é ela que define a que mês o gasto pertence.
-              </p>
-            </div>
-            <Tabs defaultValue="mes">
+        <Tabs defaultValue="mes">
+          <CardHeader>
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <CardTitle>Evolução do gasto</CardTitle>
+                <p className="mt-1 text-[11px] text-muted-foreground">
+                  Pela data de <strong>chegada</strong> da mercadoria — é ela que define a que mês o gasto pertence.
+                </p>
+              </div>
               <TabsList>
                 <TabsTrigger value="mes">Mês</TabsTrigger>
                 <TabsTrigger value="tri">Trimestre</TabsTrigger>
                 <TabsTrigger value="ano">Ano</TabsTrigger>
                 <TabsTrigger value="aa">Ano a ano</TabsTrigger>
               </TabsList>
-              <TabsContent value="mes" className="mt-4">
-                <div className="h-80">
-                  <RevenueAreaChart data={paraSerie(data.mensal, mesCurto)} height={320} />
-                </div>
-              </TabsContent>
-              <TabsContent value="tri" className="mt-4">
-                <div className="h-80">
-                  <RevenueAreaChart data={paraSerie(data.trimestral, (k) => k)} height={320} />
-                </div>
-              </TabsContent>
-              <TabsContent value="ano" className="mt-4">
-                <div className="h-80">
-                  <RevenueAreaChart data={paraSerie(data.anual, (k) => k)} height={320} />
-                </div>
-              </TabsContent>
-              <TabsContent value="aa" className="mt-4">
-                <div className="h-80">
-                  <YearComparisonChart
-                    data={{
-                      years: [anos.anterior, anos.atual],
-                      rows: data.anoAAno.map((r) => ({
-                        key: r.key,
-                        label: mesCurto(r.key),
-                        byYear: { [anos.anterior]: r.anterior, [anos.atual]: r.atual },
-                        total: r.atual + r.anterior,
-                        growth: r.anterior > 0 ? (r.atual - r.anterior) / r.anterior : null,
-                      })),
-                    }}
-                  />
-                </div>
-              </TabsContent>
-            </Tabs>
-          </div>
-        </CardHeader>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <TabsContent value="mes">
+              <div className="h-80">
+                <RevenueAreaChart data={paraSerie(data.mensal, mesCurto)} height={320} />
+              </div>
+            </TabsContent>
+            <TabsContent value="tri">
+              <div className="h-80">
+                <RevenueAreaChart data={paraSerie(data.trimestral, (k) => k)} height={320} />
+              </div>
+            </TabsContent>
+            <TabsContent value="ano">
+              <div className="h-80">
+                <RevenueAreaChart data={paraSerie(data.anual, (k) => k)} height={320} />
+              </div>
+            </TabsContent>
+            <TabsContent value="aa">
+              <div className="h-80">
+                <YearComparisonChart
+                  data={{
+                    years: [anos.anterior, anos.atual],
+                    rows: data.anoAAno.map((r) => ({
+                      key: r.key,
+                      label: mesCurto(r.key),
+                      byYear: { [anos.anterior]: r.anterior, [anos.atual]: r.atual },
+                      total: r.atual + r.anterior,
+                      growth: r.anterior > 0 ? (r.atual - r.anterior) / r.anterior : null,
+                    })),
+                  }}
+                />
+              </div>
+            </TabsContent>
+          </CardContent>
+        </Tabs>
       </Card>
 
       {/* ── Participação e risco ───────────────────────────────────────── */}

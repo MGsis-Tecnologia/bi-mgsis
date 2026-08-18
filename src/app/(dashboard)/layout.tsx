@@ -63,7 +63,7 @@ export default async function DashboardLayout({
         <div className="flex min-h-screen bg-background">
           <Sidebar isMaster={session.isMaster} role={session.role} allowedMenus={session.allowedMenus} />
           <div className="flex min-w-0 flex-1 flex-col">
-            <Topbar user={{ name: session.name, initials }} />
+            <Topbar user={{ name: session.name, initials }} empresaNome={empresa?.nome} />
             <main className="flex-1 px-4 md:px-6 lg:px-8 py-6 lg:py-8 max-w-[1440px] w-full mx-auto">
               {children}
             </main>
