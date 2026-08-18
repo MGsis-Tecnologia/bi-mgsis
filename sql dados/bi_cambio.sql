@@ -1,83 +1,104 @@
 -- ============================================================================
--- VIEW: bi_cambio  →  dataset "cambio" da API de ingestão
--- 1 linha = 1 cotação de 1 par de moedas em 1 dia
+-- VIEW: bi_cambio  →  dataset "cambio" da ingestão
+-- 1 linha = câmbio MÉDIO de 1 par de moedas em 1 mês
 --
--- Ver as três regras no topo de bi_movimento.sql (nada de NULL, data crua, sem
--- janela fixa). A data sai CRUA mesmo o câmbio indo sempre inteiro: manter o
--- padrão evita que alguém, ao adicionar um filtro no futuro, tropece num campo
--- em texto.
+-- Substitui a versão diária: para relatório mensal, a média do mês é o número
+-- que o negócio usa, e a tabela cai de dezenas de milhares de linhas para
+-- algumas centenas.
 --
--- Notas sobre o comando abaixo:
---   `cambio_taxa` significa "1 unidade de moeda_origem equivale a cambio_taxa
---   unidades de moeda_destino".
+-- ── O QUE O NÚMERO SIGNIFICA (leia antes de mexer) ──────────────────────────
 --
---   **As colunas do ERP entram TROCADAS, e é de propósito.** Neste ERP a
---   cotação está expressa em guaranis: a linha (moeda_id=3, moeda_destino_id=2,
---   cambio_produto=7350) quer dizer "1 dólar custa 7.350 guaranis" — o
---   `moeda_destino_id` é a moeda ESTRANGEIRA e o `moeda_id` é a moeda em que o
---   preço está. Copiando na ordem das colunas, a view afirmava que 1 guarani
---   valia 7.350 dólares.
+-- `cambio_medio` é uma MAGNITUDE, não uma taxa direcional:
 --
---   Como conferir na sua base, sem depender desta explicação: rode
---   `SELECT moeda_id, moeda_destino_id, min(cambio_produto), max(cambio_produto)
---    FROM cambio GROUP BY 1,2`. O par que mostrar 6.000–9.000 é o dólar, e a
---   coluna que contém a moeda do dólar é a que tem que virar `moeda_origem`.
+--     quantas unidades de `moeda_origem` valem 1 unidade de `moeda_destino`
 --
---   Se o sentido estiver invertido, o servidor recusa a cotação e diz — há uma
---   checagem de ordem de grandeza por par (US$→G$ precisa cair entre 1.000 e
---   50.000), justamente porque taxa invertida não gera erro nenhum no banco, só
---   um relatório milhares de vezes maior ou menor.
+-- Na prática, com guarani como moeda local:
 --
---   A origem é `cambio_produto`, que no ERP é a cotação de venda. Se existir
---   também uma de compra, a escolha está feita: o plano decidiu UMA cotação
---   por par, e o sentido inverso sai de 1/taxa. Duas cotações independentes
---   fariam dois relatórios do sistema se contradizerem.
+--     moeda_origem=3, moeda_destino=2, cambio_medio=7350
+--     → 1 dólar custa 7.350 guaranis
+--     → indo  US$ → G$  MULTIPLICA por 7.350
+--     → indo  G$ → US$  DIVIDE     por 7.350
 --
---   Linha sem data, sem taxa positiva ou com origem igual ao destino é
---   descartada aqui — viraria 422 no envio, derrubando o lote inteiro.
+-- O mesmo vale para o real: R$ → G$ multiplica, G$ → R$ divide.
+--
+-- **O Analytics não decide isso a cada consulta.** Na entrada, cada linha
+-- daqui vira DUAS na tabela `cambio_mensal` — o sentido direto e o inverso, já
+-- calculado como 1/taxa. Da consulta em diante é sempre multiplicação, o que
+-- elimina a classe de erro "multipliquei onde devia dividir".
+--
+-- Por isso `moeda.moeda_multiplica` não precisa ser enviado: a regra está na
+-- ordem do par, e o inverso é derivado. Se algum dia aparecer linha em que
+-- `moeda_id` NÃO seja a moeda local, a checagem de ordem de grandeza da
+-- ingestão recusa e aponta — é o sinal de que o flag passou a ser necessário.
+--
+-- ── Colunas ────────────────────────────────────────────────────────────────
+--   moeda_origem / moeda_destino  o par (ver acima o sentido)
+--   mes_referencia                dia 1º do mês, em DATE — é o que o Analytics
+--                                 usa; `YYYY-MM` sai daqui
+--   mes_ano                       'MM-YYYY', só rótulo para leitura humana
+--   cambio_medio                  média das médias diárias do mês
+--   qtd_dias_com_cotacao          quantos dias do mês tinham cotação; serve
+--                                 para desconfiar de mês com 1 dia só
+--   primeira_cotacao/ultima       extremos do mês, para auditoria
 -- ============================================================================
 CREATE OR REPLACE VIEW bi_cambio AS
+WITH cambio_diario AS (
+    -- Mais de uma cotação no mesmo dia vira a média do dia, para que um dia com
+    -- 5 lançamentos não pese 5 vezes na média do mês.
+    SELECT
+        moeda_id,
+        moeda_destino_id,
+        cambio_data,
+        AVG(cambio_produto) AS cambio_medio_dia
+    FROM cambio
+    WHERE cambio_data IS NOT NULL
+      AND cambio_produto > 0
+      AND moeda_id IS NOT NULL
+      AND moeda_destino_id IS NOT NULL
+      AND moeda_id <> moeda_destino_id
+    GROUP BY moeda_id, moeda_destino_id, cambio_data
+)
 SELECT
-    c.cambio_data                              AS cambio_data,
-    COALESCE(c.moeda_id::text, '')             AS moeda_origem,
-    COALESCE(c.moeda_destino_id::text, '')     AS moeda_destino,
-    c.cambio_produto                           AS cambio_taxa
-FROM cambio c;
+    moeda_id                                              AS moeda_origem,
+    moeda_destino_id                                      AS moeda_destino,
+    DATE_TRUNC('month', cambio_data)::date                AS mes_referencia,
+    TO_CHAR(DATE_TRUNC('month', cambio_data), 'MM-YYYY')  AS mes_ano,
+    ROUND(AVG(cambio_medio_dia), 4)                       AS cambio_medio,
+    COUNT(*)                                              AS qtd_dias_com_cotacao,
+    MIN(cambio_data)                                      AS primeira_cotacao,
+    MAX(cambio_data)                                      AS ultima_cotacao
+FROM cambio_diario
+GROUP BY moeda_id, moeda_destino_id, DATE_TRUNC('month', cambio_data)
+ORDER BY mes_referencia, moeda_id, moeda_destino_id;
 
 -- ── CONFIRA ANTES DE ENVIAR ────────────────────────────────────────────────
 --
--- 1. Mais de uma cotação para o mesmo par no mesmo dia?
---
---      SELECT cambio_data, moeda_origem, moeda_destino, COUNT(*) AS cotacoes
---        FROM bi_cambio
---       GROUP BY 1, 2, 3 HAVING COUNT(*) > 1
---       ORDER BY 4 DESC LIMIT 20;
---
---    Se voltar vazio, está tudo certo. Se voltar linhas, o servidor fica com a
---    PRIMEIRA e avisa quando as taxas divergem mais de 2% — mas nesse caso vale
---    decidir a regra (última do dia? média?) e agregar aqui, em vez de deixar
---    a escolha ao acaso.
---
--- 2. A ordem de grandeza está certa?
+-- 1. A ordem de grandeza está certa?
 --
 --      SELECT moeda_origem, moeda_destino,
---             MIN(cambio_taxa) AS menor, MAX(cambio_taxa) AS maior,
---             COUNT(*) AS dias
+--             MIN(cambio_medio) AS menor, MAX(cambio_medio) AS maior,
+--             COUNT(*) AS meses
 --        FROM bi_cambio GROUP BY 1, 2 ORDER BY 1, 2;
 --
---    Com guarani (id 3) como moeda local, o esperado é:
---      2 → 3   entre  1.000 e 50.000   (hoje perto de 7.300)
---      1 → 3   entre    200 e 10.000   (hoje perto de 1.400)
+--    Com guarani (3) como moeda local, o esperado é:
+--      3 → 2   entre 1.000 e 50.000   (hoje perto de 7.400)
+--      3 → 1   entre   200 e 10.000   (hoje perto de 1.400)
 --
---    Valores como 0,00014 significam par invertido. O servidor recusa e aponta
---    a linha, mas é melhor descobrir aqui.
+--    Valor como 0,00014 significa par ao contrário do que este cabeçalho diz.
 --
--- 3. Desde quando há cotação?
+-- 2. Algum mês com pouquíssima cotação?
 --
---      SELECT MIN(cambio_data) AS primeira, MAX(cambio_data) AS ultima,
---             COUNT(*) AS cotacoes
---        FROM bi_cambio;
+--      SELECT * FROM bi_cambio WHERE qtd_dias_com_cotacao <= 2
+--       ORDER BY mes_referencia DESC;
 --
---    Venda anterior à primeira cotação fica sem taxa — é o único buraco que
---    sobra, e só o ERP pode fechá-lo. Do lado do Analytics, a tabela densa é
---    preenchida até HOJE por carry-forward, então o lado recente está coberto.
+--    Um mês inteiro representado por um dia só é uma média frágil. Não impede
+--    o envio — só vale saber antes de explicar um número estranho.
+--
+-- 3. Falta algum mês?
+--
+--      SELECT moeda_destino, COUNT(DISTINCT mes_referencia) AS meses,
+--             MIN(mes_referencia) AS de, MAX(mes_referencia) AS ate
+--        FROM bi_cambio GROUP BY 1 ORDER BY 1;
+--
+--    Buraco não impede nada: o Analytics preenche mês sem cotação com o mês
+--    MAIS PRÓXIMO daquele par, e marca a linha como derivada.

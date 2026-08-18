@@ -75,7 +75,7 @@ const DELEGATE: Record<DatasetKind, string> = {
   caixa: "caixaItem",
   orcamento: "orcamentoItem",
   compras: "compraItem",
-  cambio: "cambio",
+  cambio: "cambioMensal",
 };
 
 /**
@@ -107,10 +107,10 @@ export async function clearRows(db: PrismaClient, kind: DatasetKind): Promise<vo
     case "caixa":      await db.caixaItem.deleteMany({}); break;
     case "orcamento":  await db.orcamentoItem.deleteMany({}); break;
     case "compras":    await db.compraItem.deleteMany({}); break;
-    // `cambio_diario` não é limpa aqui: ela é reconstruída inteira depois da
-    // importação (ver server/ingest/cambio.ts). Apagá-la agora deixaria as
-    // telas sem cotação nenhuma no intervalo entre o DELETE e a reconstrução.
-    case "cambio":     await db.cambio.deleteMany({}); break;
+    // Câmbio não passa por aqui: `reconstroiCambioMensal` reescreve a tabela
+    // inteira numa transação só, derivando os sentidos. Limpar antes abriria
+    // uma janela com as telas sem cotação nenhuma.
+    case "cambio":     break;
   }
 }
 
@@ -148,12 +148,11 @@ export async function insertRows(db: PrismaClient, kind: DatasetKind, rows: unkn
       case "compras":
         return (await db.compraItem.createMany({ data: rows as CompraLineItem[] })).count;
       case "cambio":
-        // `skipDuplicates`: a chave é (data, origem, destino), e o ERP repete a
-        // mesma cotação em lotes diferentes do mesmo arquivo. A normalização
-        // por lote não enxerga isso — só o banco enxerga.
-        return (
-          await db.cambio.createMany({ data: rows as CambioLinha[], skipDuplicates: true })
-        ).count;
+        // Idem: a gravação do câmbio é a reconstrução, que precisa do arquivo
+        // INTEIRO em mãos (o mês mais próximo e os sentidos cruzados não saem
+        // de um lote isolado). Quem chama acumula as linhas e reconstrói no
+        // fim — ver importacao/processa.ts e a rota de ingestão.
+        return 0;
     }
   } catch (e) {
     console.error(`❌ Erro ao inserir ${kind}:`, e);
@@ -222,10 +221,10 @@ export async function getRows(db: PrismaClient, kind: DatasetKind, skip: number,
     // Câmbio não tem `id`: a chave é (data, origem, destino), e é por ela que a
     // paginação ordena — sem uma ordem total, `skip` repetiria linhas.
     case "cambio":
-      return db.cambio.findMany({
+      return db.cambioMensal.findMany({
         skip,
         take,
-        orderBy: [{ data: "asc" }, { moedaOrigem: "asc" }, { moedaDestino: "asc" }],
+        orderBy: [{ competencia: "asc" }, { moedaOrigem: "asc" }, { moedaDestino: "asc" }],
       });
   }
 }

@@ -221,18 +221,22 @@ SQL
 }
 
 
-# Câmbio: vai INTEIRO a cada ciclo, sem recorte de período.
+# Câmbio: MÉDIA MENSAL, e vai INTEIRO a cada ciclo, sem recorte de período.
 #
-# São ~10 mil linhas, menos de 1 MB — controlar período aqui só traria o risco
-# de um buraco por sincronismo parcial sem economizar nada. O servidor
-# normaliza o sentido do par e reconstrói a tabela densa depois de gravar.
+# São algumas centenas de linhas — controlar período aqui só traria o risco de
+# um buraco por sincronismo parcial sem economizar nada. O servidor reescreve a
+# tabela derivando os dois sentidos de cada par e preenchendo mês sem cotação
+# com o mais próximo.
+#
+# `taxa` é a MAGNITUDE que a view devolve ("1 dólar custa 7.350 guaranis"), não
+# um fator de multiplicação — quem resolve a direção é o servidor.
 sql_cambio() { cat <<'SQL'
 SELECT json_build_object('periodo', 'tudo', 'linhas', COALESCE(json_agg(x), '[]'::json))
 FROM (
-  SELECT to_char(cambio_data, 'YYYY-MM-DD') AS "data",
+  SELECT to_char(mes_referencia, 'YYYY-MM') AS "competencia",
          moeda_origem  AS "moedaOrigem",
          moeda_destino AS "moedaDestino",
-         cambio_taxa   AS "taxa"
+         cambio_medio  AS "taxa"
   FROM bi_cambio
 ) x
 SQL

@@ -92,6 +92,36 @@ model Cambio {
   @@map("cambio")
 }
 
+/// Câmbio MÉDIO MENSAL — a fonte da conversão a partir de agosto/2026.
+///
+/// Uma linha por (mês, origem, destino). Substitui o par `cambio` +
+/// `cambio_diario`, que guardava cotação dia a dia: para relatório mensal a
+/// média do mês é o número que o negócio usa, e a tabela cai de dezenas de
+/// milhares de linhas para algumas centenas.
+///
+/// `competencia` é 'YYYY-MM' — o mesmo recorte que `substring(data, 1, 7)`
+/// devolve nas tabelas de fato, que é como a conversão faz o JOIN.
+///
+/// `taxa`: 1 unidade de `moedaOrigem` equivale a `taxa` unidades de
+/// `moedaDestino`. Dizer isso é obrigatório: taxa invertida não gera erro
+/// nenhum no banco, só relatório milhares de vezes maior ou menor.
+///
+/// `derivada` separa o que o ERP mandou do que foi preenchido aqui — mês sem
+/// cotação recebe a do mês mais próximo, e sentidos que o ERP não manda
+/// (inverso e cruzado) saem por cálculo. Sem a marca, não dá para responder
+/// "de onde veio este número" olhando a tabela.
+model CambioMensal {
+  competencia  String  @default("") // YYYY-MM
+  moedaOrigem  String  @default("") @map("moeda_origem")
+  moedaDestino String  @default("") @map("moeda_destino")
+  taxa         Float   @default(0)
+  derivada     Boolean @default(false)
+
+  @@id([competencia, moedaOrigem, moedaDestino])
+  @@index([competencia, moedaOrigem], map: "idx_cambio_mensal_lookup")
+  @@map("cambio_mensal")
+}
+
 // Câmbio, camada 2 de 2: densa, derivada, é nela que as consultas fazem JOIN.
 //
 // Uma linha para TODO dia do calendário e TODOS os sentidos, preenchendo os

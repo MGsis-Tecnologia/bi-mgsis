@@ -167,12 +167,14 @@ export async function getEstoqueData(
 
   const pInv = new Params();
   // O snapshot não tem data de transação — é uma foto do estoque AGORA —, então
-  // aqui a conversão usa a cotação mais recente que existe em `cambio_diario`,
-  // não a do dia de cada linha. `MAX(data)` em vez de `CURRENT_DATE` para que um
-  // atraso do agente não jogue tudo silenciosamente no COALESCE(taxa, 1).
+  // aqui a conversão usa o câmbio do mês mais recente que existe em
+  // `cambio_mensal`, não o do mês de cada linha. `MAX(competencia)` em vez do
+  // mês corrente para que um atraso do agente não jogue tudo silenciosamente no
+  // COALESCE(taxa, 1). O `substring` do joinCambio sobre 'YYYY-MM' devolve o
+  // próprio valor, então a competência entra direto.
   const custoInvP = converteInv ? `i.cost_total_usd * ${exprTaxa(f)}` : "i.cost_total_usd";
   const joinInvP = converteInv
-    ? joinCambio(f, pInv, "(SELECT MAX(data) FROM cambio_diario)", "i.currency_id")
+    ? joinCambio(f, pInv, "(SELECT MAX(competencia) FROM cambio_mensal)", "i.currency_id")
     : "";
   const condInvP: string[] = [];
   if (f.empresaId !== "all") condInvP.push(`i.empresa_id = ${pInv.add(f.empresaId)}`);

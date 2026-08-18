@@ -9,6 +9,7 @@ import {
   conferePertinencia,
   substituiPeriodo,
 } from "@/lib/server/ingest/substituir";
+import { reconstroiCambioMensal, valida as validaCambio, type LinhaCambioMensal } from "@/lib/server/ingest/cambio-mensal";
 import { upsertMeta } from "@/lib/server/dataset-storage";
 import type { DatasetKind } from "@/lib/server/dataset-storage";
 
@@ -127,11 +128,49 @@ export async function POST(req: Request, ctx: Ctx) {
     });
   }
 
-  // Câmbio entra RAW, sem normalização — o tratamento fica para o tempo de conversão
-  let linhasParaGravar = validas;
+  // ── Câmbio: caminho próprio ────────────────────────────────────────────────
+  // Não é "substitua o período": a tabela é reescrita inteira, derivando os
+  // dois sentidos de cada par e preenchendo mês sem cotação com o mais próximo.
+  // Isso exige o conjunto COMPLETO, que é justamente como o câmbio é enviado.
+  if (nome === "cambio") {
+    const { validas: cot, problemas } = validaCambio(validas as unknown as LinhaCambioMensal[]);
+    if (problemas.length > 0 && problemas.length >= validas.length / 4) {
+      return erro(422, `${problemas.length} de ${validas.length} cotações recusadas por ordem de grandeza.`, {
+        dica: "Confira o sentido do par na view bi_cambio — ver o cabeçalho do arquivo.",
+        exemplo: problemas[0]!.motivo,
+      });
+    }
+    try {
+      const cob = await reconstroiCambioMensal(auth.db, cot);
+      await upsertMeta(auth.db, {
+        kind: KIND_DA_META[nome],
+        filename: `api:${periodo.rotulo}`,
+        rowCount: cob.linhas,
+        importedAt: new Date().toISOString(),
+      });
+      return NextResponse.json({
+        ok: true,
+        dataset: nome,
+        empresa: auth.empresaNome,
+        periodo: periodo.rotulo,
+        recebidas: validas.length,
+        recusadas: problemas.length,
+        linhas: cob.linhas,
+        derivadas: cob.derivadas,
+        meses: cob.meses,
+        de: cob.de,
+        ate: cob.ate,
+        moedas: cob.moedas,
+        ms: cob.ms,
+      });
+    } catch (e) {
+      console.error("[ingest] cambio falhou:", e);
+      return erro(500, "Falha ao reconstruir o câmbio. Nada foi alterado.");
+    }
+  }
 
   try {
-    const r = await substituiPeriodo(auth.db, nome, periodo, linhasParaGravar);
+    const r = await substituiPeriodo(auth.db, nome, periodo, validas);
 
     // Mantém `dataset_meta` coerente: as telas e a importação de CSV leem daí
     // para saber se há dados e de quando são. O câmbio entra aqui também

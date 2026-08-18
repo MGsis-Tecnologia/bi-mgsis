@@ -5,7 +5,11 @@ import * as XLSX from "xlsx";
 import type { PrismaClient } from "@prisma/client";
 import { processRows, type ParseResult } from "@/lib/parsers/csv-parser";
 import { clearRows, insertRows, upsertMeta, type DatasetKind } from "@/lib/server/dataset-storage";
-import { detectaPivo, normaliza, reconstroiCambioDiario, type LinhaCambio } from "@/lib/server/ingest/cambio";
+import {
+  reconstroiCambioMensal,
+  valida as validaCambio,
+  type LinhaCambioMensal,
+} from "@/lib/server/ingest/cambio-mensal";
 import { atualizaJob } from "./jobs";
 
 /**
@@ -202,12 +206,15 @@ export async function processaArquivo(
   const avisos: string[] = [];
   let ultimoAviso = 0;
   /**
-   * Pivô do câmbio — a moeda contra a qual o ERP cota. É deduzido do PRIMEIRO
-   * lote e reusado nos demais, pela mesma razão que o leiaute é: é uma
-   * propriedade do arquivo, não do lote, e reduzi-lo por lote faria a
-   * normalização mudar de sentido no meio da importação.
+   * Câmbio não é gravado lote a lote: as linhas são acumuladas aqui e a tabela
+   * é reconstruída de uma vez no fim.
+   *
+   * É preciso ter o arquivo INTEIRO em mãos — o mês mais próximo (para o mês
+   * sem cotação) e os sentidos cruzados não saem de um lote isolado. Cabe na
+   * memória com folga: a média mensal são algumas centenas de linhas de quatro
+   * campos, contra as dezenas de milhares da cotação diária.
    */
-  let pivo: string | null = null;
+  const linhasCambio: LinhaCambioMensal[] = [];
 
   try {
     await db.$transaction(
@@ -245,7 +252,9 @@ export async function processaArquivo(
           // Câmbio: apenas grava RAW, sem validação ou normalização
           // Transformações de dados ficam para quando os dados forem usados (convertido na API)
 
-          if (extraido.itens.length > 0) {
+          if (extraido.kind === "cambio") {
+            linhasCambio.push(...(extraido.itens as LinhaCambioMensal[]));
+          } else if (extraido.itens.length > 0) {
             gravadas += await insertRows(txDb, extraido.kind, extraido.itens);
           }
 
@@ -287,8 +296,37 @@ export async function processaArquivo(
     throw err;
   }
 
-  // Reconstrução de cambio_diario desabilitada: fica para depois
-  // (pode ser feita manualmente ou via API quando necessário)
+  // O câmbio é gravado aqui, DEPOIS do commit do resto: a reconstrução tem a
+  // própria transação e reescreve `cambio_mensal` inteira de uma vez, então as
+  // telas nunca enxergam meia tabela.
+  if (kind === "cambio") {
+    const { validas, problemas } = validaCambio(linhasCambio);
+    ignoradas += problemas.length;
+    for (const pr of problemas.slice(0, 5)) {
+      const a = `Cotação recusada: ${pr.motivo}`;
+      if (!avisos.includes(a) && avisos.length < 20) avisos.push(a);
+    }
+    // Recusa em massa é leiaute errado, não linha solta — quase sempre o par ao
+    // contrário. Gravar o pedaço que passou seria pior: as moedas sem faixa
+    // conhecida entrariam invertidas em silêncio.
+    if (problemas.length > 0 && problemas.length >= linhasCambio.length / 4) {
+      const msg =
+        `${problemas.length} de ${linhasCambio.length} cotações recusadas por ordem de ` +
+        `grandeza — confira o sentido do par na view bi_cambio. Exemplo: ${problemas[0]!.motivo}`;
+      await atualizaJob(db, jobId, {
+        status: "erro", erro: encurtaErro(msg), lidas, gravadas: 0, ignoradas,
+        avisos: JSON.stringify(avisos), concluidoEm: new Date(),
+      });
+      throw new ErroImportacao(msg);
+    }
+
+    const cob = await reconstroiCambioMensal(db, validas);
+    gravadas = validas.length;
+    avisos.push(
+      `Câmbio mensal reconstruído: ${cob.linhas} linhas (${cob.derivadas} derivadas) ` +
+        `cobrindo ${cob.meses} meses, de ${cob.de} a ${cob.ate}, moedas ${cob.moedas.join(", ")}.`
+    );
+  }
 
   await atualizaJob(db, jobId, {
     status: "concluido",

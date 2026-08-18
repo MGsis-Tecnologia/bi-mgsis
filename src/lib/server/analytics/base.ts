@@ -83,7 +83,8 @@ export class Params {
 // ─── Conversão de moeda ──────────────────────────────────────────────────────
 
 /**
- * Conversão pela cotação do DIA DA TRANSAÇÃO, para a moeda padrão da empresa.
+ * Conversão pelo câmbio MÉDIO DO MÊS da transação, para a moeda padrão da
+ * empresa.
  *
  * Antes a taxa vinha do NAVEGADOR: cada usuário buscava a cotação de hoje numa
  * API pública e a mandava no corpo da requisição. Três defeitos de uma vez —
@@ -91,17 +92,26 @@ export class Params {
  * diferente viam totais diferentes para o mesmo período, e o número era
  * manipulável por quem abrisse o DevTools. Era a pendência 3 do PLANO-DADOS.
  *
- * Agora sai de `cambio_diario`, que tem uma linha para todo dia do calendário
- * e todos os sentidos — ver server/ingest/cambio.ts.
+ * Depois passou a sair de `cambio_diario`, dia a dia. Agora sai de
+ * `cambio_mensal`: para relatório mensal a média do mês é o número que o
+ * negócio usa, e a tabela cai de dezenas de milhares de linhas para algumas
+ * centenas — ver server/ingest/cambio-mensal.ts.
+ *
+ * **Aqui é sempre multiplicação.** O ERP guarda uma magnitude ("1 dólar custa
+ * 7.350 guaranis") e converter com ela exigiria saber quando multiplicar e
+ * quando dividir. Essa decisão é tomada uma vez, na entrada, que grava os dois
+ * sentidos já calculados. Nenhuma consulta precisa lembrar da regra.
+ *
+ * O JOIN é pelo MÊS da linha (`substring(data, 1, 7)`), o mesmo recorte que a
+ * `competencia` guarda.
  *
  * Com moeda específica no filtro não há conversão nenhuma: a consulta filtra
  * por aquela moeda e mostra o valor bruto, exatamente como está no ERP.
  *
- * `COALESCE(taxa, 1)` na ponta: a cobertura vai do primeiro fato até hoje, e as
- * linhas de identidade (X→X = 1) existem, então só cai no 1 quando a moeda da
- * linha não tem cotação NENHUMA — o caso dos `moeda_id` 0 e 5 encontrados na
- * base deste cliente. É o mesmo comportamento de antes, e não silencia a linha
- * (somar como se fosse 1:1 é errado, mas descartar seria pior e invisível).
+ * `COALESCE(taxa, 1)` na ponta: as linhas de identidade (X→X = 1) existem e os
+ * meses sem cotação são preenchidos pelo mais próximo, então só cai no 1 quando
+ * a moeda da linha não tem cotação NENHUMA. Somar como se fosse 1:1 é errado,
+ * mas descartar a linha seria pior — some do relatório sem sinal nenhum.
  */
 export function joinCambio(
   f: AnalyticsFilters,
@@ -110,8 +120,8 @@ export function joinCambio(
   colMoeda: string
 ): string {
   if (f.currency !== "ALL") return "";
-  return `LEFT JOIN cambio_diario cbx
-            ON cbx.data = ${colData}
+  return `LEFT JOIN cambio_mensal cbx
+            ON cbx.competencia = substring(${colData}, 1, 7)
            AND cbx.moeda_origem = ${colMoeda}
            AND cbx.moeda_destino = ${p.add(f.moedaPadrao)}`;
 }

@@ -157,13 +157,19 @@ const linhaCaixa = z.object({
 });
 
 // O câmbio é uma FOTO do histórico inteiro, como o estoque — vai sempre
-// completo (~10 mil linhas, menos de 1 MB), porque controlar período aqui só
-// traria o risco de um buraco por sincronismo parcial sem economizar nada.
+// completo, porque controlar período aqui só traria o risco de um buraco por
+// sincronismo parcial sem economizar nada. Na média MENSAL são algumas centenas
+// de linhas, então "completo" custa quase nada.
 //
-// `taxa`: 1 unidade de origem equivale a `taxa` unidades de destino. Deixar
-// isso implícito é a ambiguidade que mais gera valor invertido em relatório.
+// `taxa` é uma MAGNITUDE, não um fator: quantas unidades de `moedaOrigem` valem
+// 1 de `moedaDestino` ("1 dólar custa 7.350 guaranis"). Quem decide multiplicar
+// ou dividir é a normalização na entrada, que grava os dois sentidos — ver
+// ingest/cambio-mensal.ts. Deixar isso implícito é a ambiguidade que mais gera
+// valor invertido em relatório.
 const linhaCambio = z.object({
-  data: dataISO,
+  competencia: z
+    .string()
+    .regex(/^\d{4}-\d{2}$/, "competência deve ser YYYY-MM"),
   moedaOrigem: texto,
   moedaDestino: texto,
   taxa: z.coerce.number().finite().positive(),
@@ -194,7 +200,7 @@ export interface DefinicaoDataset {
   /** Delegate do Prisma Client, para o createMany. */
   delegate:
     | "saleItem" | "orcamentoItem" | "receivableItem" | "payableItem"
-    | "caixaItem" | "inventoryItem" | "cambio" | "compraItem";
+    | "caixaItem" | "inventoryItem" | "cambioMensal" | "compraItem";
   schema: z.ZodType;
   /** Só para a mensagem de erro quando o lote é grande demais. */
   linhasTipicasPorMes: number;
@@ -252,11 +258,14 @@ export const DATASETS = {
     linhasTipicasPorMes: 112_000,
   },
   cambio: {
-    tabela: "cambio",
+    // A gravação NÃO passa pelo caminho comum: a rota chama
+    // `reconstroiCambioMensal`, que reescreve a tabela inteira derivando os
+    // sentidos. `tabela` e `delegate` ficam aqui só para o GET de conferência.
+    tabela: "cambio_mensal",
     colunaData: null,
-    delegate: "cambio",
+    delegate: "cambioMensal",
     schema: linhaCambio,
-    linhasTipicasPorMes: 10_000,
+    linhasTipicasPorMes: 500,
   },
 } as const satisfies Record<string, DefinicaoDataset>;
 

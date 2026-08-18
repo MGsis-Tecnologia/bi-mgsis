@@ -247,15 +247,17 @@ export interface StoredCompras {
   rowCount: number;
 }
 
-// ─── Câmbio (cotações do ERP) ────────────────────────────────────────────────
-// Camada de auditoria: o que o ERP mandou, sem alteração. A tabela densa que as
-// consultas usam (`cambio_diario`) é derivada daqui — ver server/ingest/cambio.
+// ─── Câmbio (média mensal do ERP) ────────────────────────────────────────────
+// O que o ERP mandou, uma linha por par e mês. A tabela que as consultas usam
+// (`cambio_mensal`) é derivada daqui — ver server/ingest/cambio-mensal.ts.
 //
-// `taxa`: 1 unidade de `moedaOrigem` equivale a `taxa` unidades de
-// `moedaDestino`. Deixar isso implícito é a ambiguidade que mais gera valor
-// invertido em relatório.
+// `taxa` é uma MAGNITUDE: quantas unidades de `moedaOrigem` valem 1 de
+// `moedaDestino` ("1 dólar custa 7.350 guaranis"). Não é um fator de
+// multiplicação — quem transforma isso nos dois sentidos é a normalização na
+// entrada. Deixar implícito é a ambiguidade que mais gera valor invertido em
+// relatório.
 export interface CambioLinha {
-  data: string;          // ISO YYYY-MM-DD
+  competencia: string;   // YYYY-MM
   moedaOrigem: string;
   moedaDestino: string;
   taxa: number;

@@ -121,10 +121,13 @@ const COMPRAS_REQUIRED_COLS = [
  * A ordem importa: o primeiro nome encontrado vence.
  */
 const CAMBIO_COLS = {
-  data: ["cambio_data", "data", "fecha"],
-  moedaOrigem: ["moeda_origem", "moedaorigem", "moeda_id"],
+  // `mes_referencia` é o dia 1º do mês, em DATE — a competência sai dele.
+  // `mes_ano` ('MM-YYYY') NÃO entra: não ordena e inverte a ordem dos campos.
+  // As demais são as grafias antigas, do tempo da cotação diária.
+  data: ["mes_referencia", "competencia", "cambio_data", "data", "fecha"],
+  moedaOrigem: ["moeda_origem", "moeda_orgem", "moedaorigem", "moeda_id"],
   moedaDestino: ["moeda_destino", "moedadestino", "moeda_destino_id"],
-  taxa: ["cambio_taxa", "cambiovenda", "cambio_produto", "taxa"],
+  taxa: ["cambio_medio", "cambio_taxa", "cambiovenda", "cambio_produto", "taxa"],
 } as const;
 
 /** Primeira coluna presente no arquivo, entre os nomes aceitos. */
@@ -995,9 +998,15 @@ function processCambioRows(
     rowNum++;
     const row = mapRow(rawRow, colMap);
 
-    const data = parseDate(String(row[col.data!] ?? ""));
-    if (!data) {
-      warnings.push(`Linha ${rowNum}: data inválida "${row[col.data!]}" — ignorada.`);
+    // A competência é o MÊS. A coluna pode vir como data completa
+    // (`mes_referencia` = dia 1º) ou já como 'YYYY-MM'; nos dois casos o que
+    // interessa são os sete primeiros caracteres do ISO.
+    const cru = String(row[col.data!] ?? "").trim();
+    const competencia = /^\d{4}-\d{2}$/.test(cru)
+      ? cru
+      : (parseDate(cru) ?? "").slice(0, 7);
+    if (!/^\d{4}-\d{2}$/.test(competencia)) {
+      warnings.push(`Linha ${rowNum}: mês inválido "${cru}" — ignorada.`);
       skipped++;
       continue;
     }
@@ -1017,7 +1026,7 @@ function processCambioRows(
       continue;
     }
 
-    items.push({ data, moedaOrigem, moedaDestino, taxa });
+    items.push({ competencia, moedaOrigem, moedaDestino, taxa });
   }
 
   if (items.length === 0) {
