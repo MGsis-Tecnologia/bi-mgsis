@@ -170,8 +170,10 @@ const linhaCambio = z.object({
   competencia: z
     .string()
     .regex(/^\d{4}-\d{2}$/, "competência deve ser YYYY-MM"),
-  moedaOrigem: texto,
-  moedaDestino: texto,
+  // z.coerce (não `texto`): no ERP, moeda_id/moeda_destino_id são INTEGER, e
+  // `json_agg` preserva o tipo número no JSON — chega aqui como `2`, não `"2"`.
+  moedaOrigem: z.coerce.string().max(255),
+  moedaDestino: z.coerce.string().max(255),
   taxa: z.coerce.number().finite().positive(),
 });
 

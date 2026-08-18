@@ -199,18 +199,39 @@ GROUP BY e.produto_id, p.produto_descricao, p.produto_fabricante,
          e.empresa_id, p.moeda_id, m.moeda_sigla;
 
 -- ── bi_cambio ──
-CREATE OR REPLACE VIEW bi_cambio AS
+-- Câmbio MÉDIO MENSAL (substituiu a versão diária — colunas mudaram por
+-- completo, então precisa de DROP antes: CREATE OR REPLACE VIEW só aceita
+-- coluna nova no FIM, recusa renomear/reordenar as que já existem. Sem o
+-- DROP, quem já tinha a view diária instalada recebe erro do Postgres em vez
+-- de atualizar. Detalhe de cada coluna e das taxas em bi_cambio.sql.
+DROP VIEW IF EXISTS bi_cambio;
+CREATE VIEW bi_cambio AS
+WITH cambio_diario AS (
+    SELECT
+        moeda_id,
+        moeda_destino_id,
+        cambio_data,
+        AVG(cambio_produto) AS cambio_medio_dia
+    FROM cambio
+    WHERE cambio_data IS NOT NULL
+      AND cambio_produto > 0
+      AND moeda_id IS NOT NULL
+      AND moeda_destino_id IS NOT NULL
+      AND moeda_id <> moeda_destino_id
+    GROUP BY moeda_id, moeda_destino_id, cambio_data
+)
 SELECT
-    c.cambio_data                              AS cambio_data,
-    COALESCE(c.moeda_destino_id::text, '')     AS moeda_origem,
-    COALESCE(c.moeda_id::text, '')             AS moeda_destino,
-    c.cambio_produto                           AS cambio_taxa
-FROM cambio c
-WHERE c.cambio_data IS NOT NULL
-  AND c.cambio_produto > 0
-  AND COALESCE(c.moeda_id::text, '') <> ''
-  AND COALESCE(c.moeda_destino_id::text, '') <> ''
-  AND c.moeda_id::text <> c.moeda_destino_id::text;
+    moeda_id                                              AS moeda_origem,
+    moeda_destino_id                                      AS moeda_destino,
+    DATE_TRUNC('month', cambio_data)::date                AS mes_referencia,
+    TO_CHAR(DATE_TRUNC('month', cambio_data), 'MM-YYYY')  AS mes_ano,
+    ROUND(AVG(cambio_medio_dia), 4)                       AS cambio_medio,
+    COUNT(*)                                              AS qtd_dias_com_cotacao,
+    MIN(cambio_data)                                      AS primeira_cotacao,
+    MAX(cambio_data)                                      AS ultima_cotacao
+FROM cambio_diario
+GROUP BY moeda_id, moeda_destino_id, DATE_TRUNC('month', cambio_data)
+ORDER BY mes_referencia, moeda_id, moeda_destino_id;
 
 -- ── bi_compras ──
 -- Esta é a view do ERP, lida pelo agente. (O arquivo `bi_compras.sql` desta

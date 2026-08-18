@@ -41,7 +41,14 @@
 --                                 para desconfiar de mês com 1 dia só
 --   primeira_cotacao/ultima       extremos do mês, para auditoria
 -- ============================================================================
-CREATE OR REPLACE VIEW bi_cambio AS
+-- DROP antes do CREATE: esta view SUBSTITUIU uma versão diária mais antiga
+-- (colunas cambio_data/moeda_origem/moeda_destino/cambio_taxa). O conjunto de
+-- colunas mudou por completo, não só acrescentou no fim — e `CREATE OR REPLACE
+-- VIEW` só aceita mudança de shape assim, recusa renomear/reordenar as que já
+-- existem. Sem o DROP, quem já tinha a view antiga instalada recebe erro do
+-- Postgres ("cannot change name of view column") em vez de atualizar.
+DROP VIEW IF EXISTS bi_cambio;
+CREATE VIEW bi_cambio AS
 WITH cambio_diario AS (
     -- Mais de uma cotação no mesmo dia vira a média do dia, para que um dia com
     -- 5 lançamentos não pese 5 vezes na média do mês.
