@@ -8,6 +8,7 @@ import { Topbar } from "@/components/layout/topbar";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { DbError } from "@/components/layout/db-error";
 import { UsuarioProvider } from "@/components/providers/usuario-provider";
+import { MoedaInicial } from "@/components/providers/moeda-inicial";
 
 export const dynamic = "force-dynamic";
 
@@ -58,6 +59,7 @@ export default async function DashboardLayout({
           moedaPadrao: empresa?.moedaPadrao ?? "1",
         }}
       >
+        <MoedaInicial />
         <div className="flex min-h-screen bg-background">
           <Sidebar isMaster={session.isMaster} role={session.role} allowedMenus={session.allowedMenus} />
           <div className="flex min-w-0 flex-1 flex-col">

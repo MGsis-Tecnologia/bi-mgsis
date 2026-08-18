@@ -26,6 +26,15 @@ interface FiltersState {
   channel: string | "all";      // "Atacado" | "Varejo" | "all"
   sellerId: string | "all";
   subgroupId: string | "all";   // replaces categoryId
+  /**
+   * Moeda padrão da empresa sob a qual o filtro atual foi inicializado.
+   *
+   * Existe para o `iniciaMoeda` saber a diferença entre "ainda não escolheram
+   * nada nesta sessão" e "escolheram e eu não devo mexer". Sem essa marca, ou o
+   * filtro nunca começaria na moeda da empresa, ou desfaria a escolha do
+   * usuário a cada navegação.
+   */
+  moedaSessao: string | null;
   setPreset: (p: DatePreset) => void;
   /** Datas de calendário, `YYYY-MM-DD` — é o que o `<input type="date">` já dá. */
   setCustomRange: (r: { from: string; to: string }) => void;
@@ -34,6 +43,10 @@ interface FiltersState {
   setChannel: (c: string | "all") => void;
   setSeller: (id: string | "all") => void;
   setSubgroup: (id: string | "all") => void;
+  /** Ao entrar: começa na moeda da empresa. Ver `MoedaInicial`. */
+  iniciaMoeda: (padraoDaEmpresa: string) => void;
+  /** Chamado no login para que a próxima carga volte à moeda da empresa. */
+  esqueceMoedaDaSessao: () => void;
   resetFilters: () => void;
   getRange: () => DateRange;
 }
@@ -48,6 +61,7 @@ export const useFilters = create<FiltersState>()(
       channel: "all",
       sellerId: "all",
       subgroupId: "all",
+      moedaSessao: null,
       setPreset: (preset) => set({ preset, customRange: null }),
       setCustomRange: ({ from, to }) => set({ preset: "custom", customRange: { from, to } }),
       setCurrency: (currency) => set({ currency }),
@@ -55,6 +69,17 @@ export const useFilters = create<FiltersState>()(
       setChannel: (channel) => set({ channel }),
       setSeller: (sellerId) => set({ sellerId }),
       setSubgroup: (subgroupId) => set({ subgroupId }),
+      iniciaMoeda: (padrao) => {
+        // Só na primeira carga depois de entrar: com a marca já igual, quem
+        // mandou é a escolha do usuário, inclusive se ele preferiu "Todas".
+        if (get().moedaSessao === padrao) return;
+        const valida = padrao === "1" || padrao === "2" || padrao === "3";
+        set({
+          moedaSessao: padrao,
+          ...(valida ? { currency: padrao as AppCurrencyId } : {}),
+        });
+      },
+      esqueceMoedaDaSessao: () => set({ moedaSessao: null }),
       resetFilters: () =>
         set({ preset: "mes-atual", customRange: null, channel: "all", sellerId: "all", subgroupId: "all" }),
       getRange: () => {
@@ -81,6 +106,9 @@ export const useFilters = create<FiltersState>()(
         channel: s.channel,
         sellerId: s.sellerId,
         subgroupId: s.subgroupId,
+        // Persistida junto: o login limpa a marca e recarrega a página, e é na
+        // carga seguinte que a moeda da empresa é aplicada.
+        moedaSessao: s.moedaSessao,
       }),
     }
   )

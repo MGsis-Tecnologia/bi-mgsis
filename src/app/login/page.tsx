@@ -5,6 +5,7 @@ import { Eye, EyeOff } from "lucide-react";
 import { useTranslation } from "@/lib/hooks/use-translation";
 import { LanguageSwitcher } from "@/components/filters/language-switcher";
 import { ClientMounted } from "@/components/providers/client-mounted";
+import { useFilters } from "@/lib/store/filters";
 
 // Navegadores só sabem salvar credencial como usuário+senha — não existe um
 // terceiro campo nativo pra "empresa". Guardamos o CNPJ/RUC no localStorage
@@ -44,6 +45,10 @@ export default function LoginPage() {
       try {
         localStorage.setItem(CNPJ_STORAGE_KEY, cnpjRuc);
       } catch {}
+      // Entrou: a moeda do filtro volta a ser a da empresa. Quem aplica é o
+      // `MoedaInicial` na carga do painel — aqui só se apaga a marca, porque
+      // este lado ainda não sabe qual é a moeda da empresa.
+      useFilters.getState().esqueceMoedaDaSessao();
       window.location.replace("/dashboard");
     } catch (err) {
       setError((err as Error).message);
