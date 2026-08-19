@@ -86,6 +86,18 @@ model InviteToken {
   tokenHash String    @unique @map("token_hash") // nunca guardar o token em texto puro
   email     String    @default("")
   role      String    @default("admin") // papel do usuário criado na ativação: "admin" | "user"
+  /// Quem pediu o link — e, por consequência, o que ele tem permissão de fazer:
+  ///
+  /// "invite"     um admin/master gerou (convite de empresa, convite de usuário
+  ///              ou POST /api/users/[id]/reset-link). Cria a conta se ainda não
+  ///              existir, DESTRAVA a que estava inativa e marca a empresa como
+  ///              ativa.
+  /// "self_reset" o próprio usuário pediu em "Esqueci minha senha". Só troca a
+  ///              senha de uma conta que já existe e já está ativa: nunca cria
+  ///              usuário, nunca destrava conta bloqueada e nunca mexe no status
+  ///              da empresa. É o que mantém de pé a regra das 3 tentativas —
+  ///              quem foi bloqueado continua dependendo do gestor.
+  kind      String    @default("invite")
   // O default NOW() aqui é herança do SQL legado e não tem uso prático (todo
   // convite passa expiresAt explícito); está no datamodel só pra refletir o banco.
   expiresAt DateTime  @default(now()) @map("expires_at") @db.Timestamptz(6)

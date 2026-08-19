@@ -5,6 +5,7 @@ import { Eye, EyeOff } from "lucide-react";
 import { useTranslation } from "@/lib/hooks/use-translation";
 import { LanguageSwitcher } from "@/components/filters/language-switcher";
 import { ClientMounted } from "@/components/providers/client-mounted";
+import { ForgotPasswordDialog } from "@/components/auth/forgot-password-dialog";
 import { useFilters } from "@/lib/store/filters";
 
 // Navegadores só sabem salvar credencial como usuário+senha — não existe um
@@ -22,6 +23,7 @@ export default function LoginPage() {
   const [email, setEmail] = React.useState("");
   const [password, setPassword] = React.useState("");
   const [error, setError] = React.useState("");
+  const [forgotOpen, setForgotOpen] = React.useState(false);
 
   React.useEffect(() => {
     try {
@@ -112,7 +114,7 @@ export default function LoginPage() {
 
         {/* Footer Branding */}
         <div className="relative z-10 text-xs text-blue-300 tracking-widest">
-          {t("login.footer.branding")}
+          {t("login.footer.branding")} · {new Date().getFullYear()}
         </div>
       </div>
 
@@ -187,6 +189,7 @@ export default function LoginPage() {
                 <label className="block text-sm font-medium text-slate-700">{t("login.form.password.label")}</label>
                 <button
                   type="button"
+                  onClick={() => setForgotOpen(true)}
                   className="text-xs text-blue-600 hover:text-blue-700 font-medium transition-colors"
                 >
                   {t("login.form.password.forgot")}
@@ -261,6 +264,13 @@ export default function LoginPage() {
           </p>
         </div>
       </div>
+
+      <ForgotPasswordDialog
+        open={forgotOpen}
+        onClose={() => setForgotOpen(false)}
+        cnpjRucInicial={cnpjRuc}
+        emailInicial={email}
+      />
 
       <style jsx>{`
         @keyframes blob {

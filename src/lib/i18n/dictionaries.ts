@@ -53,7 +53,7 @@ export const dictionaries = {
     "login.hero.metric2.label": "Atualização dados",
     "login.hero.metric3.value": "24/7",
     "login.hero.metric3.label": "Disponibilidade",
-    "login.footer.branding": "MGSIS TECNOLOGÍA · PY · 2026",
+    "login.footer.branding": "MGSIS TECNOLOGÍA",
     "login.form.label": "ACESSAR O PAINEL",
     "login.form.title": "Acesse sua conta",
     "login.form.description": "Continue com o email registrado. Os campos vêm pré-preenchidos para demonstração.",
@@ -66,6 +66,21 @@ export const dictionaries = {
     "login.form.terms.usage": "Termos de Uso",
     "login.form.terms.privacy": "Política de Privacidade",
     "login.form.terms.suffix": "de MGSIS Analytics.",
+
+    // Login - Esqueci minha senha
+    "login.forgot.title": "Recuperar acesso",
+    "login.forgot.description":
+      "Informe o CNPJ/RUC da empresa e o seu e-mail. Enviaremos um link para você criar uma nova senha.",
+    "login.forgot.cnpj.label": "CNPJ ou RUC da empresa",
+    "login.forgot.submit": "Enviar link de recuperação",
+    "login.forgot.close": "Fechar",
+    "login.forgot.error": "Não foi possível enviar o link. Tente novamente.",
+    "login.forgot.sent.title": "Link enviado",
+    "login.forgot.sent.description":
+      "Se houver uma conta ativa com esses dados, o link para criar uma nova senha chegará no e-mail em instantes. Ele vale por 1 hora.",
+    "login.forgot.sent.blocked":
+      "Contas bloqueadas por tentativas incorretas só voltam a funcionar pelo link enviado pelo administrador da empresa.",
+    "login.forgot.sent.back": "Voltar ao login",
 
     // Dashboard - Header
     "dashboard.header.eyebrow": "Visão executiva · ao vivo",
@@ -600,7 +615,7 @@ export const dictionaries = {
     "login.hero.metric2.label": "Actualización datos",
     "login.hero.metric3.value": "24/7",
     "login.hero.metric3.label": "Disponibilidad",
-    "login.footer.branding": "MGSIS TECNOLOGÍA · PY · 2026",
+    "login.footer.branding": "MGSIS TECNOLOGÍA",
     "login.form.label": "ACCEDER AL PANEL",
     "login.form.title": "Ingresa a tu cuenta",
     "login.form.description": "Continúa con el correo registrado. Los campos vienen pre-completados para demostración.",
@@ -613,6 +628,21 @@ export const dictionaries = {
     "login.form.terms.usage": "Términos de Uso",
     "login.form.terms.privacy": "Política de Privacidad",
     "login.form.terms.suffix": "de MGSIS Analytics.",
+
+    // Login - Olvidé mi contraseña
+    "login.forgot.title": "Recuperar acceso",
+    "login.forgot.description":
+      "Ingresa el CNPJ/RUC de la empresa y tu correo. Te enviaremos un enlace para crear una nueva contraseña.",
+    "login.forgot.cnpj.label": "CNPJ o RUC de la empresa",
+    "login.forgot.submit": "Enviar enlace de recuperación",
+    "login.forgot.close": "Cerrar",
+    "login.forgot.error": "No fue posible enviar el enlace. Inténtalo de nuevo.",
+    "login.forgot.sent.title": "Enlace enviado",
+    "login.forgot.sent.description":
+      "Si existe una cuenta activa con esos datos, el enlace para crear una nueva contraseña llegará al correo en instantes. Es válido por 1 hora.",
+    "login.forgot.sent.blocked":
+      "Las cuentas bloqueadas por intentos incorrectos solo se liberan con el enlace que envía el administrador de la empresa.",
+    "login.forgot.sent.back": "Volver al login",
 
     // Dashboard - Header
     "dashboard.header.eyebrow": "Visión ejecutiva · en vivo",
