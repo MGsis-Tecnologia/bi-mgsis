@@ -108,7 +108,8 @@ CREATE OR REPLACE VIEW bi.proveedor_bi AS  SELECT pessoa.pessoa_id,
    FROM pessoa
   WHERE pessoa.pessoa_fornecedor = true AND pessoa.pessoa_inativo = false;
   
-CREATE OR REPLACE VIEW bi.receber_bi AS  SELECT r.empresa_id,
+CREATE OR REPLACE VIEW bi.receber_bi AS  SELECT  
+   r.empresa_id,
     r.moeda_id,
     ''::text AS sucursal,
     r.pessoa_cliente_id,
@@ -119,8 +120,14 @@ CREATE OR REPLACE VIEW bi.receber_bi AS  SELECT r.empresa_id,
     'RECEBER'::text AS tipolanzamiento,
     r.receber_valor_documento,
     r.receber_valor_recebido,
-    r.receber_valor_documento - r.receber_valor_recebido As saldo_documento
-   FROM receber r;
+    r.receber_valor_documento - r.receber_valor_recebido AS saldo_documento,
+    c.condicao_pagamento_descricao AS condicao_pagamento,
+    f.forma_pagamento_descricao AS forma_pagamento
+   FROM receber r
+     LEFT JOIN condicao_pagamento c ON r.condicao_pagamento_id = c.condicao_pagamento_id
+     LEFT JOIN forma_pagamento f ON f.forma_pagamento_id = c.forma_pagamento_id
+    
+   where r.receber_data_recebimento is null  
    
 CREATE OR REPLACE VIEW bi.stock_bi AS  SELECT e.empresa_id,
     p.moeda_id,
