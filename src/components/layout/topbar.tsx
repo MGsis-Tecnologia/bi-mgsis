@@ -9,15 +9,19 @@ import { LanguageSwitcher } from "@/components/filters/language-switcher";
 import { GlobalFilters } from "@/components/filters/global-filters";
 import { ThemeToggle } from "./theme-toggle";
 import { BrandMark } from "./brand-mark";
+import { MobileNav } from "./mobile-nav";
 import { ClientMounted } from "@/components/providers/client-mounted";
 import { useTranslation } from "@/lib/hooks/use-translation";
 
 interface TopbarProps {
   user?: { name: string; initials: string };
   empresaNome?: string;
+  isMaster?: boolean;
+  role?: string;
+  allowedMenus?: string[];
 }
 
-export function Topbar({ user, empresaNome }: TopbarProps) {
+export function Topbar({ user, empresaNome, isMaster, role, allowedMenus }: TopbarProps) {
   const { t } = useTranslation();
   const [showLogoutMenu, setShowLogoutMenu] = React.useState(false);
 
@@ -32,7 +36,8 @@ export function Topbar({ user, empresaNome }: TopbarProps) {
   return (
     <header className="sticky top-0 z-30 glass border-b border-border">
       <div className="flex h-14 items-center gap-3 px-4 md:px-6">
-        <div className="lg:hidden">
+        <div className="flex items-center gap-1 lg:hidden">
+          <MobileNav isMaster={isMaster} role={role} allowedMenus={allowedMenus} />
           <BrandMark showWord={false} />
         </div>
 
