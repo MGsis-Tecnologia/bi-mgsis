@@ -21,6 +21,10 @@ const PRESETS: { value: DatePreset; labelKey: DictionaryKey; hideDate?: boolean 
   { value: "ano-atual",     labelKey: "filters.date.preset.year" },
   { value: "ano-anterior",  labelKey: "filters.date.preset.prev_year" },
   { value: "12m",           labelKey: "filters.date.preset.12m" },
+  { value: "2a",            labelKey: "filters.date.preset.2a" },
+  { value: "3a",            labelKey: "filters.date.preset.3a" },
+  { value: "4a",            labelKey: "filters.date.preset.4a" },
+  { value: "5a",            labelKey: "filters.date.preset.5a" },
   { value: "todos",         labelKey: "filters.date.preset.all", hideDate: true },
 ];
 

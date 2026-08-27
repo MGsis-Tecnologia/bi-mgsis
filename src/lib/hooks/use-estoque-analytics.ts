@@ -30,6 +30,9 @@ export interface EstoqueRow extends Omit<EstoqueRowServidor, "coverageDays"> {
   daysSinceLastSale: number;
 }
 
+/** Dias por mês usado só pra exibição (coluna Cobertura em meses) — mesmo valor do servidor. */
+export const DAYS_PER_MONTH = 30.44;
+
 function paraTela(r: EstoqueRowServidor, agora: number): EstoqueRow {
   const ts = r.lastSaleDate ? new Date(r.lastSaleDate + "T00:00:00").getTime() : 0;
   return {
@@ -86,6 +89,7 @@ function iso(d: Date): string {
 
 export function useEstoqueAnalytics(opcoes: {
   status: StockStatus | "all";
+  coverageBucket: string;
   busca: string;
 }): { data: EstoqueView | null; loading: boolean; error: string | null } {
   const preset = useFilters((s) => s.preset);
@@ -122,10 +126,10 @@ export function useEstoqueAnalytics(opcoes: {
       subgroupId,
       hoje: iso(new Date()),
       status: opcoes.status,
+      coverageBucket: opcoes.coverageBucket,
       busca: buscaAdiada,
-      limite: 200,
     }),
-    [range, currency, empresaId, channel, sellerId, subgroupId, opcoes.status, buscaAdiada]
+    [range, currency, empresaId, channel, sellerId, subgroupId, opcoes.status, opcoes.coverageBucket, buscaAdiada]
   );
 
   React.useEffect(() => {

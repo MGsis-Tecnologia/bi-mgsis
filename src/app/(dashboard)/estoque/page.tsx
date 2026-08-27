@@ -1,10 +1,12 @@
 "use client";
 
 import * as React from "react";
+import { useVirtualizer } from "@tanstack/react-virtual";
 import {
   AlertOctagon,
   AlertTriangle,
   Boxes,
+  Download,
   Layers,
   PackageX,
   Search,
@@ -16,11 +18,14 @@ import { KpiCard } from "@/components/dashboard/kpi-card";
 import { EmptyState } from "@/components/dashboard/empty-state";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { BarChartH } from "@/components/charts/bar-chart-h";
 import { LabeledDonut } from "@/components/charts/labeled-donut";
 import { Money } from "@/components/dashboard/money";
 import type { AppCurrencyId } from "@/lib/types/dataset";
 import {
+  DAYS_PER_MONTH,
   statusLabel,
   useEstoqueAnalytics,
   type EstoqueRow as InventoryRow,
@@ -28,18 +33,21 @@ import {
 } from "@/lib/hooks/use-estoque-analytics";
 import { formatCurrency, formatNumber, formatPercent } from "@/lib/utils/format";
 import { useMoedaExibicao } from "@/lib/hooks/use-moeda-exibicao";
+import { exportarExcel } from "@/lib/utils/export-excel";
 import { cn } from "@/lib/utils";
 
 export default function EstoquePage() {
   const currency = useMoedaExibicao();
 
   const [statusFilter, setStatusFilter] = React.useState<StockStatus | "all">("all");
+  const [coverageFilter, setCoverageFilter] = React.useState<string>("all");
   const [query, setQuery] = React.useState("");
 
-  // Busca e situação vão para o servidor: são 76 mil SKUs, o navegador não tem
-  // mais a lista para filtrar.
+  // Busca, situação e faixa de cobertura vão para o servidor: são 76 mil SKUs,
+  // o navegador não tem a lista pra filtrar — só pra rolar (virtualizado).
   const { data, loading, error } = useEstoqueAnalytics({
     status: statusFilter,
+    coverageBucket: coverageFilter,
     busca: query,
   });
 
@@ -406,7 +414,19 @@ export default function EstoquePage() {
               <CardTitle>Detalhamento por SKU</CardTitle>
               <p className="mt-0.5 text-[11px] text-muted-foreground">
                 {formatNumber(data.rowsTotal)} de {formatNumber(totals.skus)} itens
-                {statusFilter !== "all" && ` · filtro: ${statusLabel(statusFilter)}`}
+                {(statusFilter !== "all" || coverageFilter !== "all") && (
+                  <>
+                    {" · filtro: "}
+                    {[
+                      statusFilter !== "all" ? statusLabel(statusFilter) : null,
+                      coverageFilter !== "all"
+                        ? (data.coverage.find((c) => c.key === coverageFilter)?.label ?? coverageFilter)
+                        : null,
+                    ]
+                      .filter(Boolean)
+                      .join(" + ")}
+                  </>
+                )}
                 {totals.skusMissingFromInventory > 0 && (
                   <>
                     {" "}· <span className="text-warning">
@@ -416,7 +436,29 @@ export default function EstoquePage() {
                 )}
               </p>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
+              <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as StockStatus | "all")}>
+                <SelectTrigger className="h-8 w-[150px] text-xs">
+                  <SelectValue placeholder="Status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos os status</SelectItem>
+                  {data.statuses.map((s) => (
+                    <SelectItem key={s.key} value={s.key}>{s.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Select value={coverageFilter} onValueChange={setCoverageFilter}>
+                <SelectTrigger className="h-8 w-[170px] text-xs">
+                  <SelectValue placeholder="Cobertura" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todas as faixas</SelectItem>
+                  {data.coverage.map((c) => (
+                    <SelectItem key={c.key} value={c.key}>{c.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
               <div className="relative">
                 <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
                 <input
@@ -424,110 +466,35 @@ export default function EstoquePage() {
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
                   placeholder="Buscar SKU, descrição, fabricante…"
-                  className="h-8 w-64 rounded-md border border-border bg-background pl-8 pr-8 text-xs text-foreground placeholder:text-muted-foreground focus:border-foreground/50 focus:outline-none"
+                  className="h-8 w-56 rounded-md border border-border bg-background pl-8 pr-8 text-xs text-foreground placeholder:text-muted-foreground focus:border-foreground/50 focus:outline-none"
                 />
                 {/* A busca corre no servidor: vale sinalizar que ainda está indo. */}
                 {loading && (
                   <Loader2 className="absolute right-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 animate-spin text-muted-foreground" />
                 )}
               </div>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="h-8 gap-1.5"
+                disabled={filteredRows.length === 0}
+                onClick={() => exportarEstoqueExcel(filteredRows, displayCode)}
+              >
+                <Download className="h-3.5 w-3.5" />
+                Excel
+              </Button>
             </div>
           </div>
         </CardHeader>
         <CardContent className="px-0">
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-y border-border text-[10px] uppercase tracking-[0.14em] text-muted-foreground">
-                  <th className="text-left font-medium py-2 px-3">SKU</th>
-                  <th className="text-left font-medium py-2 px-3">Descrição</th>
-                  <th className="text-left font-medium py-2 px-3">Fabricante</th>
-                  <th className="text-left font-medium py-2 px-3">Categoria</th>
-                  <th className="text-right font-medium py-2 px-3">Estoque</th>
-                  <th className="text-right font-medium py-2 px-3">Mínimo</th>
-                  <th className="text-right font-medium py-2 px-3">Custo {displayCode}</th>
-                  <th className="text-right font-medium py-2 px-3">Saídas</th>
-                  <th className="text-right font-medium py-2 px-3">Receita</th>
-                  <th className="text-right font-medium py-2 px-3">Cobertura</th>
-                  <th className="text-right font-medium py-2 px-3">Últ. saída</th>
-                  <th className="text-left font-medium py-2 px-3">Status</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-border">
-                {filteredRows.map((r) => (
-                  <tr key={r.productId} className="hover:bg-muted/30 transition-colors">
-                    <td className="py-2 px-3 font-mono text-xs text-muted-foreground tabular">
-                      {r.productId}
-                    </td>
-                    <td className="py-2 px-3 max-w-[200px] truncate">
-                      <div className={cn("font-medium", !r.hasInventory && "text-warning")}>
-                        {r.description || "—"}
-                      </div>
-                      {!r.hasInventory && (
-                        <div className="text-[10px] text-warning">
-                          fora do snapshot de estoque
-                        </div>
-                      )}
-                    </td>
-                    <td className="py-2 px-3 font-mono text-xs text-muted-foreground">
-                      {r.manufacturerCode || "—"}
-                    </td>
-                    <td className="py-2 px-3 text-muted-foreground truncate max-w-[120px]">
-                      {r.subgroupName || "—"}
-                    </td>
-                    <td className="py-2 px-3 text-right tabular">
-                      {formatNumber(r.stock)}
-                    </td>
-                    <td className="py-2 px-3 text-right tabular text-muted-foreground">
-                      {r.minStock > 0 ? (
-                        <span className={cn(r.stock <= r.minStock && "text-warning font-medium")}>
-                          {formatNumber(r.minStock)}
-                        </span>
-                      ) : "—"}
-                    </td>
-                    <td className="py-2 px-3 text-right tabular font-medium">
-                      {formatCurrency(r.costTotalUSD, currency, { compact: r.costTotalUSD >= 10000 })}
-                    </td>
-                    <td className="py-2 px-3 text-right tabular">
-                      {r.unitsSold > 0 ? formatNumber(r.unitsSold) : "—"}
-                    </td>
-                    <td className="py-2 px-3 text-right tabular text-muted-foreground">
-                      {r.revenueSold > 0 ? <Money value={r.revenueSold} compact /> : "—"}
-                    </td>
-                    <td className="py-2 px-3 text-right tabular">
-                      <CoverageCell row={r} />
-                    </td>
-                    <td className="py-2 px-3 text-right tabular text-muted-foreground text-xs">
-                      {r.lastSaleDate ? (
-                        <>
-                          <div>{r.lastSaleDate}</div>
-                          {Number.isFinite(r.daysSinceLastSale) && (
-                            <div className="text-[10px]">há {r.daysSinceLastSale}d</div>
-                          )}
-                        </>
-                      ) : (
-                        "—"
-                      )}
-                    </td>
-                    <td className="py-2 px-3">
-                      <StatusBadge status={r.status} />
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-            {filteredRows.length === 0 && (
-              <div className="py-10 text-center text-xs text-muted-foreground">
-                Nenhum item para o filtro atual.
-              </div>
-            )}
-            {data.rowsTotal > filteredRows.length && (
-              <div className="border-t border-border py-2.5 px-5 text-[11px] text-muted-foreground">
-                Mostrando os {formatNumber(filteredRows.length)} primeiros por valor,
-                de {formatNumber(data.rowsTotal)}. Use a busca para refinar.
-              </div>
-            )}
-          </div>
+          {filteredRows.length === 0 ? (
+            <div className="py-10 text-center text-xs text-muted-foreground">
+              Nenhum item para o filtro atual.
+            </div>
+          ) : (
+            <VirtualizedSkuTable rows={filteredRows} currency={currency} displayCode={displayCode} />
+          )}
         </CardContent>
       </Card>
     </div>
@@ -622,16 +589,183 @@ function StatusBar({
   );
 }
 
+/**
+ * Mesmas colunas e mesmos valores da tabela na tela — só sem compactação
+ * (`formatCurrency`/`formatNumber` com `compact` arredondam pra exibição; o
+ * Excel recebe o número cheio) e sem os "—" de célula vazia, que viram string
+ * vazia de verdade pra não virar texto numa coluna que devia ser numérica.
+ */
+function exportarEstoqueExcel(rows: InventoryRow[], displayCode: string) {
+  const linhas = rows.map((r) => {
+    const semCobertura = r.stock <= 0;
+    const coberturaCalculavel = Number.isFinite(r.coverageDays);
+    const meses = semCobertura ? 0 : coberturaCalculavel ? Math.round(r.coverageDays / DAYS_PER_MONTH) : "";
+    const anos = semCobertura ? 0 : coberturaCalculavel ? Number((r.coverageDays / DAYS_PER_MONTH / 12).toFixed(1)) : "";
+    return {
+      SKU: r.productId,
+      Descrição: r.description,
+      Fabricante: r.manufacturerCode,
+      Categoria: r.subgroupName,
+      Estoque: r.stock,
+      Mínimo: r.minStock > 0 ? r.minStock : "",
+      [`Custo ${displayCode}`]: r.costTotalUSD,
+      Saídas: r.unitsSold > 0 ? r.unitsSold : "",
+      Receita: r.revenueSold > 0 ? r.revenueSold : "",
+      "Cobertura (meses)": meses,
+      "Cobertura (anos)": anos,
+      "Última saída": r.lastSaleDate || "",
+      "Há dias": Number.isFinite(r.daysSinceLastSale) ? r.daysSinceLastSale : "",
+      Status: statusLabel(r.status),
+    };
+  });
+
+  const agora = new Date();
+  const carimbo = [
+    agora.getFullYear(),
+    String(agora.getMonth() + 1).padStart(2, "0"),
+    String(agora.getDate()).padStart(2, "0"),
+  ].join("-");
+  exportarExcel(`estoque-detalhamento-${carimbo}.xlsx`, "Estoque", linhas);
+}
+
+// Tom continua decidido pelos mesmos limiares em DIAS (RISK/EXCESS do
+// servidor) — só o texto exibido vira meses, pra bater com a faixa que o
+// usuário já vê no donut e no filtro de cobertura.
 function CoverageCell({ row }: { row: InventoryRow }) {
-  if (row.stock <= 0) return <span className="text-negative font-medium">0d</span>;
+  if (row.stock <= 0) return <span className="text-negative font-medium">0m</span>;
   if (!Number.isFinite(row.coverageDays)) return <span className="text-muted-foreground">—</span>;
-  const days = Math.round(row.coverageDays);
+  const days = row.coverageDays;
+  const months = days / DAYS_PER_MONTH;
   const tone =
     days <= 15 ? "text-warning" : days >= 180 ? "text-accent" : "text-foreground";
+  const monthsInt = Math.round(months);
+  const monthsTexto = monthsInt >= 999 ? "999+" : formatNumber(monthsInt);
+  const anosTexto = formatNumber(months / 12, { decimals: 1 });
   return (
     <span className={cn("font-medium", tone)}>
-      {days >= 999 ? "999+ d" : `${formatNumber(days)} d`}
+      {monthsTexto}m
+      <span className="ml-1 text-[10px] font-normal text-muted-foreground">({anosTexto}a)</span>
     </span>
+  );
+}
+
+const SKU_GRID_COLS =
+  "90px minmax(220px,2fr) 110px 130px 90px 90px 120px 90px 120px 100px 150px 110px";
+const SKU_ROW_HEIGHT = 40;
+
+/**
+ * Tabela virtualizada: o servidor já manda o conjunto INTEIRO filtrado (pode
+ * ser dezenas de milhares de SKUs), então só as linhas dentro da janela de
+ * rolagem viram DOM de verdade — o resto existe apenas como espaço reservado
+ * (`getTotalSize()`). Layout em grid (não `<table>`) porque `position:
+ * absolute` nas linhas não funciona dentro de `<tbody>`; cabeçalho e linhas
+ * compartilham o mesmo `SKU_GRID_COLS` pra colunas ficarem alinhadas.
+ */
+function VirtualizedSkuTable({
+  rows,
+  currency,
+  displayCode,
+}: {
+  rows: InventoryRow[];
+  currency: AppCurrencyId | string;
+  displayCode: string;
+}) {
+  const parentRef = React.useRef<HTMLDivElement>(null);
+  const virtualizer = useVirtualizer({
+    count: rows.length,
+    getScrollElement: () => parentRef.current,
+    estimateSize: () => SKU_ROW_HEIGHT,
+    overscan: 12,
+  });
+
+  return (
+    <div ref={parentRef} className="max-h-[70vh] overflow-auto border-t border-border">
+      <div style={{ minWidth: 1350 }}>
+        <div
+          className="grid items-center sticky top-0 z-10 border-b border-border bg-surface text-[10px] uppercase tracking-[0.14em] text-muted-foreground"
+          style={{ gridTemplateColumns: SKU_GRID_COLS }}
+        >
+          <div className="py-2 px-3 text-left font-medium">SKU</div>
+          <div className="py-2 px-3 text-left font-medium">Descrição</div>
+          <div className="py-2 px-3 text-left font-medium">Fabricante</div>
+          <div className="py-2 px-3 text-left font-medium">Categoria</div>
+          <div className="py-2 px-3 text-right font-medium">Estoque</div>
+          <div className="py-2 px-3 text-right font-medium">Mínimo</div>
+          <div className="py-2 px-3 text-right font-medium">Custo {displayCode}</div>
+          <div className="py-2 px-3 text-right font-medium">Saídas</div>
+          <div className="py-2 px-3 text-right font-medium">Receita</div>
+          <div className="py-2 px-3 text-right font-medium">Cobertura</div>
+          <div className="py-2 px-3 text-right font-medium">Últ. saída</div>
+          <div className="py-2 px-3 text-left font-medium">Status</div>
+        </div>
+
+        <div style={{ height: virtualizer.getTotalSize(), position: "relative" }}>
+          {virtualizer.getVirtualItems().map((vRow) => {
+            const r = rows[vRow.index];
+            return (
+              <div
+                key={r.productId}
+                className="absolute left-0 top-0 grid w-full items-center border-b border-border text-sm hover:bg-muted/30"
+                style={{
+                  gridTemplateColumns: SKU_GRID_COLS,
+                  height: vRow.size,
+                  transform: `translateY(${vRow.start}px)`,
+                }}
+              >
+                <div className="py-2 px-3 truncate font-mono text-xs text-muted-foreground tabular">
+                  {r.productId}
+                </div>
+                <div
+                  className={cn("py-2 px-3 truncate", !r.hasInventory && "text-warning")}
+                  title={!r.hasInventory ? "fora do snapshot de estoque" : r.description}
+                >
+                  {r.description || "—"}
+                  {!r.hasInventory && (
+                    <AlertTriangle className="ml-1 inline h-3 w-3 -translate-y-px" />
+                  )}
+                </div>
+                <div className="py-2 px-3 truncate font-mono text-xs text-muted-foreground">
+                  {r.manufacturerCode || "—"}
+                </div>
+                <div className="py-2 px-3 truncate text-muted-foreground">
+                  {r.subgroupName || "—"}
+                </div>
+                <div className="py-2 px-3 text-right tabular">{formatNumber(r.stock)}</div>
+                <div className="py-2 px-3 text-right tabular text-muted-foreground">
+                  {r.minStock > 0 ? (
+                    <span className={cn(r.stock <= r.minStock && "text-warning font-medium")}>
+                      {formatNumber(r.minStock)}
+                    </span>
+                  ) : (
+                    "—"
+                  )}
+                </div>
+                <div className="py-2 px-3 text-right tabular font-medium">
+                  {formatCurrency(r.costTotalUSD, currency, { compact: r.costTotalUSD >= 10000 })}
+                </div>
+                <div className="py-2 px-3 text-right tabular">
+                  {r.unitsSold > 0 ? formatNumber(r.unitsSold) : "—"}
+                </div>
+                <div className="py-2 px-3 text-right tabular text-muted-foreground">
+                  {r.revenueSold > 0 ? <Money value={r.revenueSold} compact /> : "—"}
+                </div>
+                <div className="py-2 px-3 text-right tabular">
+                  <CoverageCell row={r} />
+                </div>
+                <div className="py-2 px-3 truncate text-right tabular text-xs text-muted-foreground">
+                  {r.lastSaleDate
+                    ? `${r.lastSaleDate}${Number.isFinite(r.daysSinceLastSale) ? ` · há ${r.daysSinceLastSale}d` : ""}`
+                    : "—"}
+                </div>
+                <div className="py-2 px-3">
+                  <StatusBadge status={r.status} />
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </div>
   );
 }
 

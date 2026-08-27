@@ -15,6 +15,7 @@ import {
   ChevronLeft,
   ChevronRight,
   CircleDollarSign,
+  HelpCircle,
   LayoutList,
   Mail,
   Package,
@@ -105,6 +106,16 @@ const NAV_MASTER: NavGroup = {
   ],
 };
 
+// Sempre visível, pra todo mundo — inclusive role "user" com allow-list de
+// menus restrita: o que a pessoa pode VER não deveria limitar a ajuda sobre
+// aquilo que ela já vê.
+const NAV_HELP: NavGroup = {
+  sectionKey: "sidebar.section.help",
+  items: [
+    { href: "/ajuda", labelKey: "sidebar.nav.help", icon: HelpCircle },
+  ],
+};
+
 const SETTINGS_SECTION_KEY: DictionaryKey = "sidebar.section.settings";
 
 const INSIGHT_TONE_STYLES: Record<Insight["tone"], { icon: React.ElementType; iconClass: string }> = {
@@ -149,6 +160,7 @@ export function Sidebar({ isMaster = false, role, allowedMenus }: SidebarProps) 
 
     if (isAdmin || isMaster) groups = [...groups, NAV_TEAM];
     if (isMaster) groups = [...groups, NAV_MASTER];
+    groups = [...groups, NAV_HELP];
     return groups;
   }, [isAdmin, isMaster, allowedMenus]);
 

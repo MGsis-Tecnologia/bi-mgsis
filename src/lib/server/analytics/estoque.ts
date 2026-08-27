@@ -42,6 +42,47 @@ const RISK_DAYS = 15;
 const EXCESS_DAYS = 180;
 const DAYS_PER_MONTH = 30.44;
 
+/**
+ * As oito faixas de cobertura, na ordem "mais crítico primeiro" — mesma ordem
+ * do donut e da legenda do cliente (`COVERAGE_ORDER` em
+ * `src/lib/hooks/use-estoque-analytics.ts`). `test` recebe os NOMES das
+ * colunas (não os valores) já qualificados pelo chamador, porque a mesma
+ * lista alimenta duas CASE diferentes (texto da faixa e rank numérico) sobre
+ * contextos SQL distintos — nunca a mesma coluna calculada duas vezes com
+ * lógicas que podem divergir.
+ */
+const COVERAGE_BUCKETS: { key: string; test: (stock: string, demand: string, days: string) => string }[] = [
+  { key: "sem_cobertura", test: (stock) => `${stock} <= 0` },
+  { key: "fora_analise", test: (_s, demand, days) => `${demand} <= 0 OR ${days} IS NULL` },
+  { key: "ate_1", test: (_s, _d, days) => `${days} / ${DAYS_PER_MONTH} <= 1` },
+  { key: "1_2", test: (_s, _d, days) => `${days} / ${DAYS_PER_MONTH} <= 2` },
+  { key: "2_4", test: (_s, _d, days) => `${days} / ${DAYS_PER_MONTH} <= 4` },
+  { key: "4_6", test: (_s, _d, days) => `${days} / ${DAYS_PER_MONTH} <= 6` },
+  { key: "6_12", test: (_s, _d, days) => `${days} / ${DAYS_PER_MONTH} <= 12` },
+  { key: "mais_12", test: () => "true" },
+];
+
+/** CASE que devolve a CHAVE da faixa de cobertura ('sem_cobertura' ... 'mais_12'). */
+function coverageBucketCase(stock: string, demand: string, days: string): string {
+  const whens = COVERAGE_BUCKETS.slice(0, -1)
+    .map((b) => `WHEN ${b.test(stock, demand, days)} THEN '${b.key}'`)
+    .join("\n           ");
+  return `CASE\n           ${whens}\n           ELSE '${COVERAGE_BUCKETS[COVERAGE_BUCKETS.length - 1].key}'\n         END`;
+}
+
+/**
+ * CASE que devolve o RANK numérico (0-7) da mesma faixa, pra ordenar sem
+ * depender de comparação de texto. Gerada da mesma lista que
+ * `coverageBucketCase` — não pode reaproveitar o alias da outra CASE porque o
+ * Postgres não permite referenciar um alias de coluna dentro do mesmo SELECT.
+ */
+function coverageBucketRankCase(stock: string, demand: string, days: string): string {
+  const whens = COVERAGE_BUCKETS.slice(0, -1)
+    .map((b, i) => `WHEN ${b.test(stock, demand, days)} THEN ${i}`)
+    .join("\n           ");
+  return `CASE\n           ${whens}\n           ELSE ${COVERAGE_BUCKETS.length - 1}\n         END`;
+}
+
 export type StockStatus = "rupture" | "risk" | "normal" | "excess" | "no_movement";
 
 export interface EstoqueRow {
@@ -63,6 +104,8 @@ export interface EstoqueRow {
   coverageDays: number | null;
   avgDailyDemand: number;
   status: StockStatus;
+  /** Mesma faixa do donut de cobertura ('sem_cobertura' ... 'mais_12'), agora por linha. */
+  coverageBucket: string;
   hasInventory: boolean;
 }
 
@@ -108,8 +151,9 @@ export interface OpcoesEstoque {
   /** Data de hoje no relógio do cliente — limita a janela de demanda. */
   hoje: string;
   status: StockStatus | "all";
+  /** Faixa de cobertura ('sem_cobertura' ... 'mais_12') ou 'all'. */
+  coverageBucket: string;
   busca: string;
-  limite: number;
 }
 
 /**
@@ -322,7 +366,9 @@ export async function getEstoqueData(
            WHEN c.coverage_days <= ${RISK_DAYS}   THEN 'risk'
            WHEN c.coverage_days >= ${EXCESS_DAYS} THEN 'excess'
            ELSE 'normal'
-         END AS status
+         END AS status,
+         ${coverageBucketCase("c.stock", "c.avg_daily_demand", "c.coverage_days")} AS coverage_bucket,
+         ${coverageBucketRankCase("c.stock", "c.avg_daily_demand", "c.coverage_days")} AS bucket_rank
   FROM calc c`,
   });
 
@@ -360,16 +406,7 @@ export async function getEstoqueData(
       FROM e_fin GROUP BY status ORDER BY status) t) AS statuses,
 
     (SELECT COALESCE(json_agg(t), '[]'::json) FROM (
-      SELECT CASE
-               WHEN stock <= 0 THEN 'sem_cobertura'
-               WHEN avg_daily_demand <= 0 OR coverage_days IS NULL THEN 'fora_analise'
-               WHEN coverage_days / ${DAYS_PER_MONTH} <= 1  THEN 'ate_1'
-               WHEN coverage_days / ${DAYS_PER_MONTH} <= 2  THEN '1_2'
-               WHEN coverage_days / ${DAYS_PER_MONTH} <= 4  THEN '2_4'
-               WHEN coverage_days / ${DAYS_PER_MONTH} <= 6  THEN '4_6'
-               WHEN coverage_days / ${DAYS_PER_MONTH} <= 12 THEN '6_12'
-               ELSE 'mais_12'
-             END AS key,
+      SELECT coverage_bucket AS key,
              COUNT(*)::int AS count, COALESCE(SUM(cost_total), 0) AS "valueUSD"
       FROM e_fin GROUP BY 1) t) AS coverage,
 
@@ -397,9 +434,16 @@ export async function getEstoqueData(
 
     (SELECT COUNT(*)::int FROM e_fin WHERE ${filtroTabela(o, pFim)}) AS rows_total,
 
+    -- Sem LIMIT: a tabela de detalhamento lista o conjunto inteiro filtrado —
+    -- a rolagem virtualizada do lado do cliente é quem cuida de não travar o
+    -- navegador (ver src/app/(dashboard)/estoque/page.tsx). Ordem padrão:
+    -- cobertura DECRESCENTE primeiro (maior cobertura no topo), custo total
+    -- decrescente como desempate — NULLS LAST porque "sem cobertura calculada"
+    -- (estoque zerado ou nunca vendido) não é "cobertura alta", é ausência de
+    -- dado, então vai para o fim, não para o topo do DESC.
     (SELECT COALESCE(json_agg(t), '[]'::json) FROM (
       SELECT * FROM e_fin WHERE ${filtroTabela(o, pFim)}
-      ORDER BY cost_total DESC, ord LIMIT ${pFim.add(o.limite)}) t) AS page`;
+      ORDER BY coverage_days DESC NULLS LAST, cost_total DESC, ord) t) AS page`;
 
   const r = await db.$transaction(
     async (tx) => {
@@ -450,6 +494,7 @@ export async function getEstoqueData(
       : Number(x.coverage_days),
     avgDailyDemand: Number(x.avg_daily_demand),
     status: x.status as StockStatus,
+    coverageBucket: String(x.coverage_bucket),
     hasInventory: Boolean(x.has_inventory),
   });
 
@@ -507,12 +552,14 @@ export async function getEstoqueData(
 }
 
 /**
- * Busca e situação da tabela. A busca cobre os mesmos quatro campos do filtro
- * antigo do navegador; `%` e `_` são escapados para não virarem curinga.
+ * Busca, situação e faixa de cobertura da tabela. A busca cobre os mesmos
+ * quatro campos do filtro antigo do navegador; `%` e `_` são escapados para
+ * não virarem curinga.
  */
 function filtroTabela(o: OpcoesEstoque, p: Params): string {
   const cond: string[] = [];
   if (o.status !== "all") cond.push(`status = ${p.add(o.status)}`);
+  if (o.coverageBucket !== "all") cond.push(`coverage_bucket = ${p.add(o.coverageBucket)}`);
   const q = o.busca.trim();
   if (q) {
     const alvo = p.add(`%${q.replace(/([%_\\])/g, "\\$1").toLowerCase()}%`);

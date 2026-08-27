@@ -22,8 +22,10 @@ const corpoSchema = z.object({
   status: z
     .enum(["all", "rupture", "risk", "normal", "excess", "no_movement"])
     .default("all"),
+  coverageBucket: z
+    .enum(["all", "sem_cobertura", "fora_analise", "ate_1", "1_2", "2_4", "4_6", "6_12", "mais_12"])
+    .default("all"),
   busca: z.string().max(120).default(""),
-  limite: z.number().int().min(1).max(500).default(200),
 });
 
 export async function POST(req: NextRequest) {
@@ -63,8 +65,8 @@ export async function POST(req: NextRequest) {
   const data = await getEstoqueData(db, filtros, {
     hoje: corpo.hoje,
     status: corpo.status,
+    coverageBucket: corpo.coverageBucket,
     busca: corpo.busca,
-    limite: corpo.limite,
   });
 
   return NextResponse.json({ ...data, ms: Date.now() - inicio });

@@ -38,6 +38,17 @@ export function presetRange(preset: DatePreset): DateRange {
     }
     case "12m":
       return { from: startOfMonth(subMonths(now, 11)), to: endOfDay(now) };
+    // Mesma fórmula do "12m" (janela ROLANTE alinhada ao início do mês, não
+    // ao ano-calendário — isso já é o "ano atual"/"ano anterior"), só
+    // multiplicando os meses: N anos = 12*N meses, últimos 11 já contados.
+    case "2a":
+      return { from: startOfMonth(subMonths(now, 23)), to: endOfDay(now) };
+    case "3a":
+      return { from: startOfMonth(subMonths(now, 35)), to: endOfDay(now) };
+    case "4a":
+      return { from: startOfMonth(subMonths(now, 47)), to: endOfDay(now) };
+    case "5a":
+      return { from: startOfMonth(subMonths(now, 59)), to: endOfDay(now) };
     case "todos":
       return { from: new Date("2000-01-01T00:00:00"), to: new Date("2099-12-31T23:59:59") };
     default:

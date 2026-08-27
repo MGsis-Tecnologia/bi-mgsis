@@ -96,5 +96,9 @@ export type DatePreset =
   | "ano-atual"
   | "ano-anterior"
   | "12m"
+  | "2a"
+  | "3a"
+  | "4a"
+  | "5a"
   | "todos"
   | "custom";
