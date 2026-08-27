@@ -198,17 +198,22 @@ WHERE p.produto_inativo = false
 GROUP BY e.produto_id, p.produto_descricao, p.produto_fabricante,
          e.empresa_id, p.moeda_id, m.moeda_sigla;
 
--- ── bi_cambio ──
--- Câmbio MÉDIO MENSAL (substituiu a versão diária — colunas mudaram por
--- completo, então precisa de DROP antes: CREATE OR REPLACE VIEW só aceita
--- coluna nova no FIM, recusa renomear/reordenar as que já existem. Sem o
--- DROP, quem já tinha a view diária instalada recebe erro do Postgres em vez
+-- -- bi_cambio --
+-- Cambio MEDIO MENSAL (substituiu a versao diaria -- colunas mudaram por
+-- completo, entao precisa de DROP antes: CREATE OR REPLACE VIEW so aceita
+-- coluna nova no FIM, recusa renomear/reordenar as que ja existem. Sem o
+-- DROP, quem ja tinha a view diaria instalada recebe erro do Postgres em vez
 -- de atualizar. Detalhe de cada coluna e das taxas em bi_cambio.sql.
 --
--- moeda_origem/moeda_destino saem TROCADOS em relação às colunas cruas:
--- `moeda_id` é o pivô fixo da cotação no ERP (o dólar), não a moeda local —
--- confirmado com o ERP. `cambio_produto` é "quantas moeda_destino_id por 1
--- moeda_id". Ver a explicação completa em bi_cambio.sql.
+-- moeda_origem e a moeda mais FRACA do par. A orientacao nao vem de assumir
+-- qual coluna crua (moeda_id / moeda_destino_id) e a moeda local -- duas
+-- versoes anteriores tentaram isso (uma regra fixa de coluna, depois uma
+-- regra fixa de "o numero cru sempre significa X") e as duas se mostraram
+-- corretas so num cliente, invertidas no proximo. Esta versao testa as DUAS
+-- leituras possiveis do numero (ele mesmo e o reciproco) contra a faixa de
+-- magnitude ESPERADA do par -- fato de economia (guarani sempre precisa de
+-- mais unidades que real ou dolar), nao uma convencao do ERP. Ver a
+-- explicacao completa em bi_cambio.sql.
 DROP VIEW IF EXISTS bi_cambio;
 CREATE VIEW bi_cambio AS
 WITH cambio_diario AS (
@@ -224,19 +229,54 @@ WITH cambio_diario AS (
       AND moeda_destino_id IS NOT NULL
       AND moeda_id <> moeda_destino_id
     GROUP BY moeda_id, moeda_destino_id, cambio_data
+),
+forca (moeda, rank) AS (
+    VALUES (3, 1), (1, 2), (2, 3)   -- guarani, real, dolar -- do mais fraco ao mais forte
+),
+faixas (fraca, forte, minimo, maximo) AS (
+    VALUES (3, 2, 1000::numeric,  50000::numeric),  -- guaranis por 1 dolar
+           (3, 1, 200::numeric,   10000::numeric),  -- guaranis por 1 real
+           (1, 2, 0.5::numeric,   50::numeric)       -- reais por 1 dolar
+),
+candidatos AS (
+    SELECT
+        d.cambio_data,
+        r1.moeda AS fraca,
+        r2.moeda AS forte,
+        d.cambio_medio_dia AS candidato_direto,
+        CASE WHEN d.cambio_medio_dia > 0 THEN 1 / d.cambio_medio_dia END AS candidato_inverso
+    FROM cambio_diario d
+    JOIN forca rA ON rA.moeda = d.moeda_id
+    JOIN forca rB ON rB.moeda = d.moeda_destino_id
+    JOIN forca r1 ON r1.rank = LEAST(rA.rank, rB.rank)
+    JOIN forca r2 ON r2.rank = GREATEST(rA.rank, rB.rank)
+),
+orientado_diario AS (
+    SELECT
+        c.cambio_data,
+        c.fraca AS moeda_origem,
+        c.forte AS moeda_destino,
+        CASE WHEN c.candidato_direto BETWEEN f.minimo AND f.maximo
+             THEN c.candidato_direto
+             ELSE c.candidato_inverso
+        END AS cambio_medio_dia
+    FROM candidatos c
+    JOIN faixas f ON f.fraca = c.fraca AND f.forte = c.forte
+    WHERE (c.candidato_direto BETWEEN f.minimo AND f.maximo)
+       OR (c.candidato_inverso BETWEEN f.minimo AND f.maximo)
 )
 SELECT
-    moeda_destino_id                                      AS moeda_origem,
-    moeda_id                                              AS moeda_destino,
+    moeda_origem,
+    moeda_destino,
     DATE_TRUNC('month', cambio_data)::date                AS mes_referencia,
     TO_CHAR(DATE_TRUNC('month', cambio_data), 'MM-YYYY')  AS mes_ano,
     ROUND(AVG(cambio_medio_dia), 4)                       AS cambio_medio,
     COUNT(*)                                              AS qtd_dias_com_cotacao,
     MIN(cambio_data)                                      AS primeira_cotacao,
     MAX(cambio_data)                                      AS ultima_cotacao
-FROM cambio_diario
-GROUP BY moeda_id, moeda_destino_id, DATE_TRUNC('month', cambio_data)
-ORDER BY mes_referencia, moeda_id, moeda_destino_id;
+FROM orientado_diario
+GROUP BY moeda_origem, moeda_destino, DATE_TRUNC('month', cambio_data)
+ORDER BY mes_referencia, moeda_destino;
 
 -- ── bi_compras ──
 -- Esta é a view do ERP, lida pelo agente. (O arquivo `bi_compras.sql` desta
