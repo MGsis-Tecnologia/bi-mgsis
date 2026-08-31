@@ -7,6 +7,7 @@ import {
   CalendarRange,
   CircleDollarSign,
   HelpCircle,
+  KeyRound,
   LayoutList,
   Mail,
   Package,
@@ -99,6 +100,17 @@ const NAV_MASTER: NavGroup = {
   ],
 };
 
+// Sempre visível, pra todo mundo: master, admin e usuário comum têm senha, e
+// todos trocam a própria. Fica FORA de NAV (e portanto da allow-list de menus)
+// de propósito — restringir o acesso de alguém a relatórios não é motivo pra
+// tirar dessa pessoa o controle da própria senha.
+const NAV_ACCOUNT: NavGroup = {
+  sectionKey: "sidebar.section.account",
+  items: [
+    { href: "/configuracoes/senha", labelKey: "sidebar.nav.password", icon: KeyRound },
+  ],
+};
+
 // Sempre visível, pra todo mundo — inclusive role "user" com allow-list de
 // menus restrita: o que a pessoa pode VER não deveria limitar a ajuda sobre
 // aquilo que ela já vê.
@@ -136,7 +148,7 @@ export function useNavGroups({ isMaster = false, role, allowedMenus }: UseNavGro
 
     if (isAdmin || isMaster) groups = [...groups, NAV_TEAM];
     if (isMaster) groups = [...groups, NAV_MASTER];
-    groups = [...groups, NAV_HELP];
+    groups = [...groups, NAV_ACCOUNT, NAV_HELP];
     return groups;
   }, [isAdmin, isMaster, allowedMenus]);
 }
