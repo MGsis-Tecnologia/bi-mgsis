@@ -119,6 +119,111 @@ primeiro o modelo errado.
 
 ---
 
+## Dados e ingestão
+
+### 7. `receber` e `pagar` deveriam ir inteiros, não por período
+
+A linha de um título **muda depois de emitida** — `is_paid`, `data_recebimento`
+e `data_pagamento` só ganham valor quando alguém baixa o título —, mas o recorte
+de envio é pela **emissão** ([INGESTAO-API.md](INGESTAO-API.md)) e o ciclo de
+2 h reenvia só o mês corrente e o anterior. Um título emitido em março de 2024 e
+pago hoje continua aparecendo em aberto no B.I.: a data que mudou não é a data
+que decide o período, então nada manda aquele mês de volta. A recarga completa
+mensal conserta, mas até ela rodar o relatório está errado sem nenhum sinal — é
+diferente de vendas, onde a linha, depois de emitida, não muda sozinha.
+
+A mudança é os dois virarem **foto**, como `estoque`: `periodo: "tudo"`, tabela
+reescrita inteira a cada ciclo. Mexe em três lugares:
+
+- [`src/lib/server/ingest/contrato.ts`](src/lib/server/ingest/contrato.ts): a
+  `colunaData` de `receber` e `pagar` passa a `null`. A rota já cobra a coerência
+  nos dois sentidos (`src/app/api/ingest/[dataset]/route.ts`, linhas 93–97):
+  com `colunaData` preenchida, `"tudo"` é recusado.
+- [`agente/mgsis-ingest.sh`](agente/mgsis-ingest.sh): tirar o
+  `WHERE data_emissao ...` de `sql_receber`/`sql_pagar`, tirar os dois de
+  `DATASETS_PERIODO` e enviá-los junto com estoque e câmbio.
+- A documentação: o aviso de "período é pela emissão" e a tabela de quando
+  enviar o quê, em [INGESTAO-API.md](INGESTAO-API.md).
+
+O que precisa ser decidido antes é o **volume**. `pagar` são ~700 linhas/mês
+(~42 mil em cinco anos, cabe folgado). `receber` são ~8.000/mês — cerca de 480
+mil linhas, mais de três vezes o `MAX_LINHAS` de 150.000
+([`src/lib/server/ingest/substituir.ts:20`](src/lib/server/ingest/substituir.ts#L20))
+— e a foto não pode ser partida em pedaços sem perder a atomicidade, que é
+justamente a razão de ser do `"tudo"`. Ou o limite sobe (medido: o estoque, 112
+mil linhas e 21,7 MB, leva 8,4 s; 480 mil ficam longe dos 300 s, mas o corpo
+passa dos 80 MB), ou se combina uma janela de retenção — só títulos emitidos nos
+últimos N anos — e essa janela passa a ser a foto.
+
+**Peso:** médio. Corrige dado errado em tela; depende de resolver o limite.
+
+---
+
+## Telas
+
+### 8. Estoque → Detalhamento por SKU: devolução, fornecedor e ordenação
+
+Três coisas no mesmo lugar, e a primeira é a que corrompe número.
+
+**A saída não desconta devolução.** O movimento do período sai de
+`whereGraficos(f, pL)` em
+[`src/lib/server/analytics/estoque.ts:247-253`](src/lib/server/analytics/estoque.ts#L247-L253),
+que usa o `tipo` padrão `"VENDA"` — as linhas de `"DEVOLUCAO VENDA"`
+simplesmente não entram. Quem devolveu some da conta: `units_sold` fica alto
+demais, a demanda diária também, e a cobertura em dias (`estoque ÷ demanda`)
+sai baixa demais. O SKU com muita devolução aparece mais perto da ruptura do que
+realmente está — e é exatamente o SKU sobre o qual alguém decidiria comprar de
+novo. `whereBase`/`whereGraficos` já recebem o tipo por parâmetro
+([`base.ts:136`](src/lib/server/analytics/base.ts#L136)), então é subtrair uma
+agregação de devoluções em `e_mov`, não inventar caminho novo. Cuidado com o
+sinal: conferir se o ERP já manda `quantity` negativa na devolução, senão o
+desconto entra duas vezes.
+
+**Filtro por fornecedor — que é o motivo do pedido (comprar).** Não existe hoje,
+e não é só UI: nem `inventory_items` nem `sale_items` têm fornecedor
+([`prisma/schema.prisma:259`](prisma/schema.prisma#L259)). Quem tem é
+`compra_items` (`fornecedor_id`/`fornecedor_nome`), então o vínculo
+SKU → fornecedor teria de ser derivado da compra — o último que forneceu, ou
+todos os que já forneceram, porque um produto pode ter mais de um — ou o ERP
+passa a mandar o fornecedor na foto de estoque. Decidir isso antes de desenhar a
+tela; "último fornecedor" é o mais simples e provavelmente o que compras quer.
+
+**Ordenação e listagem completa.** A listagem já é completa: a consulta não tem
+`LIMIT` e a tabela é virtualizada no cliente
+([`estoque.ts:437`](src/lib/server/analytics/estoque.ts#L437)). O que falta é
+escolher a ordem — hoje é fixa em cobertura decrescente, com custo total de
+desempate. Como o conjunto inteiro já chega ao navegador, ordenar por coluna
+pode ser feito no cliente, sem nova ida ao servidor. Junto vale revisar os
+filtros: hoje são só status, faixa de cobertura e busca textual.
+
+**Peso:** médio. A devolução dá para separar e fazer antes — é a de maior
+retorno e a única que muda número já exibido.
+
+### 9. Baixar em Excel os itens de uma marca vendida — confirmar com o cliente
+
+Pedido: na tabela de vendas por marca, poder baixar os itens daquela marca.
+
+Antes de estimar, falta alinhar **o que é "marca"** — o modelo não tem esse
+campo. Tem `subgrupo`, que as telas chamam de categoria e é a base da "Curva ABC
+por categoria" em
+[`src/app/(dashboard)/produtos/page.tsx:278`](src/app/(dashboard)/produtos/page.tsx#L278);
+e tem `manufacturer_code`, que vem da foto de estoque e é código de fabricante
+por SKU, não um agrupador de vendas. Se "marca" for a categoria, o drill é
+direto. Se for fabricante, esse eixo ainda não existe em vendas e o trabalho
+vira de dados, não de tela.
+
+A parte mecânica é a menor: `exportarExcel` já é genérico
+([`src/lib/utils/export-excel.ts`](src/lib/utils/export-excel.ts)) e o
+detalhamento de estoque já faz exatamente isso. O que falta resolver é de onde
+saem os itens da marca — a tabela hoje traz o agregado, não as linhas — e se o
+download é do que está na tela ou uma consulta nova.
+
+**Combinado: confirmar a ideia com o cliente antes de construir.**
+
+**Peso:** pequeno depois de definido o que é "marca"; indefinido antes disso.
+
+---
+
 ## Decididos a não fazer
 
 Nada aqui ainda. Item descartado desce pra cá com o motivo — serve pra não
