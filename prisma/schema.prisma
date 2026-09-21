@@ -195,6 +195,8 @@ model SaleItem {
   discountOrig Float  @default(0) @map("discount_orig")
   subgroupId   String @default("") @map("subgroup_id")
   subgroupName String @default("") @map("subgroup_name")
+  brandId      String @default("") @map("brand_id")
+  brandName    String @default("") @map("brand_name")
   sellerId     String @default("") @map("seller_id")
   sellerName   String @default("") @map("seller_name")
   currencyId   String @default("1") @map("currency_id")
@@ -226,6 +228,10 @@ model ReceivableItem {
   currencyId   String  @default("1") @map("currency_id")
   currencyCode String  @default("R$") @map("currency_code")
   empresaId    String  @default("") @map("empresa_id")
+  /// Condição de pagamento do título (condicao_pagamento_id / _descricao da view
+  /// bi_receber). "" quando o título não tem condição.
+  paymentTermId   String @default("") @map("payment_term_id")
+  paymentTermName String @default("") @map("payment_term_name")
 
   @@index([dueDate], map: "idx_receivable_due_date")
   @@index([clientId], map: "idx_receivable_client_id")

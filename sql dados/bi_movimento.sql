@@ -50,7 +50,9 @@ SELECT
     COALESCE(v.pessoa_nome, '')                   AS vendedor_nome,
     COALESCE(p.moeda_id::text, '')                AS moeda_id,
     COALESCE(moeda.moeda_sigla, '')               AS moeda_sigla,
-    COALESCE(p.empresa_id::text, '')              AS empresa_id
+    COALESCE(p.empresa_id::text, '')              AS empresa_id,
+    COALESCE(marca.marca_id::text, '')            AS marca_id,
+    COALESCE(marca.marca_descricao, '')           AS marca_descricao
 FROM item_pedido i
     JOIN      pedido     p          ON p.pedido_id = i.pedido_id
     LEFT JOIN pessoa     c          ON c.pessoa_id = p.cliente_id
@@ -59,6 +61,7 @@ FROM item_pedido i
     LEFT JOIN tipo_preco            ON tipo_preco.tipo_preco_id = p.tipo_preco_id
     LEFT JOIN moeda                 ON moeda.moeda_id = p.moeda_id
     LEFT JOIN subgrupo              ON subgrupo.subgrupo_id = pr.subgrupo_id
+    LEFT JOIN marca                 ON marca.marca_id = pr.marca_id
 WHERE p.pedido_tipo::text IN ('VENDA', 'DEVOLUCAO VENDA')
   AND p.pedido_data_fatura IS NOT NULL;
 

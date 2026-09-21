@@ -1,8 +1,8 @@
 [Unit]
-Description=Ciclo de 2 horas do agente MGSIS Analytics
+Description=Ciclo de 1 hora do agente MGSIS Analytics
 
 [Timer]
-OnCalendar=0/2:07
+OnCalendar=*:07
 # Espalha o disparo em até 5 min: com vários clientes, evita todos baterem na
 # VPS no mesmo segundo.
 RandomizedDelaySec=300

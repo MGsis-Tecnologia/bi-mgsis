@@ -40,6 +40,7 @@ meia-noite do dia 31.
 | `quantity` | `produto_quantidade` |
 | `totalOrig` / `costOrig` / `discountOrig` | `produto_valor_total` / `produto_valor_custo` / `item_desconto` |
 | `subgroupId` / `subgroupName` | `subgrupo_id` / `subgrupo_descricao` |
+| `brandId` / `brandName` | `marca_id` / `marca_descricao` |
 | `sellerId` / `sellerName` | `vendedor_id` / `vendedor_nome` |
 | `currencyId` / `currencyCode` | `moeda_id` / `moeda_sigla` |
 | `empresaId` | `empresa_id` |
@@ -75,6 +76,7 @@ meia-noite do dia 31.
 | `entryType` | `tipolanzamiento` |
 | `amountOrig` | `valor_documento` |
 | `currencyId` / `currencyCode` / `empresaId` | `moeda_id` / `moeda_sigla` / `empresa_id` |
+| `paymentTermId` / `paymentTermName` | `condicao_pagamento_id` / `condicao_pagamento_descricao` (a view as entrega cruas; o agente aplica `COALESCE(…::text, '')`) |
 
 ## pagar ← `bi_pagar`
 

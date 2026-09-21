@@ -382,6 +382,10 @@ function processSalesRows(
       ),
       subgroupId:   String(row["subgrupo_id"] ?? "").trim(),
       subgroupName: String(row["subgrupo_descricao"] ?? "").trim(),
+      // Marca é OPCIONAL (fora de REQUIRED_COLS): arquivos exportados antes de
+      // a view ganhar essas colunas continuam entrando, só sem marca.
+      brandId:      String(row["marca_id"] ?? "").trim(),
+      brandName:    String(row["marca_descricao"] ?? "").trim(),
       sellerId:     String(row["vendedor_id"] ?? "").trim(),
       sellerName:   String(row["vendedor_nome"] ?? "").trim(),
       currencyId,
@@ -484,6 +488,10 @@ function processReceivableRows(
       currencyId:   String(row["moeda_id"] ?? "1").trim(),
       currencyCode: String(row["moeda_sigla"] ?? "R$").trim(),
       empresaId:    String(row["empresa_id"] ?? "").trim(),
+      // Condição de pagamento é OPCIONAL (fora das colunas obrigatórias): arquivos
+      // exportados antes de a view ganhar as colunas continuam entrando, sem ela.
+      paymentTermId:   String(row["condicao_pagamento_id"] ?? "").trim(),
+      paymentTermName: String(row["condicao_pagamento_descricao"] ?? "").trim(),
     });
   }
 

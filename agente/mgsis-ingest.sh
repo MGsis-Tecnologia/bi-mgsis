@@ -10,7 +10,9 @@
 # nada para quebrar em atualização de runtime.
 #
 # Uso:
-#   mgsis-ingest.sh --ciclo                 mês corrente + anterior + estoque
+#   mgsis-ingest.sh --ciclo                 mês corrente + anterior + estoque,
+#                                           mais receber (janela) e pagar (tudo)
+#   mgsis-ingest.sh --recarga-financeira    receber + pagar, histórico completo
 #   mgsis-ingest.sh --inicial 2022-01       carga inicial, daquele mês até hoje
 #   mgsis-ingest.sh --periodo 2026-05       um mês, todos os datasets
 #   mgsis-ingest.sh --periodo 2026-05 --dataset vendas
@@ -35,6 +37,12 @@ export PGUSER="${PGUSER:-analytics}"
 export PGDATABASE PGPASSWORD="${PGPASSWORD:-}"
 TENTATIVAS="${TENTATIVAS:-3}"
 TIMEOUT="${TIMEOUT:-600}"
+# Meses de receber reenviados a cada ciclo (o mês corrente conta). Ver `envia_financeiro`.
+JANELA_MESES_FINANCEIRO="${JANELA_MESES_FINANCEIRO:-12}"
+if ! [[ "$JANELA_MESES_FINANCEIRO" =~ ^[0-9]+$ ]] || (( JANELA_MESES_FINANCEIRO < 2 )); then
+  echo "ERRO: JANELA_MESES_FINANCEIRO deve ser um inteiro >= 2 (é \"$JANELA_MESES_FINANCEIRO\")." >&2
+  exit 78
+fi
 
 [[ -r "$TOKEN_FILE" ]] || { echo "ERRO: token não legível em $TOKEN_FILE" >&2; exit 78; }
 TOKEN="$(tr -d '[:space:]' < "$TOKEN_FILE")"
@@ -90,6 +98,7 @@ FROM (
          produto_quantidade AS "quantity",    produto_valor_total AS "totalOrig",
          produto_valor_custo AS "costOrig",   item_desconto      AS "discountOrig",
          subgrupo_id        AS "subgroupId",  subgrupo_descricao AS "subgroupName",
+         marca_id           AS "brandId",     marca_descricao    AS "brandName",
          vendedor_id        AS "sellerId",    vendedor_nome      AS "sellerName",
          moeda_id           AS "currencyId",  moeda_sigla        AS "currencyCode",
          empresa_id         AS "empresaId"
@@ -160,7 +169,11 @@ FROM (
          pessoa_nome      AS "clientName", pessoa_cidade    AS "clientCity",
          vendedor_id      AS "sellerId",   vendedor_nome    AS "sellerName",
          moeda_id         AS "currencyId", moeda_sigla      AS "currencyCode",
-         empresa_id       AS "empresaId"
+         empresa_id       AS "empresaId",
+         -- A view entrega estas duas cruas (id inteiro, descrição NULL quando o
+         -- título não tem condição); aqui viram texto, como as demais colunas.
+         COALESCE(condicao_pagamento_id::text, '')  AS "paymentTermId",
+         COALESCE(condicao_pagamento_descricao, '') AS "paymentTermName"
   FROM bi_receber
   WHERE data_emissao >= :'de' AND data_emissao < :'ate'
 ) x
@@ -369,12 +382,87 @@ envia_mes() {
   return "$falhas"
 }
 
+# Primeiro mês com título no ERP, no formato YYYY-MM. `INICIO_HISTORICO` no conf
+# tem precedência; sem ele, olha a view. Meses vazios no meio do caminho não
+# custam nada: `envia` os pula sem enviar.
+inicio_historico() { # <bi_receber|bi_pagar>
+  if [[ -n "${INICIO_HISTORICO:-}" ]]; then
+    printf '%s' "$INICIO_HISTORICO"
+    return 0
+  fi
+  local r
+  r="$(echo "SELECT COALESCE(to_char(min(data_emissao), 'YYYY-MM'), '') FROM $1" \
+        | psql -X -A -t -q -v ON_ERROR_STOP=1 -f - | tr -d '[:space:]')" || r=""
+  [[ "$r" =~ ^[0-9]{4}-[0-9]{2}$ ]] || {
+    erro "não consegui descobrir o primeiro mês de $1 — defina INICIO_HISTORICO no conf."
+    return 1
+  }
+  printf '%s' "$r"
+}
+
+# envia_faixa <dataset> <mes_inicial> <mes_final> [<mes_a_pular> ...]
+# Um dataset, mês a mês, ambos os extremos inclusos. Cada mês é uma requisição
+# e uma transação própria, então uma falha no meio deixa os demais consistentes.
+# Os meses a pular são os que o ciclo já enviou antes.
+envia_faixa() {
+  local ds="$1" mes="$2" fim="$3"; shift 3
+  local falhas=0 de ate pula p
+  while [[ "$mes" < "$fim" || "$mes" == "$fim" ]]; do
+    pula=""
+    for p in "$@"; do [[ "$p" == "$mes" ]] && pula=1; done
+    if [[ -z "$pula" ]]; then
+      de="$mes-01"
+      ate="$(desloca_mes "$de" "+1 month" "%Y-%m-%d")" || return 1
+      envia "$ds" "$mes" "$de" "$ate" || falhas=$(( falhas + 1 ))
+    fi
+    mes="$(desloca_mes "$mes-01" "+1 month" "%Y-%m")" || return 1
+  done
+  return "$falhas"
+}
+
+# Receber e pagar precisam de mais que a janela do ciclo. O período é pela
+# EMISSÃO, mas o que muda num título com o tempo é a BAIXA: um título emitido em
+# março e pago hoje não está no mês corrente nem no anterior, então sem isto a
+# baixa nunca chegaria e ele seguiria "em aberto" no Analytics.
+#
+#   ciclo:    receber = últimos JANELA_MESES_FINANCEIRO meses (~8 mil linhas/mês)
+#             pagar   = histórico inteiro (~700 linhas/mês, custa quase nada)
+#   completo: os dois, histórico inteiro — para a madrugada, pega a baixa de
+#             título muito antigo e a correção retroativa.
+#
+# No ciclo, o mês anterior e o corrente já foram enviados por `envia_mes` junto
+# com os demais datasets, então esta função os pula.
+#
+# envia_financeiro <ciclo|completo> <mes_corrente> [<dataset>] [<mes_a_pular> ...]
+envia_financeiro() {
+  local modo="$1" corrente="$2" so="${3:-}"; shift 3
+  local falhas=0 ini
+
+  if [[ -z "$so" || "$so" == "receber" ]]; then
+    if [[ "$modo" == "completo" ]]; then
+      ini="$(inicio_historico bi_receber)" || return 1
+    else
+      ini="$(desloca_mes "$corrente-01" "-$(( JANELA_MESES_FINANCEIRO - 1 )) months" "%Y-%m")" || return 1
+    fi
+    log "receber: $ini até $corrente"
+    envia_faixa receber "$ini" "$corrente" "$@" || falhas=$(( falhas + $? ))
+  fi
+
+  if [[ -z "$so" || "$so" == "pagar" ]]; then
+    ini="$(inicio_historico bi_pagar)" || return 1
+    log "pagar: $ini até $corrente"
+    envia_faixa pagar "$ini" "$corrente" "$@" || falhas=$(( falhas + $? ))
+  fi
+  return "$falhas"
+}
+
 # ─── Argumentos ──────────────────────────────────────────────────────────────
 
 MODO="" ARG="" SO_DATASET=""
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --ciclo)    MODO=ciclo ;;
+    --recarga-financeira) MODO=financeira ;;
     --inicial)  MODO=inicial; ARG="${2:-}"; shift ;;
     --periodo)  MODO=periodo; ARG="${2:-}"; shift ;;
     --dataset)  SO_DATASET="${2:-}"; shift ;;
@@ -385,7 +473,7 @@ while [[ $# -gt 0 ]]; do
   esac
   shift
 done
-[[ -n "$MODO" ]] || { erro "informe --ciclo, --inicial <YYYY-MM> ou --periodo <YYYY-MM>"; exit 64; }
+[[ -n "$MODO" ]] || { erro "informe --ciclo, --recarga-financeira, --inicial <YYYY-MM> ou --periodo <YYYY-MM>"; exit 64; }
 
 if [[ -n "$SO_DATASET" ]]; then
   case "$SO_DATASET" in
@@ -396,7 +484,7 @@ fi
 
 # Duas execuções ao mesmo tempo mandariam o mesmo período duas vezes. É
 # idempotente, então não corrompe — mas dobra a carga à toa, e uma carga
-# inicial longa cruzaria com o ciclo de 2 h.
+# inicial longa cruzaria com o ciclo horário.
 #
 # Sem `flock` na máquina, o agente SEGUE sem trava, avisando. A alternativa —
 # tratar a ausência do comando como "já tem outra execução" — faria o cron
@@ -422,7 +510,17 @@ case "$MODO" in
     log "ciclo: $ANTERIOR e $CORRENTE"
     envia_mes "$ANTERIOR" "$SO_DATASET" || FALHAS=$(( FALHAS + $? ))
     envia_mes "$CORRENTE" "$SO_DATASET" || FALHAS=$(( FALHAS + $? ))
+    envia_financeiro ciclo "$CORRENTE" "$SO_DATASET" "$ANTERIOR" "$CORRENTE" || FALHAS=$(( FALHAS + $? ))
     envia_sem_periodo "$SO_DATASET" || FALHAS=$(( FALHAS + $? ))
+    ;;
+
+  financeira)
+    case "$SO_DATASET" in
+      ""|receber|pagar) ;;
+      *) erro "--recarga-financeira só vale para receber e pagar"; exit 64 ;;
+    esac
+    log "recarga financeira: histórico completo"
+    envia_financeiro completo "$(date +%Y-%m)" "$SO_DATASET" || FALHAS=$(( FALHAS + $? ))
     ;;
 
   inicial)

@@ -1,6 +1,6 @@
 # Agente de ingestão — instalação no servidor do cliente
 
-Lê as views `bi_*` do ERP e envia para o Analytics. Roda de 2 em 2 horas.
+Lê as views `bi_*` do ERP e envia para o Analytics. Roda de hora em hora.
 
 **Por que bash + psql + curl:** a máquina já é o servidor do PostgreSQL, então
 `psql` está lá por definição, e `curl` está em qualquer distribuição. Nada a
@@ -155,7 +155,7 @@ journalctl -u mgsis-ingest.service -f        # acompanha
 Sem systemd, no cron:
 
 ```cron
-7 */2 * * * analytics /usr/local/bin/mgsis-ingest.sh --ciclo >> /var/log/mgsis-ingest.log 2>&1
+7 * * * * analytics /usr/local/bin/mgsis-ingest.sh --ciclo >> /var/log/mgsis-ingest.log 2>&1
 ```
 
 ### Por que o ciclo manda o mês anterior junto
@@ -166,9 +166,39 @@ Se o ciclo só reescrevesse agosto, essa venda cairia em julho — que não é m
 reenviado — e **nunca chegaria** ao Analytics. O mês ficaria permanentemente
 errado, sem sinal de erro. Incluir o mês anterior fecha essa janela.
 
+### Receber e pagar: a baixa não respeita o mês de emissão
+
+O período é pela **emissão**, mas o que muda num título com o tempo é a
+**baixa**. Um título emitido em março e pago hoje não está em "mês corrente +
+anterior" — sem tratamento, seguiria *em aberto* no Analytics para sempre.
+
+Por isso o ciclo horário manda, além dos dois meses de todos os datasets:
+
+| Dataset | O que o ciclo reenvia | Volume |
+|---|---|---|
+| receber | os últimos `JANELA_MESES_FINANCEIRO` meses (padrão **12**) | ~96 mil linhas |
+| pagar | **o histórico inteiro** | ~40 mil linhas |
+
+Receber não vai inteiro a cada hora porque são ~455 mil linhas (~150 MB) e uma
+reescrita dessas por hora infla a tabela e invalida o cache 57 vezes por ciclo.
+Um título raramente é baixado mais de um ano depois de emitido, então 12 meses
+cobre a quase totalidade. O que passar disso chega na recarga da madrugada:
+
+```cron
+0 3 * * * analytics /usr/local/bin/mgsis-ingest.sh --recarga-financeira >> /var/log/mgsis-ingest.log 2>&1
+```
+
+`--recarga-financeira` manda receber e pagar **do primeiro mês do histórico até
+hoje** (descoberto pelo menor `data_emissao` das views, ou fixado em
+`INICIO_HISTORICO` no conf). Aceita `--dataset receber` ou `--dataset pagar`, e
+`--simular` para conferir volume sem enviar. Cada mês é uma requisição e uma
+transação própria: se cair no meio, o resto do histórico segue como estava e a
+próxima execução refaz.
+
 ## O que isso não cobre
 
-**Correção retroativa fora da janela não chega sozinha.** Se alguém corrigir
+**Correção retroativa fora da janela não chega sozinha** — exceto receber e pagar, que a
+recarga da madrugada cobre. Nos demais datasets, se alguém corrigir
 uma nota de março de 2024, o Analytics segue mostrando o valor antigo até que
 alguém reenvie aquele período:
 
