@@ -35,6 +35,7 @@ import {
   statusLabel,
   useEstoqueAnalytics,
   type EstoqueRow as InventoryRow,
+  type EstoqueView,
   type StockStatus,
 } from "@/lib/hooks/use-estoque-analytics";
 import { formatCurrency, formatNumber, formatPercent } from "@/lib/utils/format";
@@ -79,9 +80,38 @@ export default function EstoquePage() {
     );
   const linhasDoServidor = data?.rows;
   const linhasOrdenadas = React.useMemo(
-    () => (linhasDoServidor && ordemSku ? ordenaLinhas(linhasDoServidor, ordemSku) : linhasDoServidor),
+    () =>
+      linhasDoServidor && ordemSku
+        ? ordenaLinhas(linhasDoServidor, ordemSku, COLUNAS_SKU)
+        : linhasDoServidor,
     [linhasDoServidor, ordemSku]
   );
+
+  // Busca e ordenação da tabela de estoque mínimo. Ao contrário do Detalhamento,
+  // aqui tudo roda no NAVEGADOR: `belowMinimum` já vem inteiro do servidor (é
+  // uma projeção enxuta de poucas centenas de linhas), então filtrar ou ordenar
+  // não custa uma consulta nova — e assim esta tabela não recarrega a tela toda.
+  const [buscaMinimo, setBuscaMinimo] = React.useState("");
+  const [ordemMinimo, setOrdemMinimo] = React.useState<OrdemMinimo | null>(null);
+  const ordenaMinimoPor = (id: ColunaMinimoId) =>
+    setOrdemMinimo((atual) =>
+      atual?.col === id
+        ? { col: id, dir: atual.dir === "asc" ? "desc" : "asc" }
+        : { col: id, dir: COLUNAS_MINIMO.find((c) => c.id === id)?.primeira ?? "asc" }
+    );
+  const minimoDoServidor = data?.belowMinimum;
+  const minimoVisivel = React.useMemo(() => {
+    if (!minimoDoServidor) return undefined;
+    const alvo = textoOrdenavel(buscaMinimo);
+    const filtradas = alvo
+      ? minimoDoServidor.filter((r) =>
+          [r.productId, r.description, r.manufacturerCode].some((campo) =>
+            (textoOrdenavel(campo) ?? "").includes(alvo)
+          )
+        )
+      : minimoDoServidor;
+    return ordemMinimo ? ordenaLinhas(filtradas, ordemMinimo, COLUNAS_MINIMO) : filtradas;
+  }, [minimoDoServidor, buscaMinimo, ordemMinimo]);
   // Com o card em `fixed` ele sai do fluxo e a página atrás encolheria; ao fechar,
   // o navegador teria "prendido" a rolagem no fim menor e o usuário perderia o
   // lugar. Reservar a altura de antes evita o salto.
@@ -166,6 +196,12 @@ export default function EstoquePage() {
   const dormant = data.dormant;
   const rupture = data.ruptureRisk;
   const minStockRows = data.belowMinimum;
+  // O que a tabela de estoque mínimo mostra agora: o total acima, já passado
+  // pela busca e pela ordenação do próprio card.
+  const minStockVisiveis = minimoVisivel ?? minStockRows;
+  const rotuloOrdemMinimo = ordemMinimo
+    ? COLUNAS_MINIMO.find((c) => c.id === ordemMinimo.col)?.rotulo
+    : null;
   // A exportação para Excel sai na ordem em que a tabela está.
   const filteredRows = linhasOrdenadas ?? data.rows;
   const rotuloOrdem = ordemSku ? COLUNAS_SKU.find((c) => c.id === ordemSku.col)?.rotulo(displayCode) : null;
@@ -409,63 +445,44 @@ export default function EstoquePage() {
                   Produtos com estoque mínimo definido e quantidade atual igual ou abaixo do ponto de reposição.
                 </p>
               </div>
-              <Badge variant="warning" className="gap-1">
-                {formatNumber(minStockRows.length)} item(ns)
-              </Badge>
+              <div className="flex flex-wrap items-center gap-2">
+                <div className="relative">
+                  <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+                  <input
+                    type="text"
+                    value={buscaMinimo}
+                    onChange={(e) => setBuscaMinimo(e.target.value)}
+                    placeholder="Buscar SKU, descrição, fabricante…"
+                    className="h-8 w-56 rounded-md border border-border bg-background pl-8 pr-3 text-xs text-foreground placeholder:text-muted-foreground focus:border-foreground/50 focus:outline-none"
+                  />
+                </div>
+                <Badge variant="warning" className="gap-1">
+                  {buscaMinimo.trim()
+                    ? `${formatNumber(minStockVisiveis.length)} de ${formatNumber(minStockRows.length)}`
+                    : `${formatNumber(minStockRows.length)} item(ns)`}
+                </Badge>
+              </div>
             </div>
+            {ordemMinimo && rotuloOrdemMinimo && (
+              <p className="mt-1 text-[11px] text-muted-foreground">
+                Ordem: <span className="text-foreground">{rotuloOrdemMinimo}</span>{" "}
+                {ordemMinimo.dir === "asc" ? "↑ crescente" : "↓ decrescente"}{" "}
+                <button
+                  type="button"
+                  onClick={() => setOrdemMinimo(null)}
+                  className="text-accent underline-offset-2 hover:underline"
+                >
+                  voltar à ordem padrão
+                </button>
+              </p>
+            )}
           </CardHeader>
           <CardContent className="px-0">
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-y border-border text-[10px] uppercase tracking-[0.14em] text-muted-foreground">
-                    <th className="text-left font-medium py-2 px-5">SKU</th>
-                    <th className="text-left font-medium py-2 px-5">Descrição</th>
-                    <th className="text-left font-medium py-2 px-5">Fabricante</th>
-                    <th className="text-right font-medium py-2 px-5">Estoque atual</th>
-                    <th className="text-right font-medium py-2 px-5">Estoque mínimo</th>
-                    <th className="text-right font-medium py-2 px-5">Gap</th>
-                    <th className="text-left font-medium py-2 px-5">Status</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-border">
-                  {minStockRows.map((r) => {
-                    const gap = r.minStock - r.stock;
-                    return (
-                      <tr key={r.productId} className="hover:bg-muted/30 transition-colors">
-                        <td className="py-2 px-5 font-mono text-xs text-muted-foreground tabular">
-                          {r.productId}
-                        </td>
-                        <td className="py-2 px-5 max-w-[280px] truncate font-medium">
-                          {r.description || "—"}
-                        </td>
-                        <td className="py-2 px-5 font-mono text-xs text-muted-foreground">
-                          {r.manufacturerCode || "—"}
-                        </td>
-                        <td className={cn(
-                          "py-2 px-5 text-right tabular font-medium",
-                          r.stock === 0 ? "text-negative" : "text-warning"
-                        )}>
-                          {formatNumber(r.stock)}
-                        </td>
-                        <td className="py-2 px-5 text-right tabular text-muted-foreground">
-                          {formatNumber(r.minStock)}
-                        </td>
-                        <td className="py-2 px-5 text-right tabular">
-                          <span className="inline-flex items-center gap-1 text-warning font-medium">
-                            <AlertTriangle className="h-3 w-3" />
-                            {formatNumber(gap)}
-                          </span>
-                        </td>
-                        <td className="py-2 px-5">
-                          <StatusBadge status={r.status} />
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
+            <VirtualizedMinStockTable
+              rows={minStockVisiveis}
+              ordem={ordemMinimo}
+              onOrdena={ordenaMinimoPor}
+            />
           </CardContent>
         </Card>
       )}
@@ -829,6 +846,51 @@ const COLUNAS_SKU: ColunaSku[] = [
     chave: (r) => STATUS_ORDER.indexOf(r.status) },
 ];
 
+/** A projeção enxuta que o servidor manda para a tabela de estoque mínimo. */
+type MinStockRow = EstoqueView["belowMinimum"][number];
+
+type ColunaMinimoId = "sku" | "descricao" | "fabricante" | "estoque" | "minimo" | "gap" | "status";
+interface OrdemMinimo { col: ColunaMinimoId; dir: DirecaoOrdem }
+
+/**
+ * Colunas da tabela "Abaixo do estoque mínimo" — mesma mecânica das do
+ * Detalhamento (largura em px, primeira direção do clique, `chave` que segue o
+ * que a tela MOSTRA). Soma: 810px, que cabe na largura do card sem rolagem
+ * lateral na maioria das telas. Só a Descrição é elástica.
+ */
+const COLUNAS_MINIMO: ColunaMinimo[] = [
+  { id: "sku", rotulo: "SKU", align: "left", largura: 90, primeira: "asc",
+    chave: (r) => (/^\d{1,15}$/.test(r.productId) ? Number(r.productId) : textoOrdenavel(r.productId)) },
+  { id: "descricao", rotulo: "Descrição", align: "left", largura: 200, primeira: "asc",
+    chave: (r) => textoOrdenavel(r.description) },
+  { id: "fabricante", rotulo: "Fabricante", align: "left", largura: 110, primeira: "asc",
+    chave: (r) => textoOrdenavel(r.manufacturerCode) },
+  { id: "estoque", rotulo: "Estoque atual", align: "right", largura: 110, primeira: "asc",
+    chave: (r) => r.stock },
+  { id: "minimo", rotulo: "Estoque mínimo", align: "right", largura: 120, primeira: "desc",
+    chave: (r) => r.minStock },
+  // O gap é o que ordena por padrão no servidor (maior primeiro): é a coluna
+  // que responde "o que repor antes".
+  { id: "gap", rotulo: "Gap", align: "right", largura: 90, primeira: "desc",
+    chave: (r) => r.minStock - r.stock },
+  { id: "status", rotulo: "Status", align: "left", largura: 110, primeira: "asc",
+    chave: (r) => STATUS_ORDER.indexOf(r.status) },
+];
+
+interface ColunaMinimo {
+  id: ColunaMinimoId;
+  rotulo: string;
+  align: "left" | "right";
+  largura: number;
+  primeira: DirecaoOrdem;
+  chave: (r: MinStockRow) => number | string | null;
+}
+
+const MINIMO_TEMPLATE = COLUNAS_MINIMO.map((c) =>
+  c.id === "descricao" ? `minmax(${c.largura}px,2fr)` : `${c.largura}px`
+).join(" ");
+const MINIMO_MIN_WIDTH = COLUNAS_MINIMO.reduce((s, c) => s + c.largura, 0);
+
 /**
  * Ordena no NAVEGADOR: o servidor já mandou o conjunto inteiro filtrado (60 mil
  * SKUs), então ordenar lá custaria refazer a consulta e baixar tudo de novo a cada
@@ -836,12 +898,21 @@ const COLUNAS_SKU: ColunaSku[] = [
  *
  * Empate mantém a ordem que o servidor mandou (índice original), nas duas
  * direções — o desempate é explícito e a ordem não inverte junto com a direção.
+ *
+ * Genérica de propósito: o Detalhamento por SKU e a tabela de estoque mínimo
+ * ordenam com esta mesma função (listas e colunas diferentes, regra idêntica),
+ * para "vazio sempre por último" e o desempate estável não divergirem entre as
+ * duas com o tempo.
  */
-function ordenaLinhas(rows: InventoryRow[], ordem: OrdemSku): InventoryRow[] {
-  const coluna = COLUNAS_SKU.find((c) => c.id === ordem.col);
+function ordenaLinhas<T, Id extends string>(
+  rows: T[],
+  ordem: { col: Id; dir: DirecaoOrdem },
+  colunas: readonly { id: Id; chave: (r: T) => number | string | null }[]
+): T[] {
+  const coluna = colunas.find((c) => c.id === ordem.col);
   if (!coluna) return rows;
   const f = ordem.dir === "asc" ? 1 : -1;
-  const dec = rows.map((r, i) => ({ r, i, k: coluna.chave(r) }));
+  const dec = rows.map((r, i) => ({ r, i, k: coluna.chave(r) as number | string | null }));
   dec.sort((a, b) => {
     if (a.k === null || b.k === null) {
       if (a.k === b.k) return a.i - b.i;
@@ -871,18 +942,22 @@ function colunasSku(telaCheia: boolean): { template: string; minWidth: number } 
   };
 }
 
-/** Cabeçalho clicável: seta para cima = crescente, para baixo = decrescente. */
-function CabecalhoSku({
-  coluna, moeda, ordem, onOrdena,
+/**
+ * Cabeçalho clicável: seta para cima = crescente, para baixo = decrescente.
+ * Serve as duas tabelas ordenáveis da tela (Detalhamento por SKU e estoque
+ * mínimo) — recebe o rótulo já resolvido em vez da coluna inteira.
+ */
+function CabecalhoOrdenavel<Id extends string>({
+  id, rotulo, align, ordem, onOrdena,
 }: {
-  coluna: ColunaSku;
-  moeda: string;
-  ordem: OrdemSku | null;
-  onOrdena: (id: ColunaSkuId) => void;
+  id: Id;
+  rotulo: string;
+  align: "left" | "right";
+  ordem: { col: Id; dir: DirecaoOrdem } | null;
+  onOrdena: (id: Id) => void;
 }) {
-  const ativo = ordem?.col === coluna.id;
-  const rotulo = coluna.rotulo(moeda);
-  const direita = coluna.align === "right";
+  const ativo = ordem?.col === id;
+  const direita = align === "right";
   const Icone = ativo ? (ordem.dir === "asc" ? ArrowUp : ArrowDown) : ArrowUpDown;
   const dica = ativo
     ? `Ordenado ${ordem.dir === "asc" ? "crescente" : "decrescente"} por ${rotulo} — clique para inverter`
@@ -899,7 +974,7 @@ function CabecalhoSku({
   return (
     <button
       type="button"
-      onClick={() => onOrdena(coluna.id)}
+      onClick={() => onOrdena(id)}
       title={dica}
       aria-label={dica}
       className={cn(
@@ -973,7 +1048,14 @@ function VirtualizedSkuTable({
           style={{ gridTemplateColumns: gridCols }}
         >
           {COLUNAS_SKU.map((c) => (
-            <CabecalhoSku key={c.id} coluna={c} moeda={displayCode} ordem={ordem} onOrdena={onOrdena} />
+            <CabecalhoOrdenavel
+              key={c.id}
+              id={c.id}
+              rotulo={c.rotulo(displayCode)}
+              align={c.align}
+              ordem={ordem}
+              onOrdena={onOrdena}
+            />
           ))}
         </div>
 
@@ -1037,6 +1119,123 @@ function VirtualizedSkuTable({
                   {r.lastSaleDate
                     ? `${r.lastSaleDate}${Number.isFinite(r.daysSinceLastSale) ? ` · há ${r.daysSinceLastSale}d` : ""}`
                     : "—"}
+                </div>
+                <div className="py-2 px-3">
+                  <StatusBadge status={r.status} />
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * "Abaixo do estoque mínimo", virtualizada como o Detalhamento e com altura
+ * limitada: a lista pode passar de mil itens e antes crescia sem teto, empurrando
+ * o Detalhamento para fora da tela. Aqui ela para em ~15 linhas e rola por dentro.
+ *
+ * Mesma razão do Detalhamento para usar grid em vez de `<table>`: linha
+ * posicionada com `position: absolute` não funciona dentro de `<tbody>`.
+ */
+const MINIMO_MAX_H = 15 * SKU_ROW_HEIGHT;
+
+function VirtualizedMinStockTable({
+  rows, ordem, onOrdena,
+}: {
+  rows: MinStockRow[];
+  ordem: OrdemMinimo | null;
+  onOrdena: (id: ColunaMinimoId) => void;
+}) {
+  const parentRef = React.useRef<HTMLDivElement>(null);
+
+  // Outra ordem ou outra busca = outra lista: volta ao topo.
+  React.useEffect(() => {
+    parentRef.current?.scrollTo({ top: 0 });
+  }, [ordem, rows]);
+
+  const virtualizer = useVirtualizer({
+    count: rows.length,
+    getScrollElement: () => parentRef.current,
+    estimateSize: () => SKU_ROW_HEIGHT,
+    overscan: 8,
+  });
+
+  if (rows.length === 0) {
+    return (
+      <p className="border-t border-border px-5 py-8 text-center text-sm text-muted-foreground">
+        Nenhum item abaixo do mínimo corresponde à busca.
+      </p>
+    );
+  }
+
+  return (
+    <div
+      ref={parentRef}
+      className="overflow-auto overscroll-contain border-t border-border"
+      style={{ maxHeight: MINIMO_MAX_H }}
+    >
+      <div style={{ minWidth: MINIMO_MIN_WIDTH }}>
+        <div
+          className="grid items-stretch sticky top-0 z-10 border-b border-border bg-surface text-[10px] uppercase tracking-[0.14em] text-muted-foreground"
+          style={{ gridTemplateColumns: MINIMO_TEMPLATE }}
+        >
+          {COLUNAS_MINIMO.map((c) => (
+            <CabecalhoOrdenavel
+              key={c.id}
+              id={c.id}
+              rotulo={c.rotulo}
+              align={c.align}
+              ordem={ordem}
+              onOrdena={onOrdena}
+            />
+          ))}
+        </div>
+
+        <div style={{ height: virtualizer.getTotalSize(), position: "relative" }}>
+          {virtualizer.getVirtualItems().map((vRow) => {
+            const r = rows[vRow.index];
+            const gap = r.minStock - r.stock;
+            return (
+              <div
+                key={r.productId}
+                className="absolute left-0 top-0 grid w-full items-center border-b border-border text-sm hover:bg-muted/30"
+                style={{
+                  gridTemplateColumns: MINIMO_TEMPLATE,
+                  height: vRow.size,
+                  transform: `translateY(${vRow.start}px)`,
+                }}
+              >
+                <div className="py-2 px-3 truncate font-mono text-xs text-muted-foreground tabular">
+                  {r.productId}
+                </div>
+                <div className="py-2 px-3 truncate font-medium" title={r.description || undefined}>
+                  {r.description || "—"}
+                </div>
+                <div
+                  className="py-2 px-3 truncate font-mono text-xs text-muted-foreground"
+                  title={r.manufacturerCode || undefined}
+                >
+                  {r.manufacturerCode || "—"}
+                </div>
+                <div
+                  className={cn(
+                    "py-2 px-3 text-right tabular font-medium",
+                    r.stock === 0 ? "text-negative" : "text-warning"
+                  )}
+                >
+                  {formatNumber(r.stock)}
+                </div>
+                <div className="py-2 px-3 text-right tabular text-muted-foreground">
+                  {formatNumber(r.minStock)}
+                </div>
+                <div className="py-2 px-3 text-right tabular">
+                  <span className="inline-flex items-center gap-1 font-medium text-warning">
+                    <AlertTriangle className="h-3 w-3 shrink-0" />
+                    {formatNumber(gap)}
+                  </span>
                 </div>
                 <div className="py-2 px-3">
                   <StatusBadge status={r.status} />
