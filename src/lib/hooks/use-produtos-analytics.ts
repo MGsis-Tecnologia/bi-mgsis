@@ -35,6 +35,18 @@ export interface SubgrupoABC {
   curve: "A" | "B" | "C";
 }
 
+export interface MarcaABC {
+  id: string;
+  /** "" = venda sem marca (marca_id vazio). */
+  name: string;
+  revenue: number;
+  units: number;
+  productCount: number;
+  share: number;
+  cumulativeShare: number;
+  curve: "A" | "B" | "C";
+}
+
 export interface ProdutoLucro {
   productId: string;
   productName: string;
@@ -54,6 +66,7 @@ export interface ProdutosView {
   productsWithSales: number;
   totalProducts: number;
   subgroups: SubgrupoABC[];
+  brands: MarcaABC[];
   profitRanking: ProdutoLucro[];
   profitTotals: { units: number; revenue: number; cost: number; profit: number; count: number };
   /** Derivado dos subgrupos — mesma agregação que o donut usava. */
@@ -65,10 +78,15 @@ function iso(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
+/** Filtros que a tela mandou — as páginas seguintes das tabelas repetem os mesmos. */
+export type FiltrosProdutos = Record<string, unknown>;
+
 export function useProdutosAnalytics(): {
   data: ProdutosView | null;
   loading: boolean;
   error: string | null;
+  /** O corpo do pedido atual; `null` até a primeira resposta. */
+  filtros: FiltrosProdutos | null;
 } {
   const preset = useFilters((s) => s.preset);
   const customRange = useFilters((s) => s.customRange);
@@ -135,5 +153,76 @@ export function useProdutosAnalytics(): {
     };
   }, [resposta]);
 
-  return { data, loading, error };
+  return { data, loading, error, filtros: resposta ? corpo : null };
+}
+
+/** Linhas pedidas a cada página, depois da primeira (que já vem na tela). */
+const LINHAS_POR_PAGINA = 50;
+
+/**
+ * Uma das tabelas grandes (ABC ou lucro), com carga por páginas.
+ *
+ * A primeira página já veio na resposta da tela (`primeira`); as seguintes são
+ * pedidas ao servidor conforme o usuário rola, sempre com os MESMOS filtros da
+ * tela. Trocar de filtro gera uma resposta nova — e portanto uma `primeira`
+ * nova —, e isso descarta o que tinha sido acumulado.
+ */
+export function useProdutosPagina<T>(
+  tabela: "abc" | "lucro",
+  primeira: T[],
+  total: number,
+  filtros: FiltrosProdutos | null
+): {
+  rows: T[];
+  total: number;
+  hasMore: boolean;
+  loadingMais: boolean;
+  loadMore: () => void;
+  error: string | null;
+} {
+  const [extra, setExtra] = React.useState<T[]>([]);
+  const [loadingMais, setLoadingMais] = React.useState(false);
+  const [error, setError] = React.useState<string | null>(null);
+  const ctrlRef = React.useRef<AbortController | null>(null);
+
+  React.useEffect(() => {
+    ctrlRef.current?.abort();
+    // Funcional e só quando há o que limpar: um `[]` novo a cada render faria
+    // este efeito reagendar a si mesmo.
+    setExtra((atual) => (atual.length ? [] : atual));
+    setLoadingMais(false);
+    setError(null);
+  }, [primeira]);
+
+  const rows = React.useMemo(() => [...primeira, ...extra], [primeira, extra]);
+  const hasMore = rows.length < total;
+
+  const loadMore = React.useCallback(() => {
+    if (loadingMais || !hasMore || !filtros) return;
+
+    ctrlRef.current?.abort();
+    const ctrl = new AbortController();
+    ctrlRef.current = ctrl;
+    setLoadingMais(true);
+    setError(null);
+
+    fetch("/api/analytics/produtos", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ...filtros, tabela, offset: rows.length, limite: LINHAS_POR_PAGINA }),
+      signal: ctrl.signal,
+    })
+      .then((res) => leJson<{ rows: T[] }>(res))
+      .then((r) => {
+        if (!ctrl.signal.aborted) setExtra((atual) => [...atual, ...r.rows]);
+      })
+      .catch((err: Error) => {
+        if (err.name !== "AbortError") setError(err.message);
+      })
+      .finally(() => {
+        if (!ctrl.signal.aborted) setLoadingMais(false);
+      });
+  }, [loadingMais, hasMore, filtros, tabela, rows.length]);
+
+  return { rows, total, hasMore, loadingMais, loadMore, error };
 }

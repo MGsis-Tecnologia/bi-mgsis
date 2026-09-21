@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { Package, TrendingUp, ArrowRight, Layers } from "lucide-react";
+import { Package, TrendingUp, ArrowRight, Layers, Tag } from "lucide-react";
 import { PageHeader } from "@/components/layout/page-header";
 import { KpiCard } from "@/components/dashboard/kpi-card";
 import { EmptyState } from "@/components/dashboard/empty-state";
@@ -10,21 +10,52 @@ import { Badge } from "@/components/ui/badge";
 import { BarChartH } from "@/components/charts/bar-chart-h";
 import { DonutChart } from "@/components/charts/donut-chart";
 import { Money } from "@/components/dashboard/money";
-import { useProdutosAnalytics } from "@/lib/hooks/use-produtos-analytics";
+import {
+  useProdutosAnalytics,
+  useProdutosPagina,
+  type ProdutoABC,
+  type ProdutoLucro,
+} from "@/lib/hooks/use-produtos-analytics";
 import { formatNumber, formatPercent } from "@/lib/utils/format";
 import { cn } from "@/lib/utils";
 import { useTranslation } from "@/lib/hooks/use-translation";
+
+/** Estável de propósito: um `[]` novo a cada render reiniciaria a paginação. */
+const SEM_LINHAS: never[] = [];
+
+/** Chegou perto do fim do container de rolagem? Hora de pedir a próxima página. */
+const pertoDoFim = (e: React.UIEvent<HTMLDivElement>) =>
+  e.currentTarget.scrollHeight - e.currentTarget.scrollTop - e.currentTarget.clientHeight < 240;
+
+/** "50 de 3.412 — role para carregar o restante." + estado da carga. */
+function RodapePaginacao({
+  shown, total, hasMore, loading, error,
+}: { shown: number; total: number; hasMore: boolean; loading: boolean; error: string | null }) {
+  const { t } = useTranslation();
+  return (
+    <p className="border-t border-border px-5 pt-3 text-[11px] text-muted-foreground">
+      {error
+        ? <span className="text-negative">{error}</span>
+        : loading
+          ? t("produtos.table.loading")
+          : t(hasMore ? "produtos.table.loaded.more" : "produtos.table.loaded.all", {
+              shown: formatNumber(shown),
+              total: formatNumber(total),
+            })}
+    </p>
+  );
+}
 
 export default function ProdutosPage() {
   const { t } = useTranslation();
 
   // Tudo agregado no servidor: curvas ABC, ranking por lucro e categorias já
   // chegam classificados, com os totais calculados sobre a lista inteira.
-  const { data, loading, error } = useProdutosAnalytics();
+  const { data, loading, error, filtros } = useProdutosAnalytics();
 
   const abc = data?.topProducts ?? [];
   const catABC = data?.subgroups ?? [];
-  const profitRanking = data?.profitRanking ?? [];
+  const marcaABC = data?.brands ?? [];
   const donut = data?.donut ?? [];
 
   const aCount = data?.curveCounts.A ?? 0;
@@ -34,6 +65,16 @@ export default function ProdutosPage() {
   const totalRevenue = data?.totals.revenue ?? 0;
   const produtosComVenda = data?.productsWithSales ?? 0;
   const totalProdutos = data?.totalProducts ?? 0;
+
+  // As duas tabelas grandes listam TODOS os produtos com venda no período: a
+  // primeira página vem na resposta da tela, o resto é pedido ao rolar. O
+  // gráfico do topo continua usando só `abc` (as 12 primeiras linhas).
+  const abcPag = useProdutosPagina<ProdutoABC>(
+    "abc", data?.topProducts ?? SEM_LINHAS, data?.productsWithSales ?? 0, filtros
+  );
+  const lucroPag = useProdutosPagina<ProdutoLucro>(
+    "lucro", data?.profitRanking ?? SEM_LINHAS, data?.profitTotals.count ?? 0, filtros
+  );
 
   if (error) {
     return (
@@ -98,8 +139,11 @@ export default function ProdutosPage() {
               rows={abc.slice(0, 12).map((e) => ({
                 key: e.id,
                 label: e.name,
+                // Código do fabricante logo abaixo da descrição. Vem do ESTOQUE:
+                // produto ausente do snapshot fica sem a linha.
+                sublabel: e.manufacturerCode ? `Fab. ${e.manufacturerCode}` : undefined,
                 value: e.revenue,
-                secondary: `${formatNumber(e.units)} un · ${e.curve}${e.manufacturerCode ? ` · ${e.manufacturerCode}` : ""}`,
+                secondary: `${formatNumber(e.units)} un · ${e.curve}`,
                 tone: e.curve === "A" ? "accent" : "muted",
               }))}
               maxRows={12}
@@ -136,7 +180,7 @@ export default function ProdutosPage() {
           </div>
         </CardHeader>
         <CardContent className="px-0">
-          <div className="overflow-x-auto overflow-y-auto max-h-[720px]">
+          <div onScroll={(e) => pertoDoFim(e) && abcPag.loadMore()} className="overflow-x-auto overflow-y-auto max-h-[720px]">
             <table className="w-full text-sm">
               <thead className="[&_th]:sticky [&_th]:top-0 [&_th]:z-10 [&_th]:bg-surface [&_th]:border-b [&_th]:border-border">
                 <tr className="text-[10px] uppercase tracking-[0.14em] text-muted-foreground">
@@ -151,7 +195,7 @@ export default function ProdutosPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
-                {abc.map((e, i) => (
+                {abcPag.rows.map((e, i) => (
                   <tr key={e.id} className="hover:bg-muted/30 transition-colors">
                     <td className="py-2 px-5 font-mono text-xs text-muted-foreground tabular">
                       {(i + 1).toString().padStart(2, "0")}
@@ -182,6 +226,7 @@ export default function ProdutosPage() {
               </tbody>
             </table>
           </div>
+          <RodapePaginacao shown={abcPag.rows.length} total={abcPag.total} hasMore={abcPag.hasMore} loading={abcPag.loadingMais} error={abcPag.error} />
         </CardContent>
       </Card>
 
@@ -199,7 +244,7 @@ export default function ProdutosPage() {
           </div>
         </CardHeader>
         <CardContent className="px-0">
-          <div className="overflow-x-auto overflow-y-auto max-h-[720px]">
+          <div onScroll={(e) => pertoDoFim(e) && lucroPag.loadMore()} className="overflow-x-auto overflow-y-auto max-h-[720px]">
             <table className="w-full text-sm">
               <thead className="[&_th]:sticky [&_th]:top-0 [&_th]:z-10 [&_th]:bg-surface [&_th]:border-b [&_th]:border-border">
                 <tr className="text-[10px] uppercase tracking-[0.14em] text-muted-foreground">
@@ -214,7 +259,7 @@ export default function ProdutosPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
-                {profitRanking.map((e, i) => (
+                {lucroPag.rows.map((e, i) => (
                   <tr key={e.productId} className="hover:bg-muted/30 transition-colors">
                     <td className="py-2 px-5 font-mono text-xs text-muted-foreground tabular">
                       {(i + 1).toString().padStart(2, "0")}
@@ -272,6 +317,7 @@ export default function ProdutosPage() {
               </tfoot>
             </table>
           </div>
+          <RodapePaginacao shown={lucroPag.rows.length} total={lucroPag.total} hasMore={lucroPag.hasMore} loading={lucroPag.loadingMais} error={lucroPag.error} />
         </CardContent>
       </Card>
 
@@ -345,6 +391,88 @@ export default function ProdutosPage() {
                   </td>
                   <td className="py-2.5 px-5 text-right tabular">
                     <Money value={catABC.reduce((s, c) => s + c.revenue, 0)} />
+                  </td>
+                  <td className="py-2.5 px-5" colSpan={3} />
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* ── Curva ABC por Marca ────────────────────────────────────────────── */}
+      <Card id="marcas-abc" className="scroll-mt-24">
+        <CardHeader>
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div className="flex items-center gap-2">
+              <Tag className="h-4 w-4 text-muted-foreground" />
+              <div>
+                <CardTitle>{t("produtos.marca.title")}</CardTitle>
+                <p className="mt-0.5 text-[11px] text-muted-foreground">{t("produtos.marca.desc")}</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+              <CurvaLegend curve="A" count={marcaABC.filter((m) => m.curve === "A").length} />
+              <CurvaLegend curve="B" count={marcaABC.filter((m) => m.curve === "B").length} />
+              <CurvaLegend curve="C" count={marcaABC.filter((m) => m.curve === "C").length} />
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="px-0">
+          <div className="overflow-x-auto overflow-y-auto max-h-[720px]">
+            <table className="w-full text-sm">
+              <thead className="[&_th]:sticky [&_th]:top-0 [&_th]:z-10 [&_th]:bg-surface [&_th]:border-b [&_th]:border-border">
+                <tr className="text-[10px] uppercase tracking-[0.14em] text-muted-foreground">
+                  <th className="text-left font-medium py-2 px-5">#</th>
+                  <th className="text-left font-medium py-2 px-5">{t("produtos.marca.col.brand")}</th>
+                  <th className="text-right font-medium py-2 px-5">{t("produtos.cat.col.skus")}</th>
+                  <th className="text-right font-medium py-2 px-5">{t("produtos.table.col.units")}</th>
+                  <th className="text-right font-medium py-2 px-5">{t("produtos.table.col.revenue")}</th>
+                  <th className="text-right font-medium py-2 px-5">{t("produtos.table.col.share")}</th>
+                  <th className="text-right font-medium py-2 px-5">{t("produtos.table.col.acc")}</th>
+                  <th className="text-left font-medium py-2 px-5">{t("produtos.table.col.curve")}</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {marcaABC.map((m, i) => (
+                  <tr key={m.id} className="hover:bg-muted/30 transition-colors">
+                    <td className="py-2 px-5 font-mono text-xs text-muted-foreground tabular">
+                      {(i + 1).toString().padStart(2, "0")}
+                    </td>
+                    <td className="py-2 px-5 max-w-[280px] truncate font-medium">
+                      {m.name || <span className="text-muted-foreground">{t("produtos.marca.none")}</span>}
+                    </td>
+                    <td className="py-2 px-5 text-right tabular text-muted-foreground">{formatNumber(m.productCount)}</td>
+                    <td className="py-2 px-5 text-right tabular">{formatNumber(m.units)}</td>
+                    <td className="py-2 px-5 text-right tabular font-medium">
+                      <Money value={m.revenue} />
+                    </td>
+                    <td className="py-2 px-5 text-right tabular text-muted-foreground">
+                      {formatPercent(m.share, { decimals: 2 })}
+                    </td>
+                    <td className="py-2 px-5 text-right tabular text-muted-foreground">
+                      {formatPercent(m.cumulativeShare, { decimals: 1 })}
+                    </td>
+                    <td className="py-2 px-5">
+                      <CurvaBadge curve={m.curve} />
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+              <tfoot className="[&_td]:sticky [&_td]:bottom-0 [&_td]:z-10 [&_td]:bg-surface [&_td]:border-t [&_td]:border-border">
+                <tr className="text-[11px] font-medium">
+                  <td className="py-2.5 px-5" />
+                  <td className="py-2.5 px-5 uppercase tracking-[0.1em] text-muted-foreground">
+                    {t("produtos.marca.total", { count: marcaABC.length })}
+                  </td>
+                  <td className="py-2.5 px-5 text-right tabular text-muted-foreground">
+                    {formatNumber(marcaABC.reduce((s, m) => s + m.productCount, 0))}
+                  </td>
+                  <td className="py-2.5 px-5 text-right tabular">
+                    {formatNumber(marcaABC.reduce((s, m) => s + m.units, 0))}
+                  </td>
+                  <td className="py-2.5 px-5 text-right tabular">
+                    <Money value={marcaABC.reduce((s, m) => s + m.revenue, 0)} />
                   </td>
                   <td className="py-2.5 px-5" colSpan={3} />
                 </tr>

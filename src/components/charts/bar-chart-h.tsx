@@ -8,6 +8,8 @@ import { cn } from "@/lib/utils";
 interface Row {
   key: string;
   label: string;
+  /** Linha pequena logo abaixo da descrição (ex.: código do fabricante). */
+  sublabel?: string;
   value: number;
   secondary?: number | string;
   tone?: "accent" | "positive" | "negative" | "muted";
@@ -53,6 +55,11 @@ export function BarChartH({
           )}
           <div className="min-w-0">
             <div className="truncate text-[13px] font-medium text-foreground">{row.label}</div>
+            {row.sublabel && (
+              <div className="truncate font-mono text-[11px] text-muted-foreground" title={row.sublabel}>
+                {row.sublabel}
+              </div>
+            )}
             <div className="relative mt-1 h-1 w-full rounded-full bg-muted/60 overflow-hidden">
               <div
                 className={cn(
