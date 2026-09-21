@@ -85,8 +85,8 @@ O que mudou, em uma linha por assunto:
   ```
 
   Deve listar receber dos últimos 12 meses e pagar do primeiro mês até hoje, e
-  terminar com "concluído sem falhas". Se falhar com `column "marca_id" does not
-  exist`, a view do item 2 não foi instalada.
+  terminar com "concluído sem falhas". Se falhar com erro de coluna inexistente (`marca_id` ou
+  `condicao_pagamento_id`), a view do item 2 não foi instalada nesse banco.
 - [ ] **Ciclo de 1 hora.** Trocar o timer do systemd
   (`agente/systemd/mgsis-ingest.timer`, agora `OnCalendar=*:07`):
 
