@@ -16,6 +16,8 @@ const corpoSchema = z.object({
   currency: z.enum(["ALL", "1", "2", "3"]).default("ALL"),
   empresaId: z.string().default("all"),
   sellerId: z.string().default("all"),
+  // "all", o id da condição de pagamento, ou "__none__" (títulos sem condição).
+  condicaoPagamentoId: z.string().max(255).default("all"),
   // "Hoje" do navegador: define atraso e aging.
   hoje: dataISO,
   // Só o preset "custom" limita o vencimento superiormente — os demais
@@ -61,6 +63,7 @@ export async function POST(req: NextRequest) {
   const data = await getReceberData(db, filtros, {
     hoje: corpo.hoje,
     aplicarLimiteSuperior: corpo.aplicarLimiteSuperior,
+    condicaoPagamentoId: corpo.condicaoPagamentoId,
   });
 
   return NextResponse.json({ ...data, ms: Date.now() - inicio });

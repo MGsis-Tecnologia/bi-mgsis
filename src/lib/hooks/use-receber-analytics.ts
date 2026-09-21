@@ -63,7 +63,11 @@ function monthLabel(key: string): string {
   );
 }
 
-export function useReceberAnalytics(): {
+/**
+ * @param condicaoPagamentoId "all", o id da condição, ou "__none__" (sem condição).
+ *   Vem da própria tela, não do store global: só o Receber tem esse filtro.
+ */
+export function useReceberAnalytics(condicaoPagamentoId = "all"): {
   data: ReceberView | null;
   loading: boolean;
   error: string | null;
@@ -92,10 +96,11 @@ export function useReceberAnalytics(): {
       currency,
       empresaId,
       sellerId,
+      condicaoPagamentoId,
       hoje: iso(new Date()),
       aplicarLimiteSuperior: preset === "custom",
     }),
-    [range, currency, empresaId, sellerId, preset]
+    [range, currency, empresaId, sellerId, condicaoPagamentoId, preset]
   );
 
   React.useEffect(() => {

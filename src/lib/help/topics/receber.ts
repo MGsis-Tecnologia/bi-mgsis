@@ -11,7 +11,7 @@ export const receber: HelpSection = {
   globalFilters:
     "Empresa, moeda e vendedor (o único filtro de escopo global que também vale aqui — canal e subgrupo não se aplicam a título financeiro).",
   localFilters:
-    "O filtro de período incide sobre a data de VENCIMENTO, não de emissão. O limite SUPERIOR do período só é aplicado quando você escolhe um período personalizado — os presets prontos (ex. \"este mês\") terminam em \"hoje\" sem limite superior, propositalmente, para não esconder título a vencer no futuro.",
+    "Condição de pagamento (seletor no topo da tela): filtra TODA a tela — indicadores, aging, tabelas, linha do tempo e a análise de recebimentos — pelos títulos daquela condição. A opção \"Sem condição informada\" mostra os títulos que não têm condição, o que inclui todos os gravados antes de o campo existir e ainda não reenviados pelo agente. É um filtro só desta tela: não está no popover global de filtros e volta a \"Todas as condições\" ao sair dela. O filtro de período incide sobre a data de VENCIMENTO, não de emissão. O limite SUPERIOR do período só é aplicado quando você escolhe um período personalizado — os presets prontos (ex. \"este mês\") terminam em \"hoje\" sem limite superior, propositalmente, para não esconder título a vencer no futuro.",
   metrics: [
     {
       id: "duas-bases",
