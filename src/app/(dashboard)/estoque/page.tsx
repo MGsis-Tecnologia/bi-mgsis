@@ -7,6 +7,9 @@ import {
   AlertTriangle,
   Boxes,
   Download,
+  ArrowDown,
+  ArrowUp,
+  ArrowUpDown,
   Layers,
   Maximize2,
   Minimize2,
@@ -28,6 +31,7 @@ import { Money } from "@/components/dashboard/money";
 import type { AppCurrencyId } from "@/lib/types/dataset";
 import {
   DAYS_PER_MONTH,
+  STATUS_ORDER,
   statusLabel,
   useEstoqueAnalytics,
   type EstoqueRow as InventoryRow,
@@ -63,6 +67,21 @@ export default function EstoquePage() {
   const [maximizado, setMaximizado] = React.useState(false);
   const telaCheia = maximizado && !error && !!data?.hasData;
   const botaoTelaCheiaRef = React.useRef<HTMLButtonElement>(null);
+
+  // Ordenação do Detalhamento por SKU. `null` = a ordem que o servidor manda
+  // (cobertura decrescente). Roda no navegador — ver `ordenaLinhas`.
+  const [ordemSku, setOrdemSku] = React.useState<OrdemSku | null>(null);
+  const ordenaPor = (id: ColunaSkuId) =>
+    setOrdemSku((atual) =>
+      atual?.col === id
+        ? { col: id, dir: atual.dir === "asc" ? "desc" : "asc" }
+        : { col: id, dir: COLUNAS_SKU.find((c) => c.id === id)?.primeira ?? "asc" }
+    );
+  const linhasDoServidor = data?.rows;
+  const linhasOrdenadas = React.useMemo(
+    () => (linhasDoServidor && ordemSku ? ordenaLinhas(linhasDoServidor, ordemSku) : linhasDoServidor),
+    [linhasDoServidor, ordemSku]
+  );
   // Com o card em `fixed` ele sai do fluxo e a página atrás encolheria; ao fechar,
   // o navegador teria "prendido" a rolagem no fim menor e o usuário perderia o
   // lugar. Reservar a altura de antes evita o salto.
@@ -147,7 +166,9 @@ export default function EstoquePage() {
   const dormant = data.dormant;
   const rupture = data.ruptureRisk;
   const minStockRows = data.belowMinimum;
-  const filteredRows = data.rows;
+  // A exportação para Excel sai na ordem em que a tabela está.
+  const filteredRows = linhasOrdenadas ?? data.rows;
+  const rotuloOrdem = ordemSku ? COLUNAS_SKU.find((c) => c.id === ordemSku.col)?.rotulo(displayCode) : null;
 
   const coverage = data.coverage.map((s) => ({
     key: s.key,
@@ -477,7 +498,22 @@ export default function EstoquePage() {
                         .join(" + ")}
                     </>
                   )}
-                  {totals.skusMissingFromInventory > 0 && (
+                  {ordemSku && rotuloOrdem && (
+                  <>
+                    {" · ordem: "}
+                    <span className="text-foreground">
+                      {rotuloOrdem} {ordemSku.dir === "asc" ? "↑ crescente" : "↓ decrescente"}
+                    </span>{" "}
+                    <button
+                      type="button"
+                      onClick={() => setOrdemSku(null)}
+                      className="text-accent underline-offset-2 hover:underline"
+                    >
+                      voltar à ordem padrão
+                    </button>
+                  </>
+                )}
+                {totals.skusMissingFromInventory > 0 && (
                     <>
                       {" "}· <span className="text-warning">
                         {totals.skusMissingFromInventory} SKU(s) vendidos sem registro no estoque
@@ -561,6 +597,8 @@ export default function EstoquePage() {
                 currency={currency}
                 displayCode={displayCode}
                 telaCheia={telaCheia}
+                ordem={ordemSku}
+                onOrdena={ordenaPor}
               />
             )}
           </CardContent>
@@ -718,23 +756,105 @@ function CoverageCell({ row }: { row: InventoryRow }) {
   );
 }
 
+type ColunaSkuId =
+  | "sku" | "fabricante" | "descricao" | "categoria" | "estoque" | "minimo"
+  | "custo" | "saidas" | "receita" | "cobertura" | "ultSaida" | "status";
+type DirecaoOrdem = "asc" | "desc";
+interface OrdemSku { col: ColunaSkuId; dir: DirecaoOrdem }
+
+interface ColunaSku {
+  id: ColunaSkuId;
+  rotulo: (moeda: string) => string;
+  align: "left" | "right";
+  /** Largura mínima em px. A Descrição é a única elástica (`2fr`). */
+  largura: number;
+  /** Direção do primeiro clique: texto de A a Z; número e data do maior para o menor. */
+  primeira: DirecaoOrdem;
+  /**
+   * Valor pelo qual a coluna ordena. `null` = vazio, que vai SEMPRE para o fim,
+   * nas duas direções: um "—" no topo de uma ordem decrescente não diz nada.
+   * Segue o que a tela MOSTRA, não o campo cru — ex.: Mínimo 0 aparece como "—".
+   */
+  chave: (r: InventoryRow) => number | string | null;
+}
+
 /**
- * Larguras das colunas, em px, na ordem em que aparecem (a mesma nos dois
- * modos): SKU, Fabricante, Descrição, Categoria, Estoque, Mínimo, Custo, Saídas,
- * Receita, Cobertura, Últ. saída, Status.
- *
- * O template do grid E o `minWidth` saem daqui. Antes o `minWidth` era um número
- * solto (1350) e as colunas somavam 1420: a tabela transbordava e o Status ficava
- * cortado, exigindo rolagem lateral. Sendo derivado da soma, os dois não voltam a
- * divergir.
- *
- * A Descrição é a única elástica (`2fr`): o número dela é só o mínimo. As demais
- * ficam no mínimo que comporta o valor mais largo ("US$ 8.448,16" em 120) e o
- * cabeçalho em maiúsculas.
+ * Texto para ordenar: sem acento, minúsculo. Calculado UMA vez por linha em cada
+ * ordenação, e comparado com `<`/`>`. O caminho óbvio, `localeCompare`, levou 8 s
+ * para 60 mil linhas numa medição; `Intl.Collator` levou ~210 ms e isto ~40 ms.
  */
-const SKU_COL_PX = [90, 110, 200, 120, 80, 70, 120, 76, 104, 100, 150, 110] as const;
-const SKU_COL_FABRICANTE = 1;
-const SKU_COL_DESCRICAO = 2;
+function textoOrdenavel(s: string): string | null {
+  const n = s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
+  return n === "" ? null : n;
+}
+
+/**
+ * As colunas, na ordem em que aparecem (a mesma nos dois modos). Daqui saem o
+ * template do grid, o `minWidth` (a soma) e a ordenação — assim nenhum dos três
+ * diverge dos outros. Antes o `minWidth` era um número solto (1350) e as colunas
+ * somavam 1420: a tabela transbordava e o Status ficava cortado.
+ *
+ * Cada largura comporta o valor mais largo ("US$ 8.448,16" em Custo) e o
+ * cabeçalho em maiúsculas MAIS a seta de ordenação (16px reservados sempre, para
+ * o cabeçalho não "pular" ao ordenar). Soma: 1352px.
+ */
+const COLUNAS_SKU: ColunaSku[] = [
+  // SKU numérico ordena como número (9 vem antes de 10); alfanumérico, como texto.
+  { id: "sku", rotulo: () => "SKU", align: "left", largura: 90, primeira: "asc",
+    chave: (r) => (/^\d{1,15}$/.test(r.productId) ? Number(r.productId) : textoOrdenavel(r.productId)) },
+  { id: "fabricante", rotulo: () => "Fabricante", align: "left", largura: 110, primeira: "asc",
+    chave: (r) => textoOrdenavel(r.manufacturerCode) },
+  { id: "descricao", rotulo: () => "Descrição", align: "left", largura: 200, primeira: "asc",
+    chave: (r) => textoOrdenavel(r.description) },
+  { id: "categoria", rotulo: () => "Categoria", align: "left", largura: 120, primeira: "asc",
+    chave: (r) => textoOrdenavel(r.subgroupName) },
+  { id: "estoque", rotulo: () => "Estoque", align: "right", largura: 86, primeira: "desc",
+    chave: (r) => r.stock },
+  { id: "minimo", rotulo: () => "Mínimo", align: "right", largura: 78, primeira: "desc",
+    chave: (r) => (r.minStock > 0 ? r.minStock : null) },
+  { id: "custo", rotulo: (m) => `Custo ${m}`, align: "right", largura: 120, primeira: "desc",
+    chave: (r) => r.costTotalUSD },
+  { id: "saidas", rotulo: () => "Saídas", align: "right", largura: 80, primeira: "desc",
+    chave: (r) => (r.unitsSold > 0 ? r.unitsSold : null) },
+  { id: "receita", rotulo: () => "Receita", align: "right", largura: 104, primeira: "desc",
+    chave: (r) => (r.revenueSold > 0 ? r.revenueSold : null) },
+  // Igual ao que CoverageCell mostra: estoque zerado é "0m"; sem cobertura é "—".
+  { id: "cobertura", rotulo: () => "Cobertura", align: "right", largura: 104, primeira: "desc",
+    chave: (r) => (r.stock <= 0 ? 0 : Number.isFinite(r.coverageDays) ? r.coverageDays : null) },
+  // Data ISO: a comparação de texto já é a cronológica.
+  { id: "ultSaida", rotulo: () => "Últ. saída", align: "right", largura: 150, primeira: "desc",
+    chave: (r) => r.lastSaleDate || null },
+  // Por gravidade (Ruptura primeiro), não em ordem alfabética do rótulo.
+  { id: "status", rotulo: () => "Status", align: "left", largura: 110, primeira: "asc",
+    chave: (r) => STATUS_ORDER.indexOf(r.status) },
+];
+
+/**
+ * Ordena no NAVEGADOR: o servidor já mandou o conjunto inteiro filtrado (60 mil
+ * SKUs), então ordenar lá custaria refazer a consulta e baixar tudo de novo a cada
+ * clique. Aqui são ~20 a 50 ms.
+ *
+ * Empate mantém a ordem que o servidor mandou (índice original), nas duas
+ * direções — o desempate é explícito e a ordem não inverte junto com a direção.
+ */
+function ordenaLinhas(rows: InventoryRow[], ordem: OrdemSku): InventoryRow[] {
+  const coluna = COLUNAS_SKU.find((c) => c.id === ordem.col);
+  if (!coluna) return rows;
+  const f = ordem.dir === "asc" ? 1 : -1;
+  const dec = rows.map((r, i) => ({ r, i, k: coluna.chave(r) }));
+  dec.sort((a, b) => {
+    if (a.k === null || b.k === null) {
+      if (a.k === b.k) return a.i - b.i;
+      return a.k === null ? 1 : -1; // vazio sempre depois, seja qual for a direção
+    }
+    // SKU pode misturar número e texto: número antes de texto, numa ordem total.
+    if (typeof a.k !== typeof b.k) return (typeof a.k === "number" ? -1 : 1) * f;
+    if (a.k < b.k) return -f;
+    if (a.k > b.k) return f;
+    return a.i - b.i;
+  });
+  return dec.map((d) => d.r);
+}
 
 /**
  * Em tela cheia só o Fabricante muda: ganha largura para uns 25 caracteres
@@ -744,12 +864,58 @@ const SKU_COL_DESCRICAO = 2;
 const FABRICANTE_TELA_CHEIA_PX = 230;
 
 function colunasSku(telaCheia: boolean): { template: string; minWidth: number } {
-  const px = SKU_COL_PX.map((w, i) => (i === SKU_COL_FABRICANTE && telaCheia ? FABRICANTE_TELA_CHEIA_PX : w));
+  const px = COLUNAS_SKU.map((c) => (c.id === "fabricante" && telaCheia ? FABRICANTE_TELA_CHEIA_PX : c.largura));
   return {
-    template: px.map((w, i) => (i === SKU_COL_DESCRICAO ? `minmax(${w}px,2fr)` : `${w}px`)).join(" "),
+    template: px.map((w, i) => (COLUNAS_SKU[i].id === "descricao" ? `minmax(${w}px,2fr)` : `${w}px`)).join(" "),
     minWidth: px.reduce((s, w) => s + w, 0),
   };
 }
+
+/** Cabeçalho clicável: seta para cima = crescente, para baixo = decrescente. */
+function CabecalhoSku({
+  coluna, moeda, ordem, onOrdena,
+}: {
+  coluna: ColunaSku;
+  moeda: string;
+  ordem: OrdemSku | null;
+  onOrdena: (id: ColunaSkuId) => void;
+}) {
+  const ativo = ordem?.col === coluna.id;
+  const rotulo = coluna.rotulo(moeda);
+  const direita = coluna.align === "right";
+  const Icone = ativo ? (ordem.dir === "asc" ? ArrowUp : ArrowDown) : ArrowUpDown;
+  const dica = ativo
+    ? `Ordenado ${ordem.dir === "asc" ? "crescente" : "decrescente"} por ${rotulo} — clique para inverter`
+    : `Ordenar por ${rotulo}`;
+  // A seta ocupa espaço SEMPRE (só a opacidade muda), para o cabeçalho não pular.
+  const seta = (
+    <Icone
+      className={cn(
+        "h-3 w-3 shrink-0 transition-opacity",
+        ativo ? "opacity-100" : "opacity-0 group-hover:opacity-50 group-focus-visible:opacity-50"
+      )}
+    />
+  );
+  return (
+    <button
+      type="button"
+      onClick={() => onOrdena(coluna.id)}
+      title={dica}
+      aria-label={dica}
+      className={cn(
+        "group flex h-full w-full items-center gap-1 py-2 font-medium uppercase tracking-[0.14em]",
+        "transition-colors hover:text-foreground focus-visible:bg-muted/40 focus-visible:outline-none",
+        direita ? "justify-end pl-1 pr-3" : "justify-start pl-3 pr-1",
+        ativo && "text-foreground"
+      )}
+    >
+      {direita && seta}
+      <span className="whitespace-nowrap">{rotulo}</span>
+      {!direita && seta}
+    </button>
+  );
+}
+
 const SKU_ROW_HEIGHT = 40;
 
 /**
@@ -765,15 +931,25 @@ function VirtualizedSkuTable({
   currency,
   displayCode,
   telaCheia,
+  ordem,
+  onOrdena,
 }: {
   rows: InventoryRow[];
   currency: AppCurrencyId | string;
   displayCode: string;
   /** Ocupa toda a altura que sobra do card, em vez do teto de 70% da janela. */
   telaCheia: boolean;
+  ordem: OrdemSku | null;
+  onOrdena: (id: ColunaSkuId) => void;
 }) {
   const parentRef = React.useRef<HTMLDivElement>(null);
   const { template: gridCols, minWidth } = colunasSku(telaCheia);
+
+  // Outra ordem = outra lista: volta ao topo em vez de ficar no meio dela.
+  React.useEffect(() => {
+    parentRef.current?.scrollTo({ top: 0 });
+  }, [ordem]);
+
   const virtualizer = useVirtualizer({
     count: rows.length,
     getScrollElement: () => parentRef.current,
@@ -793,21 +969,12 @@ function VirtualizedSkuTable({
     >
       <div style={{ minWidth }}>
         <div
-          className="grid items-center sticky top-0 z-10 border-b border-border bg-surface text-[10px] uppercase tracking-[0.14em] text-muted-foreground"
+          className="grid items-stretch sticky top-0 z-10 border-b border-border bg-surface text-[10px] uppercase tracking-[0.14em] text-muted-foreground"
           style={{ gridTemplateColumns: gridCols }}
         >
-          <div className="py-2 px-3 text-left font-medium">SKU</div>
-          <div className="py-2 px-3 text-left font-medium">Fabricante</div>
-          <div className="py-2 px-3 text-left font-medium">Descrição</div>
-          <div className="py-2 px-3 text-left font-medium">Categoria</div>
-          <div className="py-2 px-3 text-right font-medium">Estoque</div>
-          <div className="py-2 px-3 text-right font-medium">Mínimo</div>
-          <div className="py-2 px-3 text-right font-medium">Custo {displayCode}</div>
-          <div className="py-2 px-3 text-right font-medium">Saídas</div>
-          <div className="py-2 px-3 text-right font-medium">Receita</div>
-          <div className="py-2 px-3 text-right font-medium">Cobertura</div>
-          <div className="py-2 px-3 text-right font-medium">Últ. saída</div>
-          <div className="py-2 px-3 text-left font-medium">Status</div>
+          {COLUNAS_SKU.map((c) => (
+            <CabecalhoSku key={c.id} coluna={c} moeda={displayCode} ordem={ordem} onOrdena={onOrdena} />
+          ))}
         </div>
 
         <div style={{ height: virtualizer.getTotalSize(), position: "relative" }}>
