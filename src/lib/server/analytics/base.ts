@@ -180,7 +180,8 @@ export function cteLinhas(f: AnalyticsFilters, p: Params, o: OpcoesLinhas): stri
   return `
     SELECT s.order_id, s.date, s.client_id, s.client_name, s.client_city,
            s.seller_id, s.seller_name, s.channel, s.currency_id,
-           s.product_id, s.product_name, s.subgroup_id, s.subgroup_name, s.quantity,
+           s.product_id, s.product_name, s.subgroup_id, s.subgroup_name,
+           s.brand_id, s.brand_name, s.quantity,
            s.total_orig    * ${taxa} AS total,
            s.cost_orig     * ${taxa} AS cost,
            s.discount_orig * ${taxa} AS discount
