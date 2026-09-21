@@ -227,6 +227,66 @@ download é do que está na tela ou uma consulta nova.
 
 **Peso:** pequeno depois de definido o que é "marca"; indefinido antes disso.
 
+### 10. Estoque → "Excesso" infla para item recém-comprado
+
+Com o preset **Ano flutuante** (o mais usado), item que entrou no estoque há
+pouco aparece como Excesso sem estar: estoque alto e poucas saídas, porque a
+demanda é dividida por um tempo que o SKU não viveu.
+
+A causa está em [`estoque.ts:349`](src/lib/server/analytics/estoque.ts#L349):
+
+```sql
+b.units_sold / ${diasFin}::double precision AS avg_daily_demand
+```
+
+`periodDays` é **um número só para a tela inteira**
+([`calculaPeriodDays`](src/lib/server/analytics/estoque.ts#L164)) — os dias em
+que *a loja* vendeu na janela, não os dias em que *aquele item* esteve
+disponível. SKU que entrou há 30 dias e vendeu 1 unidade é dividido por ~356: a
+demanda sai 12× menor, a cobertura 12× maior.
+
+Detalhe que muda qual alavanca resolve: **saída 0 não cai em Excesso**. A regra 4
+da cascata ([`estoque.ts:365`](src/lib/server/analytics/estoque.ts#L365)) manda
+todo item sem venda para *Sem giro* e a cobertura fica `NULL`. O que polui o
+filtro de Excesso é o caso de 1 a 3 saídas.
+
+**Média ponderada pela última compra não resolve sozinha.** Ela ataca outro
+problema — item cujo padrão de venda mudou. O item novo continua com meses
+zerados no começo da janela, e esses zeros continuam puxando a demanda para
+baixo. O que resolve é cortar a janela, não pesá-la.
+
+**Caminho proposto — as duas juntas, porque uma corrige o exagero da outra:**
+
+- **Janela de exposição por SKU.** Trocar o `periodDays` global por
+  `dias_expostos = do max(início do período, primeira entrada do SKU) até o fim`.
+  A primeira entrada sai de `MIN(pedido_data)` em `compra_items` (já tem índice
+  em `produto_id` e `pedido_data`), com cascata de fallback: sem compra
+  registrada → `MIN(s.date)` das vendas do próprio SKU; sem nenhum dos dois → o
+  início do período, que é o comportamento de hoje. Encaixa como mais uma tabela
+  temporária no pipeline que já existe.
+- **Piso de confiança.** Sozinha, a exposição inverte o erro: com 1 venda em 30
+  dias o item projeta 12/ano e pode virar **Em risco**, errado na direção oposta.
+  Então menos de ~3 vendas ou ~60 dias de exposição não recebe Excesso nem
+  Risco — recebe um status novo, *Recente* / *Sem histórico*. É a mesma ideia do
+  "Fora de análise" que já existe para venda zero, estendida para "amostra
+  pequena demais para julgar".
+
+**Dependências antes de qualquer coisa que use compras:** o `instalar-views.sql`
+mudou o `bi_compras` para `compra_data_lancamento` + `compra_status_estoque =
+true` — que é exatamente o "entrou no estoque" de que essa conta precisa, mas
+significa que `compra_items` só serve **depois do reenvio das compras** (item 4
+do [IMPLANTACAO-2026-09.md](IMPLANTACAO-2026-09.md)). E o histórico de compras só
+vai até onde a ingestão foi: SKU comprado antes disso e nunca recomprado não tem
+linha, por isso a cascata de fallback não é opcional.
+
+Descartadas no caminho: mediana mensal por SKU (resistente a pico e a zero, mas
+agregação mensal sobre 76 mil SKUs por um ganho que exposição + piso já
+entregam) e guarda de idade crua — "item com menos de 180 dias nunca é Excesso"
+— que funciona em uma linha, mas é grosseira e não melhora a cobertura exibida.
+
+**Peso:** médio. Muda número já exibido (cobertura, status, donut), então pede
+conferência contra o ERP depois — e um status novo mexe na legenda e no filtro.
+
 ---
 
 ## Decididos a não fazer
