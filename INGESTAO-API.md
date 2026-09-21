@@ -148,7 +148,7 @@ você mandar. A recomendação, com os volumes medidos no cliente real:
 | Momento | O que enviar | Custo |
 |---|---|---|
 | **Implantação** | mês a mês, os últimos 3–5 anos | ~1,5 GB, uma vez |
-| **A cada 2 h** | mês corrente **e o anterior** | ~53 MB por ciclo |
+| **A cada 1 h** | mês corrente **e o anterior**; receber: últimos 12 meses; pagar: tudo | ~53 MB + receber e pagar |
 | **Diário, de madrugada** | últimos 3–6 meses | 81–175 MB |
 | **Mensal ou sob demanda** | a janela completa | ~1,5 GB, raro |
 
@@ -229,7 +229,7 @@ curl -s -X POST \
 
 Onde `julho.json` é `{"periodo":"2026-07","linhas":[...]}`.
 
-### Esqueleto do ciclo de 2 horas
+### Esqueleto do ciclo horário
 
 ```bash
 #!/usr/bin/env bash
@@ -293,6 +293,7 @@ booleanos viram `false` — só os marcados como **obrigatório** precisam vir.
 | `quantity` | número | |
 | `totalOrig`, `costOrig`, `discountOrig` | número | na moeda do documento |
 | `subgroupId`, `subgroupName` | texto | |
+| `brandId`, `brandName` | texto | opcionais — marca do produto (`marca_id`, `marca_descricao`) |
 | `sellerId`, `sellerName` | texto | |
 | `currencyId`, `currencyCode` | texto | `1`=R$, `2`=U$, `3`=G$ |
 | `empresaId` | texto | matriz/filial |
@@ -310,7 +311,8 @@ booleanos viram `false` — só os marcados como **obrigatório** precisam vir.
 `documentId` (**obrigatório**), `issueDate` (**obrigatório**), `dueDate`,
 `receivedDate`, `isPaid`, `entryType`, `amountOrig`, `clientId`, `clientName`,
 `clientCity`, `sellerId`, `sellerName`, `currencyId`, `currencyCode`,
-`empresaId`.
+`empresaId`, `paymentTermId`, `paymentTermName` (condição de pagamento do
+título — opcionais; aceitam número e `null`, que viram texto e `""`).
 
 ### `pagar`
 

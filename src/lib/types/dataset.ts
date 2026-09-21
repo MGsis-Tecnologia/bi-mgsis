@@ -20,6 +20,8 @@ export interface OrderLineItem {
   discountOrig: number;   // produto_valor_desconto — desconto da linha (bruto = totalOrig + discountOrig)
   subgroupId: string;
   subgroupName: string;
+  brandId: string;        // marca_id — "" quando o arquivo/view não traz a marca
+  brandName: string;      // marca_descricao
   sellerId: string;
   sellerName: string;
   currencyId: string;     // "1" | "2" | "3"
@@ -102,6 +104,8 @@ export interface ReceivableItem {
   currencyId: string;     // moeda_id — "1" | "2" | "3"
   currencyCode: string;   // moeda_sigla — "R$" | "US$" | "G$"
   empresaId: string;      // empresa_id ("" quando ausente)
+  paymentTermId: string;   // condicao_pagamento_id — "" quando o título não tem condição
+  paymentTermName: string; // condicao_pagamento_descricao
 }
 
 export interface StoredReceivables {

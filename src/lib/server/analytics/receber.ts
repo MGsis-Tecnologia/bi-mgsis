@@ -104,9 +104,20 @@ export interface ReceberData {
  */
 const TOP_GRUPO = 20;
 
+/** Valor do filtro de condição de pagamento para "títulos sem condição informada". */
+export const SEM_CONDICAO = "__none__";
+
 export interface ReceberOpcoes {
   /** "Hoje" do navegador — referência de todo o cálculo de atraso. */
   hoje: string;
+  /**
+   * Condição de pagamento: "all", o id exato, ou {@link SEM_CONDICAO}.
+   *
+   * Entra em `ctes()` e não em cada consulta: as duas metades da tela (a
+   * receber e a análise de recebimentos) partem da mesma CTE, então um filtro
+   * ali vale para KPIs, aging, tabelas, linha do tempo e recebimentos de uma vez.
+   */
+  condicaoPagamentoId?: string;
   /** Só o período personalizado aplica o limite superior de data. */
   aplicarLimiteSuperior: boolean;
 }
@@ -133,6 +144,9 @@ export async function getReceberData(
     if (f.empresaId !== "all") cond.push(`r.empresa_id = ${p.add(f.empresaId)}`);
     if (f.currency !== "ALL") cond.push(`r.currency_id = ${p.add(f.currency)}`);
     if (f.sellerId !== "all") cond.push(`r.seller_id = ${p.add(f.sellerId)}`);
+    const condicao = o.condicaoPagamentoId ?? "all";
+    if (condicao === SEM_CONDICAO) cond.push(`r.payment_term_id = ''`);
+    else if (condicao !== "all") cond.push(`r.payment_term_id = ${p.add(condicao)}`);
 
     return `
       titulos AS (

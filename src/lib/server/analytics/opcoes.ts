@@ -65,7 +65,7 @@ export async function getOpcoesFiltro(db: PrismaClient, chave: string): Promise<
     "orcamento_items",
   ];
 
-  const [canais, subgrupos, vendedores, empresas] = await Promise.all([
+  const [canais, subgrupos, vendedores, empresas, condicoes, semCondicao] = await Promise.all([
     consultaAnalitica<{ v: string }>(
       db,
       `SELECT channel AS v FROM sale_items
@@ -92,6 +92,19 @@ export async function getOpcoesFiltro(db: PrismaClient, chave: string): Promise<
         -- Numérico quando dá, como fazia o sort do JS.
         ORDER BY NULLIF(regexp_replace(v, '\\D', '', 'g'), '')::bigint NULLS LAST, v`
     ),
+    // Universo de TODOS os títulos, sem olhar empresa nem moeda: como os demais,
+    // a lista não encolhe conforme o que já está selecionado.
+    consultaAnalitica<{ id: string; name: string }>(
+      db,
+      `SELECT payment_term_id AS id,
+              COALESCE(MIN(NULLIF(payment_term_name, '')), payment_term_id) AS name
+         FROM receivable_items WHERE payment_term_id <> ''
+         GROUP BY 1 ORDER BY 2, 1`
+    ),
+    consultaAnalitica<{ existe: boolean }>(
+      db,
+      `SELECT EXISTS (SELECT 1 FROM receivable_items WHERE payment_term_id = '') AS existe`
+    ),
   ]);
 
   const opcoes: OpcoesFiltro = {
@@ -99,6 +112,8 @@ export async function getOpcoesFiltro(db: PrismaClient, chave: string): Promise<
     subgrupos,
     vendedores,
     empresas: empresas.map((r) => r.v),
+    condicoesPagamento: condicoes,
+    temTituloSemCondicao: semCondicao[0]?.existe ?? false,
   };
 
   cache.set(chave, { versao, opcoes });

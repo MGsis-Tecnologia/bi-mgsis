@@ -9,7 +9,12 @@ raciocínio depois.
 estamos. Quando um item for feito, sair daqui e virar commit — e quando for
 descartado, descer pra "Decididos a não fazer" com o motivo, em vez de sumir.
 
-Última revisão: 2026-09-19.
+Última revisão: 2026-09-21.
+
+> **Antes de tudo:** há uma implantação pendente das mudanças de 21/09/2026
+> (marca, condição de pagamento, ingestão financeira, migrations e reenvio do
+> histórico), que só foram aplicadas no banco de desenvolvimento. O checklist
+> completo, com os comandos, está em [IMPLANTACAO-2026-09.md](IMPLANTACAO-2026-09.md).
 
 ---
 

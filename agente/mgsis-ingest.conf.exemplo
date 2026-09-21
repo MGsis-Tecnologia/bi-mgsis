@@ -64,4 +64,18 @@ TIMEOUT=600
 # Só mude para "sim" quando a intenção for mesmo apagar um período.
 PERMITIR_VAZIO="nao"
 
+# Receber e pagar: o período é pela EMISSÃO, mas o que muda num título é a
+# BAIXA — um título de março pago hoje não está na janela de "mês corrente +
+# anterior". Por isso o ciclo reenvia, além desses dois meses:
+#   receber → os últimos N meses (~8 mil linhas/mês; o mês corrente conta)
+#   pagar   → o histórico inteiro (~700 linhas/mês, custa quase nada)
+# Baixa de título mais velho que a janela chega na recarga da madrugada
+# (`--recarga-financeira`, ver README).
+JANELA_MESES_FINANCEIRO=12
+
+# Primeiro mês do histórico de receber/pagar (YYYY-MM). Vazio = o agente
+# descobre pelo menor data_emissao das views. Defina se houver título com data
+# de emissão absurda (ex.: 1990) que faria a recarga varrer décadas vazias.
+INICIO_HISTORICO=""
+
 LOCK_FILE="/var/lock/mgsis-ingest.lock"

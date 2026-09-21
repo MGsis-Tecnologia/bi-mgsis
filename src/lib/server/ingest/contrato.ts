@@ -38,6 +38,17 @@ const dataISO = z
 
 const dataOpc = z.union([dataISO, z.literal("")]).optional().default("");
 
+/**
+ * Texto opcional que aceita `null` e número. Existe para colunas que a view
+ * entrega CRUAS, sem `COALESCE(...::text, '')`: o `json_agg` mantém o tipo, então
+ * um id inteiro chega como `3` e a ausência como `null` — e o `texto` comum
+ * recusaria a linha inteira com 422 por causa de um campo que nem é obrigatório.
+ */
+const textoNulavel = z
+  .union([z.string().max(255), z.number(), z.null()])
+  .optional()
+  .transform((v) => (v === null || v === undefined ? "" : String(v)));
+
 // ─── Linhas por dataset ──────────────────────────────────────────────────────
 
 const linhaVenda = z.object({
@@ -56,6 +67,9 @@ const linhaVenda = z.object({
   discountOrig: numeroOpc,
   subgroupId: textoOpc,
   subgroupName: textoOpc,
+  // Opcionais: um agente antigo, sem as colunas na view, segue sendo aceito.
+  brandId: textoOpc,
+  brandName: textoOpc,
   sellerId: textoOpc,
   sellerName: textoOpc,
   currencyId: textoOpc,
@@ -100,6 +114,9 @@ const linhaReceber = z.object({
   currencyId: textoOpc,
   currencyCode: textoOpc,
   empresaId: textoOpc,
+  // Opcionais: um agente antigo, sem as colunas na view, segue sendo aceito.
+  paymentTermId: textoNulavel,
+  paymentTermName: textoNulavel,
 });
 
 const linhaPagar = z.object({

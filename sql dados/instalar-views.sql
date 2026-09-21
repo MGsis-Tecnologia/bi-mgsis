@@ -40,7 +40,9 @@ SELECT
     COALESCE(v.pessoa_nome, '')                   AS vendedor_nome,
     COALESCE(p.moeda_id::text, '')                AS moeda_id,
     COALESCE(moeda.moeda_sigla, '')               AS moeda_sigla,
-    COALESCE(p.empresa_id::text, '')              AS empresa_id
+    COALESCE(p.empresa_id::text, '')              AS empresa_id,
+    COALESCE(marca.marca_id::text, '')            AS marca_id,
+    COALESCE(marca.marca_descricao, '')           AS marca_descricao    
 FROM item_pedido i
     JOIN      pedido     p          ON p.pedido_id = i.pedido_id
     LEFT JOIN pessoa     c          ON c.pessoa_id = p.cliente_id
@@ -49,6 +51,7 @@ FROM item_pedido i
     LEFT JOIN tipo_preco            ON tipo_preco.tipo_preco_id = p.tipo_preco_id
     LEFT JOIN moeda                 ON moeda.moeda_id = p.moeda_id
     LEFT JOIN subgrupo              ON subgrupo.subgrupo_id = pr.subgrupo_id
+    LEFT JOIN marca                 ON marca.marca_id = pr.marca_id
 WHERE p.pedido_tipo::text IN ('VENDA', 'DEVOLUCAO VENDA')
   AND p.pedido_data_fatura IS NOT NULL;
 
@@ -119,11 +122,14 @@ SELECT
     COALESCE(v.pessoa_nome, '')                  AS vendedor_nome,
     COALESCE(r.moeda_id::text, '')               AS moeda_id,
     COALESCE(moeda.moeda_sigla, '')              AS moeda_sigla,
-    COALESCE(r.empresa_id::text, '')             AS empresa_id
+    COALESCE(r.empresa_id::text, '')             AS empresa_id,
+    r.condicao_pagamento_id                      AS condicao_pagamento_id,
+    condicao_pagamento.condicao_pagamento_descricao AS condicao_pagamento_descricao
 FROM receber r
     LEFT JOIN pessoa c    ON c.pessoa_id = r.pessoa_cliente_id
     LEFT JOIN pessoa v    ON v.pessoa_id = r.pessoa_vendedor_id
     LEFT JOIN moeda       ON moeda.moeda_id = r.moeda_id
+    LEFT JOIN condicao_pagamento ON condicao_pagamento.condicao_pagamento_id = r.condicao_pagamento_id
 WHERE r.receber_data_emissao IS NOT NULL;
 
 -- ── bi_pagar ──
@@ -295,7 +301,7 @@ ORDER BY mes_referencia, moeda_destino;
 -- existem — e aqui a view costuma ser recriada sobre uma já instalada.
 CREATE OR REPLACE VIEW bi_compras AS
 SELECT
-    p.compra_data_fatura                          AS pedido_data,
+    p.compra_data_lancamento                      AS pedido_data,
     COALESCE(p.compra_id::text, '')               AS pedido_documento,
     COALESCE(p.compra_tipo::text, '')             AS pedido_tipo,
     COALESCE(p.fornecedor_id::text, '')           AS fornecedor_id,
@@ -320,5 +326,5 @@ FROM item_compra i
     LEFT JOIN moeda                 ON moeda.moeda_id = p.moeda_id
     LEFT JOIN subgrupo              ON subgrupo.subgrupo_id = pr.subgrupo_id
 WHERE p.compra_tipo::text IN ('COMPRA', 'DEVOLUCAO COMPRA', 'TRANSFERENCIA COMPRA', 'EXPORTACAO COMPRA')
-  AND p.compra_data_fatura IS NOT NULL;
+  AND p.compra_status_estoque = true;
 

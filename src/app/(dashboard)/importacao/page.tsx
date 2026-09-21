@@ -431,6 +431,8 @@ const SALES_SCHEMA: SchemaCol[] = [
   { name: "item_desconto",       type: "decimal_opt", example: "150,00" },
   { name: "subgrupo_id",         type: "key",         example: "SG-05" },
   { name: "subgrupo_descricao",  type: "text",        example: "Informática" },
+  { name: "marca_id",            type: "key_opt",     example: "MRC-02" },
+  { name: "marca_descricao",     type: "text_opt",    example: "Dell" },
   { name: "vendedor_id",         type: "key",         example: "VND-003" },
   { name: "vendedor_nome",       type: "text",        example: "João Silva" },
   { name: "moeda_id",            type: "currency",    example: "1" },
@@ -454,6 +456,8 @@ const RECEIVABLE_SCHEMA: SchemaCol[] = [
   { name: "vendedor_nome",       type: "text",     example: "João Silva" },
   { name: "pessoa_cidade",       type: "text_opt", example: "São Paulo" },
   { name: "empresa_id",          type: "key",      example: "1 / 2" },
+  { name: "condicao_pagamento_id",        type: "key_opt",  example: "3" },
+  { name: "condicao_pagamento_descricao", type: "text_opt", example: "30/60/90 dias" },
 ];
 
 const PAYABLE_SCHEMA: SchemaCol[] = [

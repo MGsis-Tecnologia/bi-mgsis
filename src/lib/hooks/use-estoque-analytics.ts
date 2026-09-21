@@ -53,7 +53,7 @@ const STATUS_LABEL: Record<StockStatus, string> = {
   no_movement: "Sem giro",
 };
 
-const STATUS_ORDER: StockStatus[] = ["rupture", "risk", "normal", "excess", "no_movement"];
+export const STATUS_ORDER: StockStatus[] = ["rupture", "risk", "normal", "excess", "no_movement"];
 
 const COVERAGE_ORDER: { key: string; label: string }[] = [
   { key: "sem_cobertura", label: "Sem cobertura" },

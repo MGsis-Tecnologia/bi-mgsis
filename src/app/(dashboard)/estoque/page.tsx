@@ -7,7 +7,12 @@ import {
   AlertTriangle,
   Boxes,
   Download,
+  ArrowDown,
+  ArrowUp,
+  ArrowUpDown,
   Layers,
+  Maximize2,
+  Minimize2,
   PackageX,
   Search,
   TrendingUp,
@@ -26,6 +31,7 @@ import { Money } from "@/components/dashboard/money";
 import type { AppCurrencyId } from "@/lib/types/dataset";
 import {
   DAYS_PER_MONTH,
+  STATUS_ORDER,
   statusLabel,
   useEstoqueAnalytics,
   type EstoqueRow as InventoryRow,
@@ -52,6 +58,62 @@ export default function EstoquePage() {
   });
 
   const displayCode = currency === "2" ? "US$" : currency === "3" ? "G$" : "R$";
+
+  // Tela cheia do "Detalhamento por SKU". É a MESMA tabela que cresce (o card
+  // vira `fixed inset-0`), não uma cópia: filtros, busca, linhas e posição da
+  // rolagem se mantêm ao abrir e fechar. Só vale enquanto o card está na tela —
+  // se um erro no recarregamento o tirasse, a página ficaria com a rolagem
+  // travada e sem botão para sair.
+  const [maximizado, setMaximizado] = React.useState(false);
+  const telaCheia = maximizado && !error && !!data?.hasData;
+  const botaoTelaCheiaRef = React.useRef<HTMLButtonElement>(null);
+
+  // Ordenação do Detalhamento por SKU. `null` = a ordem que o servidor manda
+  // (cobertura decrescente). Roda no navegador — ver `ordenaLinhas`.
+  const [ordemSku, setOrdemSku] = React.useState<OrdemSku | null>(null);
+  const ordenaPor = (id: ColunaSkuId) =>
+    setOrdemSku((atual) =>
+      atual?.col === id
+        ? { col: id, dir: atual.dir === "asc" ? "desc" : "asc" }
+        : { col: id, dir: COLUNAS_SKU.find((c) => c.id === id)?.primeira ?? "asc" }
+    );
+  const linhasDoServidor = data?.rows;
+  const linhasOrdenadas = React.useMemo(
+    () => (linhasDoServidor && ordemSku ? ordenaLinhas(linhasDoServidor, ordemSku) : linhasDoServidor),
+    [linhasDoServidor, ordemSku]
+  );
+  // Com o card em `fixed` ele sai do fluxo e a página atrás encolheria; ao fechar,
+  // o navegador teria "prendido" a rolagem no fim menor e o usuário perderia o
+  // lugar. Reservar a altura de antes evita o salto.
+  const secaoSkuRef = React.useRef<HTMLDivElement>(null);
+  const alturaSecaoRef = React.useRef(0);
+  const alternaTelaCheia = () => {
+    if (!maximizado) alturaSecaoRef.current = secaoSkuRef.current?.offsetHeight ?? 0;
+    setMaximizado((v) => !v);
+  };
+
+  React.useEffect(() => {
+    if (!telaCheia) return;
+
+    // `defaultPrevented`: um Select aberto trata o próprio Esc e o marca como
+    // tratado — o primeiro Esc fecha a lista, o segundo é que fecha a tela cheia.
+    const aoTeclar = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && !e.defaultPrevented) setMaximizado(false);
+    };
+    window.addEventListener("keydown", aoTeclar);
+
+    // A página de fundo não rola enquanto a tabela ocupa a janela.
+    const overflowAnterior = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
+    const botao = botaoTelaCheiaRef.current;
+    return () => {
+      window.removeEventListener("keydown", aoTeclar);
+      document.body.style.overflow = overflowAnterior;
+      // O foco volta ao botão que abriu, para quem navega pelo teclado.
+      botao?.focus();
+    };
+  }, [telaCheia]);
 
   const cabecalho = (
     <PageHeader
@@ -104,7 +166,9 @@ export default function EstoquePage() {
   const dormant = data.dormant;
   const rupture = data.ruptureRisk;
   const minStockRows = data.belowMinimum;
-  const filteredRows = data.rows;
+  // A exportação para Excel sai na ordem em que a tabela está.
+  const filteredRows = linhasOrdenadas ?? data.rows;
+  const rotuloOrdem = ordemSku ? COLUNAS_SKU.find((c) => c.id === ordemSku.col)?.rotulo(displayCode) : null;
 
   const coverage = data.coverage.map((s) => ({
     key: s.key,
@@ -407,96 +471,139 @@ export default function EstoquePage() {
       )}
 
       {/* Detailed table */}
-      <Card id="sec-detail">
-        <CardHeader>
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div>
-              <CardTitle>Detalhamento por SKU</CardTitle>
-              <p className="mt-0.5 text-[11px] text-muted-foreground">
-                {formatNumber(data.rowsTotal)} de {formatNumber(totals.skus)} itens
-                {(statusFilter !== "all" || coverageFilter !== "all") && (
+      <div ref={secaoSkuRef} style={telaCheia ? { height: alturaSecaoRef.current } : undefined}>
+        <Card
+          id="sec-detail"
+          role={telaCheia ? "dialog" : undefined}
+          aria-modal={telaCheia || undefined}
+          aria-label={telaCheia ? "Detalhamento por SKU" : undefined}
+          className={cn(telaCheia && "fixed inset-0 z-[70] flex flex-col rounded-none border-0 bg-background")}
+        >
+          <CardHeader className={cn(telaCheia && "shrink-0 px-4 py-3")}>
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <CardTitle>Detalhamento por SKU</CardTitle>
+                <p className="mt-0.5 text-[11px] text-muted-foreground">
+                  {formatNumber(data.rowsTotal)} de {formatNumber(totals.skus)} itens
+                  {(statusFilter !== "all" || coverageFilter !== "all") && (
+                    <>
+                      {" · filtro: "}
+                      {[
+                        statusFilter !== "all" ? statusLabel(statusFilter) : null,
+                        coverageFilter !== "all"
+                          ? (data.coverage.find((c) => c.key === coverageFilter)?.label ?? coverageFilter)
+                          : null,
+                      ]
+                        .filter(Boolean)
+                        .join(" + ")}
+                    </>
+                  )}
+                  {ordemSku && rotuloOrdem && (
                   <>
-                    {" · filtro: "}
-                    {[
-                      statusFilter !== "all" ? statusLabel(statusFilter) : null,
-                      coverageFilter !== "all"
-                        ? (data.coverage.find((c) => c.key === coverageFilter)?.label ?? coverageFilter)
-                        : null,
-                    ]
-                      .filter(Boolean)
-                      .join(" + ")}
+                    {" · ordem: "}
+                    <span className="text-foreground">
+                      {rotuloOrdem} {ordemSku.dir === "asc" ? "↑ crescente" : "↓ decrescente"}
+                    </span>{" "}
+                    <button
+                      type="button"
+                      onClick={() => setOrdemSku(null)}
+                      className="text-accent underline-offset-2 hover:underline"
+                    >
+                      voltar à ordem padrão
+                    </button>
                   </>
                 )}
                 {totals.skusMissingFromInventory > 0 && (
-                  <>
-                    {" "}· <span className="text-warning">
-                      {totals.skusMissingFromInventory} SKU(s) vendidos sem registro no estoque
-                    </span>
-                  </>
-                )}
-              </p>
-            </div>
-            <div className="flex flex-wrap items-center gap-2">
-              <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as StockStatus | "all")}>
-                <SelectTrigger className="h-8 w-[150px] text-xs">
-                  <SelectValue placeholder="Status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todos os status</SelectItem>
-                  {data.statuses.map((s) => (
-                    <SelectItem key={s.key} value={s.key}>{s.label}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Select value={coverageFilter} onValueChange={setCoverageFilter}>
-                <SelectTrigger className="h-8 w-[170px] text-xs">
-                  <SelectValue placeholder="Cobertura" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todas as faixas</SelectItem>
-                  {data.coverage.map((c) => (
-                    <SelectItem key={c.key} value={c.key}>{c.label}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <div className="relative">
-                <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
-                <input
-                  type="text"
-                  value={query}
-                  onChange={(e) => setQuery(e.target.value)}
-                  placeholder="Buscar SKU, descrição, fabricante…"
-                  className="h-8 w-56 rounded-md border border-border bg-background pl-8 pr-8 text-xs text-foreground placeholder:text-muted-foreground focus:border-foreground/50 focus:outline-none"
-                />
-                {/* A busca corre no servidor: vale sinalizar que ainda está indo. */}
-                {loading && (
-                  <Loader2 className="absolute right-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 animate-spin text-muted-foreground" />
-                )}
+                    <>
+                      {" "}· <span className="text-warning">
+                        {totals.skusMissingFromInventory} SKU(s) vendidos sem registro no estoque
+                      </span>
+                    </>
+                  )}
+                </p>
               </div>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                className="h-8 gap-1.5"
-                disabled={filteredRows.length === 0}
-                onClick={() => exportarEstoqueExcel(filteredRows, displayCode)}
-              >
-                <Download className="h-3.5 w-3.5" />
-                Excel
-              </Button>
+              <div className="flex flex-wrap items-center gap-2">
+                <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as StockStatus | "all")}>
+                  <SelectTrigger className="h-8 w-[150px] text-xs">
+                    <SelectValue placeholder="Status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos os status</SelectItem>
+                    {data.statuses.map((s) => (
+                      <SelectItem key={s.key} value={s.key}>{s.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Select value={coverageFilter} onValueChange={setCoverageFilter}>
+                  <SelectTrigger className="h-8 w-[170px] text-xs">
+                    <SelectValue placeholder="Cobertura" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todas as faixas</SelectItem>
+                    {data.coverage.map((c) => (
+                      <SelectItem key={c.key} value={c.key}>{c.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <div className="relative">
+                  <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+                  <input
+                    type="text"
+                    value={query}
+                    onChange={(e) => setQuery(e.target.value)}
+                    placeholder="Buscar SKU, descrição, fabricante…"
+                    className="h-8 w-56 rounded-md border border-border bg-background pl-8 pr-8 text-xs text-foreground placeholder:text-muted-foreground focus:border-foreground/50 focus:outline-none"
+                  />
+                  {/* A busca corre no servidor: vale sinalizar que ainda está indo. */}
+                  {loading && (
+                    <Loader2 className="absolute right-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 animate-spin text-muted-foreground" />
+                  )}
+                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="h-8 gap-1.5"
+                  disabled={filteredRows.length === 0}
+                  onClick={() => exportarEstoqueExcel(filteredRows, displayCode)}
+                >
+                  <Download className="h-3.5 w-3.5" />
+                  Excel
+                </Button>
+                <Button
+                  ref={botaoTelaCheiaRef}
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="h-8 gap-1.5"
+                  onClick={alternaTelaCheia}
+                  aria-expanded={telaCheia}
+                  title={telaCheia ? "Fechar tela cheia (Esc)" : "Maximizar a tabela"}
+                >
+                  {telaCheia ? <Minimize2 className="h-3.5 w-3.5" /> : <Maximize2 className="h-3.5 w-3.5" />}
+                  {telaCheia ? "Fechar" : "Maximizar"}
+                </Button>
+              </div>
             </div>
-          </div>
-        </CardHeader>
-        <CardContent className="px-0">
-          {filteredRows.length === 0 ? (
-            <div className="py-10 text-center text-xs text-muted-foreground">
-              Nenhum item para o filtro atual.
-            </div>
-          ) : (
-            <VirtualizedSkuTable rows={filteredRows} currency={currency} displayCode={displayCode} />
-          )}
-        </CardContent>
-      </Card>
+          </CardHeader>
+          <CardContent className={cn("px-0", telaCheia && "flex min-h-0 flex-1 flex-col")}>
+            {filteredRows.length === 0 ? (
+              <div className="py-10 text-center text-xs text-muted-foreground">
+                Nenhum item para o filtro atual.
+              </div>
+            ) : (
+              <VirtualizedSkuTable
+                rows={filteredRows}
+                currency={currency}
+                displayCode={displayCode}
+                telaCheia={telaCheia}
+                ordem={ordemSku}
+                onOrdena={ordenaPor}
+              />
+            )}
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }
@@ -649,8 +756,166 @@ function CoverageCell({ row }: { row: InventoryRow }) {
   );
 }
 
-const SKU_GRID_COLS =
-  "90px minmax(220px,2fr) 110px 130px 90px 90px 120px 90px 120px 100px 150px 110px";
+type ColunaSkuId =
+  | "sku" | "fabricante" | "descricao" | "categoria" | "estoque" | "minimo"
+  | "custo" | "saidas" | "receita" | "cobertura" | "ultSaida" | "status";
+type DirecaoOrdem = "asc" | "desc";
+interface OrdemSku { col: ColunaSkuId; dir: DirecaoOrdem }
+
+interface ColunaSku {
+  id: ColunaSkuId;
+  rotulo: (moeda: string) => string;
+  align: "left" | "right";
+  /** Largura mínima em px. A Descrição é a única elástica (`2fr`). */
+  largura: number;
+  /** Direção do primeiro clique: texto de A a Z; número e data do maior para o menor. */
+  primeira: DirecaoOrdem;
+  /**
+   * Valor pelo qual a coluna ordena. `null` = vazio, que vai SEMPRE para o fim,
+   * nas duas direções: um "—" no topo de uma ordem decrescente não diz nada.
+   * Segue o que a tela MOSTRA, não o campo cru — ex.: Mínimo 0 aparece como "—".
+   */
+  chave: (r: InventoryRow) => number | string | null;
+}
+
+/**
+ * Texto para ordenar: sem acento, minúsculo. Calculado UMA vez por linha em cada
+ * ordenação, e comparado com `<`/`>`. O caminho óbvio, `localeCompare`, levou 8 s
+ * para 60 mil linhas numa medição; `Intl.Collator` levou ~210 ms e isto ~40 ms.
+ */
+function textoOrdenavel(s: string): string | null {
+  const n = s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
+  return n === "" ? null : n;
+}
+
+/**
+ * As colunas, na ordem em que aparecem (a mesma nos dois modos). Daqui saem o
+ * template do grid, o `minWidth` (a soma) e a ordenação — assim nenhum dos três
+ * diverge dos outros. Antes o `minWidth` era um número solto (1350) e as colunas
+ * somavam 1420: a tabela transbordava e o Status ficava cortado.
+ *
+ * Cada largura comporta o valor mais largo ("US$ 8.448,16" em Custo) e o
+ * cabeçalho em maiúsculas MAIS a seta de ordenação (16px reservados sempre, para
+ * o cabeçalho não "pular" ao ordenar). Soma: 1352px.
+ */
+const COLUNAS_SKU: ColunaSku[] = [
+  // SKU numérico ordena como número (9 vem antes de 10); alfanumérico, como texto.
+  { id: "sku", rotulo: () => "SKU", align: "left", largura: 90, primeira: "asc",
+    chave: (r) => (/^\d{1,15}$/.test(r.productId) ? Number(r.productId) : textoOrdenavel(r.productId)) },
+  { id: "fabricante", rotulo: () => "Fabricante", align: "left", largura: 110, primeira: "asc",
+    chave: (r) => textoOrdenavel(r.manufacturerCode) },
+  { id: "descricao", rotulo: () => "Descrição", align: "left", largura: 200, primeira: "asc",
+    chave: (r) => textoOrdenavel(r.description) },
+  { id: "categoria", rotulo: () => "Categoria", align: "left", largura: 120, primeira: "asc",
+    chave: (r) => textoOrdenavel(r.subgroupName) },
+  { id: "estoque", rotulo: () => "Estoque", align: "right", largura: 86, primeira: "desc",
+    chave: (r) => r.stock },
+  { id: "minimo", rotulo: () => "Mínimo", align: "right", largura: 78, primeira: "desc",
+    chave: (r) => (r.minStock > 0 ? r.minStock : null) },
+  { id: "custo", rotulo: (m) => `Custo ${m}`, align: "right", largura: 120, primeira: "desc",
+    chave: (r) => r.costTotalUSD },
+  { id: "saidas", rotulo: () => "Saídas", align: "right", largura: 80, primeira: "desc",
+    chave: (r) => (r.unitsSold > 0 ? r.unitsSold : null) },
+  { id: "receita", rotulo: () => "Receita", align: "right", largura: 104, primeira: "desc",
+    chave: (r) => (r.revenueSold > 0 ? r.revenueSold : null) },
+  // Igual ao que CoverageCell mostra: estoque zerado é "0m"; sem cobertura é "—".
+  { id: "cobertura", rotulo: () => "Cobertura", align: "right", largura: 104, primeira: "desc",
+    chave: (r) => (r.stock <= 0 ? 0 : Number.isFinite(r.coverageDays) ? r.coverageDays : null) },
+  // Data ISO: a comparação de texto já é a cronológica.
+  { id: "ultSaida", rotulo: () => "Últ. saída", align: "right", largura: 150, primeira: "desc",
+    chave: (r) => r.lastSaleDate || null },
+  // Por gravidade (Ruptura primeiro), não em ordem alfabética do rótulo.
+  { id: "status", rotulo: () => "Status", align: "left", largura: 110, primeira: "asc",
+    chave: (r) => STATUS_ORDER.indexOf(r.status) },
+];
+
+/**
+ * Ordena no NAVEGADOR: o servidor já mandou o conjunto inteiro filtrado (60 mil
+ * SKUs), então ordenar lá custaria refazer a consulta e baixar tudo de novo a cada
+ * clique. Aqui são ~20 a 50 ms.
+ *
+ * Empate mantém a ordem que o servidor mandou (índice original), nas duas
+ * direções — o desempate é explícito e a ordem não inverte junto com a direção.
+ */
+function ordenaLinhas(rows: InventoryRow[], ordem: OrdemSku): InventoryRow[] {
+  const coluna = COLUNAS_SKU.find((c) => c.id === ordem.col);
+  if (!coluna) return rows;
+  const f = ordem.dir === "asc" ? 1 : -1;
+  const dec = rows.map((r, i) => ({ r, i, k: coluna.chave(r) }));
+  dec.sort((a, b) => {
+    if (a.k === null || b.k === null) {
+      if (a.k === b.k) return a.i - b.i;
+      return a.k === null ? 1 : -1; // vazio sempre depois, seja qual for a direção
+    }
+    // SKU pode misturar número e texto: número antes de texto, numa ordem total.
+    if (typeof a.k !== typeof b.k) return (typeof a.k === "number" ? -1 : 1) * f;
+    if (a.k < b.k) return -f;
+    if (a.k > b.k) return f;
+    return a.i - b.i;
+  });
+  return dec.map((d) => d.r);
+}
+
+/**
+ * Em tela cheia só o Fabricante muda: ganha largura para uns 25 caracteres
+ * (código em fonte mono de 12px ≈ 7px por caractere, mais o padding). Fora dela
+ * a coluna continua estreita, porque a largura da página não comporta mais.
+ */
+const FABRICANTE_TELA_CHEIA_PX = 230;
+
+function colunasSku(telaCheia: boolean): { template: string; minWidth: number } {
+  const px = COLUNAS_SKU.map((c) => (c.id === "fabricante" && telaCheia ? FABRICANTE_TELA_CHEIA_PX : c.largura));
+  return {
+    template: px.map((w, i) => (COLUNAS_SKU[i].id === "descricao" ? `minmax(${w}px,2fr)` : `${w}px`)).join(" "),
+    minWidth: px.reduce((s, w) => s + w, 0),
+  };
+}
+
+/** Cabeçalho clicável: seta para cima = crescente, para baixo = decrescente. */
+function CabecalhoSku({
+  coluna, moeda, ordem, onOrdena,
+}: {
+  coluna: ColunaSku;
+  moeda: string;
+  ordem: OrdemSku | null;
+  onOrdena: (id: ColunaSkuId) => void;
+}) {
+  const ativo = ordem?.col === coluna.id;
+  const rotulo = coluna.rotulo(moeda);
+  const direita = coluna.align === "right";
+  const Icone = ativo ? (ordem.dir === "asc" ? ArrowUp : ArrowDown) : ArrowUpDown;
+  const dica = ativo
+    ? `Ordenado ${ordem.dir === "asc" ? "crescente" : "decrescente"} por ${rotulo} — clique para inverter`
+    : `Ordenar por ${rotulo}`;
+  // A seta ocupa espaço SEMPRE (só a opacidade muda), para o cabeçalho não pular.
+  const seta = (
+    <Icone
+      className={cn(
+        "h-3 w-3 shrink-0 transition-opacity",
+        ativo ? "opacity-100" : "opacity-0 group-hover:opacity-50 group-focus-visible:opacity-50"
+      )}
+    />
+  );
+  return (
+    <button
+      type="button"
+      onClick={() => onOrdena(coluna.id)}
+      title={dica}
+      aria-label={dica}
+      className={cn(
+        "group flex h-full w-full items-center gap-1 py-2 font-medium uppercase tracking-[0.14em]",
+        "transition-colors hover:text-foreground focus-visible:bg-muted/40 focus-visible:outline-none",
+        direita ? "justify-end pl-1 pr-3" : "justify-start pl-3 pr-1",
+        ativo && "text-foreground"
+      )}
+    >
+      {direita && seta}
+      <span className="whitespace-nowrap">{rotulo}</span>
+      {!direita && seta}
+    </button>
+  );
+}
+
 const SKU_ROW_HEIGHT = 40;
 
 /**
@@ -659,18 +924,32 @@ const SKU_ROW_HEIGHT = 40;
  * rolagem viram DOM de verdade — o resto existe apenas como espaço reservado
  * (`getTotalSize()`). Layout em grid (não `<table>`) porque `position:
  * absolute` nas linhas não funciona dentro de `<tbody>`; cabeçalho e linhas
- * compartilham o mesmo `SKU_GRID_COLS` pra colunas ficarem alinhadas.
+ * compartilham o mesmo template (`colunasSku`) pra colunas ficarem alinhadas.
  */
 function VirtualizedSkuTable({
   rows,
   currency,
   displayCode,
+  telaCheia,
+  ordem,
+  onOrdena,
 }: {
   rows: InventoryRow[];
   currency: AppCurrencyId | string;
   displayCode: string;
+  /** Ocupa toda a altura que sobra do card, em vez do teto de 70% da janela. */
+  telaCheia: boolean;
+  ordem: OrdemSku | null;
+  onOrdena: (id: ColunaSkuId) => void;
 }) {
   const parentRef = React.useRef<HTMLDivElement>(null);
+  const { template: gridCols, minWidth } = colunasSku(telaCheia);
+
+  // Outra ordem = outra lista: volta ao topo em vez de ficar no meio dela.
+  React.useEffect(() => {
+    parentRef.current?.scrollTo({ top: 0 });
+  }, [ordem]);
+
   const virtualizer = useVirtualizer({
     count: rows.length,
     getScrollElement: () => parentRef.current,
@@ -679,24 +958,23 @@ function VirtualizedSkuTable({
   });
 
   return (
-    <div ref={parentRef} className="max-h-[70vh] overflow-auto border-t border-border">
-      <div style={{ minWidth: 1350 }}>
+    <div
+      ref={parentRef}
+      className={cn(
+        "overflow-auto border-t border-border",
+        // `overscroll-contain`: ao chegar no fim da tabela a roda do mouse não
+        // "vaza" para rolar a página que está por trás.
+        telaCheia ? "min-h-0 flex-1 overscroll-contain" : "max-h-[70vh]"
+      )}
+    >
+      <div style={{ minWidth }}>
         <div
-          className="grid items-center sticky top-0 z-10 border-b border-border bg-surface text-[10px] uppercase tracking-[0.14em] text-muted-foreground"
-          style={{ gridTemplateColumns: SKU_GRID_COLS }}
+          className="grid items-stretch sticky top-0 z-10 border-b border-border bg-surface text-[10px] uppercase tracking-[0.14em] text-muted-foreground"
+          style={{ gridTemplateColumns: gridCols }}
         >
-          <div className="py-2 px-3 text-left font-medium">SKU</div>
-          <div className="py-2 px-3 text-left font-medium">Descrição</div>
-          <div className="py-2 px-3 text-left font-medium">Fabricante</div>
-          <div className="py-2 px-3 text-left font-medium">Categoria</div>
-          <div className="py-2 px-3 text-right font-medium">Estoque</div>
-          <div className="py-2 px-3 text-right font-medium">Mínimo</div>
-          <div className="py-2 px-3 text-right font-medium">Custo {displayCode}</div>
-          <div className="py-2 px-3 text-right font-medium">Saídas</div>
-          <div className="py-2 px-3 text-right font-medium">Receita</div>
-          <div className="py-2 px-3 text-right font-medium">Cobertura</div>
-          <div className="py-2 px-3 text-right font-medium">Últ. saída</div>
-          <div className="py-2 px-3 text-left font-medium">Status</div>
+          {COLUNAS_SKU.map((c) => (
+            <CabecalhoSku key={c.id} coluna={c} moeda={displayCode} ordem={ordem} onOrdena={onOrdena} />
+          ))}
         </div>
 
         <div style={{ height: virtualizer.getTotalSize(), position: "relative" }}>
@@ -707,13 +985,19 @@ function VirtualizedSkuTable({
                 key={r.productId}
                 className="absolute left-0 top-0 grid w-full items-center border-b border-border text-sm hover:bg-muted/30"
                 style={{
-                  gridTemplateColumns: SKU_GRID_COLS,
+                  gridTemplateColumns: gridCols,
                   height: vRow.size,
                   transform: `translateY(${vRow.start}px)`,
                 }}
               >
                 <div className="py-2 px-3 truncate font-mono text-xs text-muted-foreground tabular">
                   {r.productId}
+                </div>
+                <div
+                  className="py-2 px-3 truncate font-mono text-xs text-muted-foreground"
+                  title={r.manufacturerCode || undefined}
+                >
+                  {r.manufacturerCode || "—"}
                 </div>
                 <div
                   className={cn("py-2 px-3 truncate", !r.hasInventory && "text-warning")}
@@ -723,9 +1007,6 @@ function VirtualizedSkuTable({
                   {!r.hasInventory && (
                     <AlertTriangle className="ml-1 inline h-3 w-3 -translate-y-px" />
                   )}
-                </div>
-                <div className="py-2 px-3 truncate font-mono text-xs text-muted-foreground">
-                  {r.manufacturerCode || "—"}
                 </div>
                 <div className="py-2 px-3 truncate text-muted-foreground">
                   {r.subgroupName || "—"}

@@ -12,6 +12,14 @@ export interface OpcoesFiltro {
   vendedores: { id: string; name: string }[];
   /** empresa_id presentes em QUALQUER dataset — o filtro de empresa é global. */
   empresas: string[];
+  /**
+   * Condições de pagamento dos títulos a receber. Só a tela de Receber usa: não
+   * é um filtro global, mas a lista vem junto porque é o mesmo endpoint, já
+   * carregado e em cache no topbar.
+   */
+  condicoesPagamento: { id: string; name: string }[];
+  /** Há título a receber sem condição — vira a opção "Sem condição informada". */
+  temTituloSemCondicao: boolean;
 }
 
 export const OPCOES_VAZIAS: OpcoesFiltro = {
@@ -19,4 +27,6 @@ export const OPCOES_VAZIAS: OpcoesFiltro = {
   subgrupos: [],
   vendedores: [],
   empresas: [],
+  condicoesPagamento: [],
+  temTituloSemCondicao: false,
 };

@@ -4,7 +4,7 @@ import * as React from "react";
 import {
   Bar, BarChart, CartesianGrid, Cell, ResponsiveContainer, Tooltip, XAxis, YAxis,
 } from "recharts";
-import { CheckCircle2, Clock, TrendingDown } from "lucide-react";
+import { CheckCircle2 } from "lucide-react";
 import { PageHeader } from "@/components/layout/page-header";
 import { KpiCard } from "@/components/dashboard/kpi-card";
 import { EmptyState } from "@/components/dashboard/empty-state";
@@ -14,6 +14,7 @@ import { BarChartH } from "@/components/charts/bar-chart-h";
 import { ChartDefs } from "@/components/charts/chart-defs";
 import { ChartTooltip } from "@/components/charts/chart-tooltip";
 import { useReceberAnalytics, type AgingBucketId, type GroupRow } from "@/lib/hooks/use-receber-analytics";
+import { useOpcoesFiltro } from "@/lib/hooks/use-opcoes-filtro";
 import { formatCurrency, formatNumber, formatPercent } from "@/lib/utils/format";
 import { useTranslation } from "@/lib/hooks/use-translation";
 import { useMoedaExibicao } from "@/lib/hooks/use-moeda-exibicao";
@@ -27,12 +28,66 @@ const AGING_COLORS: Record<AgingBucketId, string> = {
   d90plus: "hsl(var(--negative))",
 };
 
+/** Valor do filtro para "títulos sem condição de pagamento" — o mesmo do servidor. */
+const SEM_CONDICAO = "__none__";
+
+/**
+ * Condição de pagamento do título. É um filtro só desta tela (por isso não está
+ * no popover global) e vale para tudo que ela mostra: KPIs, aging, tabelas e a
+ * análise de recebimentos.
+ *
+ * "Sem condição informada" existe porque os títulos gravados antes de a view
+ * trazer a condição só a ganham quando o período é reenviado.
+ */
+function FiltroCondicaoPagamento({
+  value,
+  onChange,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+}) {
+  const { t } = useTranslation();
+  const opcoes = useOpcoesFiltro();
+
+  // Sem nenhuma condição no banco não há o que filtrar — e o seletor só
+  // confundiria. Mas se já há um filtro ligado, ele precisa continuar visível
+  // para poder ser desligado.
+  const semOpcoes = opcoes.condicoesPagamento.length === 0 && !opcoes.temTituloSemCondicao;
+  if (semOpcoes && value === "all") return null;
+
+  return (
+    <label className="flex items-center gap-2 text-xs text-muted-foreground">
+      <span className="hidden sm:inline">{t("receber.filter.condicao")}</span>
+      <select
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        aria-label={t("receber.filter.condicao")}
+        className={cn(
+          "h-9 max-w-[240px] rounded-md border bg-surface px-3 text-sm",
+          value !== "all" ? "border-foreground text-foreground" : "border-border"
+        )}
+      >
+        <option value="all">{t("receber.filter.condicao.all")}</option>
+        {opcoes.condicoesPagamento.map((c) => (
+          <option key={c.id} value={c.id}>{c.name}</option>
+        ))}
+        {opcoes.temTituloSemCondicao && (
+          <option value={SEM_CONDICAO}>{t("receber.filter.condicao.none")}</option>
+        )}
+      </select>
+    </label>
+  );
+}
+
 export default function ContasReceberPage() {
   const { t } = useTranslation();
   const currency = useMoedaExibicao();
+  const [condicao, setCondicao] = React.useState("all");
 
   // Tudo agregado no servidor a partir de `receivable_items`.
-  const { data, loading, error } = useReceberAnalytics();
+  const { data, loading, error } = useReceberAnalytics(condicao);
+
+  const filtroCondicao = <FiltroCondicaoPagamento value={condicao} onChange={setCondicao} />;
 
   const kpi = data?.kpi;
   const aging = data?.aging ?? [];
@@ -70,7 +125,9 @@ export default function ContasReceberPage() {
   if (error) {
     return (
       <div className="space-y-8">
-        <PageHeader eyebrow={t("receber.header.eyebrow")} title={t("receber.header.title")} description={t("receber.header.desc")} />
+        <PageHeader eyebrow={t("receber.header.eyebrow")} title={t("receber.header.title")} description={t("receber.header.desc")}>
+          {filtroCondicao}
+        </PageHeader>
         <div className="rounded-lg border border-negative/30 bg-negative/10 px-4 py-3 text-sm text-negative">
           Não foi possível carregar as contas a receber: {error}
         </div>
@@ -81,7 +138,9 @@ export default function ContasReceberPage() {
   if (!kpi || !payStats || !data?.hasData) {
     return (
       <div className="space-y-8">
-        <PageHeader eyebrow={t("receber.header.eyebrow")} title={t("receber.header.title")} description={t("receber.header.desc")} />
+        <PageHeader eyebrow={t("receber.header.eyebrow")} title={t("receber.header.title")} description={t("receber.header.desc")}>
+          {filtroCondicao}
+        </PageHeader>
         {loading ? (
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             {Array.from({ length: 4 }).map((_, i) => (
@@ -102,6 +161,7 @@ export default function ContasReceberPage() {
         title={t("receber.header.title")}
         description={t("receber.header.desc")}
       >
+        {filtroCondicao}
         <Badge variant="ghost">{t("receber.table.badge", { count: formatNumber(data.allRowsCount) })}</Badge>
       </PageHeader>
 

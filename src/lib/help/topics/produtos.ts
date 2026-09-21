@@ -25,19 +25,26 @@ export const produtos: HelpSection = {
       title: "Curva ABC",
       description: "Classifica os produtos em A, B ou C pela participação acumulada na receita.",
       logic:
-        "Ordena produtos por receita (maior pra menor) e soma a participação acumulada: os primeiros que juntos somam até 80% da receita são classe A, até 95% é classe B, o resto é classe C. O corte é calculado sobre TODOS os produtos do período, mesmo que a tabela mostre só os 24 primeiros.",
+        "Ordena produtos por receita (maior pra menor) e soma a participação acumulada: os primeiros que juntos somam até 80% da receita são classe A, até 95% é classe B, o resto é classe C. O corte é calculado sobre TODOS os produtos do período, e a tabela lista todos os que tiveram venda: as linhas vêm de 50 em 50 conforme você rola, sem cortar em um top N. O gráfico do topo mostra só os 12 maiores.",
       howToRead: "Classe A é o pequeno grupo que sustenta a maior parte da receita — é onde ruptura de estoque ou perda de cliente dói mais.",
     },
     {
       id: "ranking-lucro",
       title: "Ranking por Lucro",
-      description: "Top 30 produtos ordenados por lucro (não por receita).",
+      description: "Todos os produtos com venda no período, ordenados por lucro (não por receita). A tabela tem barra de rolagem e carrega 50 linhas por vez conforme você desce.",
       logic: "lucro = receita − custo. Os totais no rodapé da tabela somam a lista inteira, não só os 30 exibidos.",
     },
     {
       id: "curva-abc-categoria",
       title: "Curva ABC por categoria",
       description: "A mesma lógica de classificação A/B/C, mas aplicada a subgrupos/categorias em vez de produtos individuais — com o detalhamento completo de todas as categorias.",
+    },
+    {
+      id: "curva-abc-marca",
+      title: "Curva ABC por marca",
+      description: "A mesma classificação A/B/C aplicada às marcas, com receita, unidades e quantidade de SKUs de cada uma.",
+      logic:
+        "A marca é identificada pelo código (marca_id), como no Comparativo. Vendas sem marca informada — inclusive as de períodos que ainda não foram reenviados depois de a marca entrar na view — somam numa linha \"Sem marca\". Respeita os mesmos filtros da tela.",
     },
     {
       id: "produtos-parados",

@@ -1,6 +1,6 @@
 # Primeira carga — roteiro no servidor do cliente
 
-Da máquina zerada até o ciclo de 2 h rodando. Cada passo confirma o anterior,
+Da máquina zerada até o ciclo horário rodando. Cada passo confirma o anterior,
 e os três primeiros **não escrevem nada** no Analytics.
 
 Pré-requisitos: empresa criada e **ativa** no Analytics, token de integração em
@@ -203,13 +203,22 @@ sudo systemctl enable --now mgsis-ingest.timer
 systemctl list-timers mgsis-ingest.timer
 ```
 
-A partir daí, de 2 em 2 horas: mês corrente, mês anterior e a foto de estoque.
+A partir daí, de hora em hora: mês corrente, mês anterior e a foto de estoque
+para todos os datasets, mais os últimos 12 meses de receber e o histórico
+inteiro de pagar (a baixa de um título não respeita o mês em que ele foi emitido).
 
 ## Depois
 
-**Recarga mensal da janela completa.** Correção retroativa fora da janela dos
-2 h não chega sozinha — se alguém corrigir uma nota de 2024, o Analytics segue
-com o valor antigo até aquele período ser reenviado:
+**Recarga da madrugada, receber e pagar.** Baixa de título mais velho que a
+janela de 12 meses não chega no ciclo horário:
+
+```cron
+0 3 * * * analytics /usr/local/bin/mgsis-ingest.sh --recarga-financeira >> /var/log/mgsis-ingest.log 2>&1
+```
+
+**Recarga mensal da janela completa.** Correção retroativa fora da janela do
+ciclo não chega sozinha nos demais datasets — se alguém corrigir uma nota de
+2024, o Analytics segue com o valor antigo até aquele período ser reenviado:
 
 ```cron
 0 3 1 * * analytics /usr/local/bin/mgsis-ingest.sh --inicial 2022-01 >> /var/log/mgsis-ingest.log 2>&1
