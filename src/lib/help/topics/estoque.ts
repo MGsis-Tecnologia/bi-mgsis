@@ -20,7 +20,7 @@ export const estoque: HelpSection = {
       description:
         "Donut mostrando o capital em estoque (US$) e o % de itens agrupados por faixa de meses que o saldo atual cobre a demanda.",
       logic:
-        "coverageDays = estoque atual ÷ demanda média diária, onde a demanda vem das vendas do PERÍODO filtrado. O resultado em dias é convertido em faixas de meses: sem cobertura (estoque zerado), fora de análise (tem estoque mas nenhuma venda no período — não dá pra estimar demanda), até 1 mês, 1–2, 2–4, 4–6, 6–12 e acima de 12 meses.",
+        "coverageDays = estoque atual ÷ demanda média diária, onde a demanda vem das vendas do PERÍODO filtrado, já descontadas as devoluções do mesmo período. O resultado em dias é convertido em faixas de meses: sem cobertura (estoque zerado), fora de análise (tem estoque mas nenhuma venda no período — não dá pra estimar demanda), até 1 mês, 1–2, 2–4, 4–6, 6–12 e acima de 12 meses.",
       howToRead:
         "\"Fora de análise\" não é erro — é um produto com estoque parado que simplesmente não vendeu no recorte de tempo escolhido; alargar o período de filtro pode tirá-lo dessa faixa.",
     },
@@ -75,8 +75,8 @@ export const estoque: HelpSection = {
         { name: "Estoque", desc: "Quantidade em estoque AGORA (a foto mais recente importada), somada entre empresas quando o filtro de empresa é \"Todas\"." },
         { name: "Mínimo", desc: "Estoque mínimo cadastrado para o produto, quando existe. Em aviso quando o estoque atual já está nele ou abaixo." },
         { name: "Custo", desc: "Valor total do estoque desse SKU, na moeda selecionada no filtro global — não é o custo unitário, é quantidade × custo unitário." },
-        { name: "Saídas", desc: "Unidades vendidas no PERÍODO filtrado (não é histórico total, é só dentro da janela de data escolhida)." },
-        { name: "Receita", desc: "Receita gerada por esse SKU no mesmo período filtrado." },
+        { name: "Saídas", desc: "Unidades vendidas no PERÍODO filtrado, LÍQUIDAS de devolução: as devoluções da mesma janela são descontadas, e o resultado nunca fica abaixo de zero. Não é histórico total, é só dentro da janela de data escolhida." },
+        { name: "Receita", desc: "Receita gerada por esse SKU no mesmo período filtrado, LÍQUIDA de devolução, como as Saídas. Por isso pode ficar abaixo do que a tela de Vendas mostra para o mesmo item — lá a devolução aparece à parte." },
         { name: "Cobertura", desc: "Quantos meses (e, entre parênteses, anos) o estoque atual sustenta no ritmo de venda do período — mesmo cálculo do donut, em número exato em vez de faixa." },
         { name: "Últ. saída", desc: "Data da venda mais recente desse SKU dentro do período, e há quantos dias foi (contado a partir de hoje, não do fim do período)." },
         { name: "Status", desc: "Ruptura, Em risco, Normal, Excesso ou Sem giro — mesma classificação dos cards de \"Distribuição por status\" no topo da tela." },

@@ -166,26 +166,11 @@ passa dos 80 MB), ou se combina uma janela de retenção — só títulos emitid
 
 ## Telas
 
-### 8. Estoque → Detalhamento por SKU: devolução e fornecedor
+### 8. Estoque → Detalhamento por SKU: filtro por fornecedor
 
-Duas coisas no mesmo lugar, e a primeira é a que corrompe número.
-
-**A saída não desconta devolução.** O movimento do período sai de
-`whereGraficos(f, pL)` em
-[`src/lib/server/analytics/estoque.ts:247-253`](src/lib/server/analytics/estoque.ts#L247-L253),
-que usa o `tipo` padrão `"VENDA"` — as linhas de `"DEVOLUCAO VENDA"`
-simplesmente não entram. Quem devolveu some da conta: `units_sold` fica alto
-demais, a demanda diária também, e a cobertura em dias (`estoque ÷ demanda`)
-sai baixa demais. O SKU com muita devolução aparece mais perto da ruptura do que
-realmente está — e é exatamente o SKU sobre o qual alguém decidiria comprar de
-novo. `whereBase`/`whereGraficos` já recebem o tipo por parâmetro
-([`base.ts:136`](src/lib/server/analytics/base.ts#L136)), então é subtrair uma
-agregação de devoluções em `e_mov`, não inventar caminho novo. Cuidado com o
-sinal: conferir se o ERP já manda `quantity` negativa na devolução, senão o
-desconto entra duas vezes.
-
-**Filtro por fornecedor — que é o motivo do pedido (comprar).** Não existe hoje,
-e não é só UI: nem `inventory_items` nem `sale_items` têm fornecedor
+Pedido de compras: filtrar o detalhamento por fornecedor, para decidir o que
+comprar de quem. Não existe hoje, e não é só UI: nem `inventory_items` nem
+`sale_items` têm fornecedor
 ([`prisma/schema.prisma:259`](prisma/schema.prisma#L259)). Quem tem é
 `compra_items` (`fornecedor_id`/`fornecedor_nome`), então o vínculo
 SKU → fornecedor teria de ser derivado da compra — o último que forneceu, ou
@@ -193,8 +178,13 @@ todos os que já forneceram, porque um produto pode ter mais de um — ou o ERP
 passa a mandar o fornecedor na foto de estoque. Decidir isso antes de desenhar a
 tela; "último fornecedor" é o mais simples e provavelmente o que compras quer.
 
-**Peso:** médio. A devolução dá para separar e fazer antes — é a de maior
-retorno e a única que muda número já exibido.
+Vale olhar junto com o item 10, que também precisa de `compra_items` por SKU — e
+os dois dependem do reenvio das compras.
+
+(A outra metade deste item, descontar devolução das saídas e da receita, foi
+feita em 21/09/2026.)
+
+**Peso:** médio.
 
 ### 9. Baixar em Excel os itens de uma marca vendida — confirmar com o cliente
 

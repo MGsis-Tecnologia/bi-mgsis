@@ -36,6 +36,11 @@ import {
  * Uma particularidade do comportamento antigo segue mantida de propósito: um
  * SKU vendido no período mas ausente do snapshot entra como ruptura, com
  * estoque 0.
+ *
+ * **A saída é líquida de devolução** (desde 21/09/2026): as linhas de
+ * "DEVOLUCAO VENDA" do período são subtraídas das de "VENDA" por SKU — quantidade,
+ * receita e custo —, com piso em zero (ver `e_dev`). As telas de Vendas e
+ * Produtos continuam mostrando a devolução à parte.
  */
 
 const RISK_DAYS = 15;
@@ -252,6 +257,30 @@ export async function getEstoqueData(
             AND s.date >= ${pL.add(f.from)} AND s.date <= ${pL.add(f.to)}`,
   });
 
+  // Devoluções do período, por produto, com os mesmos filtros da venda. Sem
+  // isso o SKU com muita devolução tinha a saída inflada, a demanda também, e a
+  // cobertura saía baixa demais — aparecia mais perto da ruptura do que estava,
+  // justo o item sobre o qual alguém decidiria comprar de novo.
+  //
+  // O ERP manda quantidade e valor da devolução POSITIVOS (conferido no banco:
+  // 27.948 linhas, nenhuma negativa), então eles são subtraídos em e_mov. Conta
+  // pela data da devolução, não da venda original: é o movimento que aconteceu
+  // na janela. O valor passa pelo mesmo câmbio da venda (mês da linha), senão
+  // "Todas as moedas" subtrairia guarani de real.
+  const pD = new Params();
+  passos.push({
+    nome: "e_dev",
+    params: pD.values,
+    sql: `SELECT s.product_id,
+                 SUM(s.quantity) AS units_returned,
+                 SUM(s.total_orig * ${exprTaxa(f)}) AS revenue_returned,
+                 SUM(s.cost_orig  * ${exprTaxa(f)}) AS cost_returned
+          FROM sale_items s ${joinCambio(f, pD, "s.date", "s.currency_id")}
+          WHERE ${whereGraficos(f, pD, "DEVOLUCAO VENDA")}
+            AND s.date >= ${pD.add(f.from)} AND s.date <= ${pD.add(f.to)}
+          GROUP BY s.product_id`,
+  });
+
   // Movimento do período por produto, em duas agregações encadeadas em vez de
   // três passadas separadas sobre as mesmas linhas: agrupando primeiro por
   // (produto, pedido), o COUNT dos pedidos distintos vira um COUNT(*) comum —
@@ -277,10 +306,19 @@ export async function getEstoqueData(
                    COUNT(*)::int AS orders_count, MIN(min_id) AS min_id
             FROM po GROUP BY product_id
           )
-          SELECT ag.product_id, ag.units_sold, ag.revenue_sold, ag.cost_sold,
+          -- Saída, receita e custo LÍQUIDOS de devolução, com piso em zero:
+          -- devolução de venda feita antes da janela pode superar a venda
+          -- dentro dela, e demanda ou receita negativa não têm significado
+          -- nesta tela. (Vendas e Produtos seguem mostrando a devolução à parte.)
+          SELECT ag.product_id,
+                 GREATEST(ag.units_sold   - COALESCE(d.units_returned, 0), 0)   AS units_sold,
+                 GREATEST(ag.revenue_sold - COALESCE(d.revenue_returned, 0), 0) AS revenue_sold,
+                 GREATEST(ag.cost_sold    - COALESCE(d.cost_returned, 0), 0)    AS cost_sold,
                  ag.last_sale, ag.orders_count,
                  n.product_name, n.subgroup_id, n.subgroup_name
-          FROM ag JOIN sale_items n ON n.id = ag.min_id`,
+          FROM ag
+          JOIN sale_items n ON n.id = ag.min_id
+          LEFT JOIN e_dev d ON d.product_id = ag.product_id`,
   });
 
   // Catálogo: primeira ocorrência de cada produto na tabela inteira. Só serve
@@ -343,6 +381,9 @@ export async function getEstoqueData(
     FROM e_mov mov
     LEFT JOIN e_cat cat ON cat.product_id = mov.product_id
     WHERE NOT EXISTS (SELECT 1 FROM e_inv inv WHERE inv.product_id = mov.product_id)
+      -- Venda inteira devolvida no período não é "vendeu": sem isso o SKU
+      -- viraria ruptura com saída zero.
+      AND mov.units_sold > 0
   ),
   calc AS (
     SELECT b.*,
@@ -448,7 +489,7 @@ export async function getEstoqueData(
   const r = await db.$transaction(
     async (tx) => {
       // O que falta ao planejador é a cardinalidade, não histograma fino: com o
-      // alvo padrão (100) o ANALYZE das cinco temporárias custava 2,5 s. Com 10
+      // alvo padrão (100) o ANALYZE das temporárias custava 2,5 s. Com 10
       // ele amostra 10× menos, a contagem de linhas continua exata e o plano
       // escolhido é o mesmo. Vale só nesta transação.
       await tx.$executeRawUnsafe("SET LOCAL default_statistics_target = 10");
