@@ -67,6 +67,7 @@ GET  /api/ingest/<dataset>     mostra o que já está lá
 | `pagar` | contas a pagar | data de **emissão** |
 | `caixa` | movimentações de caixa | data do movimento |
 | `estoque` | foto do estoque | *(não tem data)* |
+| `empresa` | cadastro de matriz/filiais (nome de cada `empresaId`) | *(não tem data)* |
 
 > **Atenção em `receber` e `pagar`:** o período é pela **emissão**, não pelo
 > vencimento. As telas filtram por vencimento, mas quem decide a que mês a linha
@@ -89,7 +90,7 @@ GET  /api/ingest/<dataset>     mostra o que já está lá
 | `"2026-07"` | o mês inteiro |
 | `"2026-07-01..2026-07-15"` | intervalo, inclusivo dos dois lados |
 | `"2026-07-09"` | um dia |
-| `"tudo"` | **apenas** `estoque` |
+| `"tudo"` | os datasets sem período: `estoque`, `cambio`, `empresa` |
 
 O intervalo existe para quem tiver um mês grande demais para uma requisição só:
 dá para partir em quinzenas sem perder atomicidade, porque cada pedaço é um
@@ -339,6 +340,14 @@ Uma conta-pai sem movimento próprio recebe a soma dos filhos.
 
 Sempre com `"periodo": "tudo"`. O mesmo produto pode aparecer mais de uma vez,
 uma por empresa (matriz e filial).
+
+### `empresa`
+
+`empresaId` (**obrigatório**), `empresaFantasia`.
+
+Sempre com `"periodo": "tudo"`. Uma linha por matriz/filial cadastrada no ERP —
+é o que dá nome ao `empresaId` que aparece em todos os outros datasets. Sem
+este dataset enviado, o filtro de empresa das telas mostra só o código cru.
 
 ---
 

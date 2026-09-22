@@ -234,6 +234,18 @@ SQL
 }
 
 
+# Empresa é uma FOTO: vai inteira, sem período. Só dá NOME ao empresa_id que já
+# aparece em todo dataset — sem isso o filtro de empresa das telas mostra só o
+# código cru.
+sql_empresa() { cat <<'SQL'
+SELECT json_build_object('periodo', 'tudo', 'linhas', COALESCE(json_agg(x), '[]'::json))
+FROM (
+  SELECT empresa_id AS "empresaId", empresa_fantasia AS "empresaFantasia"
+  FROM bi_empresa
+) x
+SQL
+}
+
 # Câmbio: MÉDIA MENSAL, e vai INTEIRO a cada ciclo, sem recorte de período.
 #
 # São algumas centenas de linhas — controlar período aqui só traria o risco de
@@ -265,6 +277,7 @@ conta_sql() {
     caixa)      echo "SELECT count(*) FROM bi_caixa      WHERE caixa_data_emissao >= :'de' AND caixa_data_emissao < :'ate'" ;;
     estoque)    echo "SELECT count(*) FROM bi_estoque" ;;
     cambio)     echo "SELECT count(*) FROM bi_cambio" ;;
+    empresa)    echo "SELECT count(*) FROM bi_empresa" ;;
   esac
 }
 
@@ -355,11 +368,11 @@ envia() {
   done
 }
 
-  # Os dois datasets sem período: foto do momento (estoque) e histórico
-  # completo de cotações (câmbio). Vão inteiros, sempre.
+  # Os três datasets sem período: foto do momento (estoque), histórico completo
+  # de cotações (câmbio) e o cadastro de empresas. Vão inteiros, sempre.
   envia_sem_periodo() {
     local so="${1:-}" falhas=0
-    for ds in estoque cambio; do
+    for ds in estoque cambio empresa; do
       [[ -n "$so" && "$so" != "$ds" ]] && continue
       log "$ds (envio completo)"
       envia "$ds" tudo || falhas=$(( falhas + 1 ))
@@ -477,7 +490,7 @@ done
 
 if [[ -n "$SO_DATASET" ]]; then
   case "$SO_DATASET" in
-    vendas|compras|orcamentos|receber|pagar|caixa|estoque|cambio) ;;
+    vendas|compras|orcamentos|receber|pagar|caixa|estoque|cambio|empresa) ;;
     *) erro "dataset inválido: $SO_DATASET"; exit 64 ;;
   esac
 fi
@@ -537,7 +550,7 @@ case "$MODO" in
 
   periodo)
     [[ "$ARG" =~ ^[0-9]{4}-[0-9]{2}$ ]] || { erro "--periodo espera YYYY-MM"; exit 64; }
-    if [[ "$SO_DATASET" == "estoque" || "$SO_DATASET" == "cambio" ]]; then
+    if [[ "$SO_DATASET" == "estoque" || "$SO_DATASET" == "cambio" || "$SO_DATASET" == "empresa" ]]; then
       envia_sem_periodo "$SO_DATASET" || FALHAS=$(( FALHAS + $? ))
     else
       envia_mes "$ARG" "$SO_DATASET" || FALHAS=$(( FALHAS + $? ))

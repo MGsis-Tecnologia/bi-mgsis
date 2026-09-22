@@ -84,13 +84,19 @@ export async function getOpcoesFiltro(db: PrismaClient, chave: string): Promise<
         WHERE order_type = 'VENDA' AND seller_id <> ''
         GROUP BY 1 ORDER BY 2, 1`
     ),
-    consultaAnalitica<{ v: string }>(
+    // O nome vem do dataset "empresa" (bi_empresa → empresa_items); sem ele
+    // enviado ainda, `name` sai "" e o rótulo cai no id cru (empresa-switcher).
+    // `LEFT JOIN` pela CHAVE PRIMÁRIA de empresa_items — no máximo uma linha
+    // por id, então não precisa de agregação depois do JOIN.
+    consultaAnalitica<{ id: string; name: string }>(
       db,
-      `SELECT v FROM (${TABELAS_COM_EMPRESA.map(
-        (t) => `SELECT empresa_id AS v FROM ${t} WHERE empresa_id <> '' GROUP BY 1`
-      ).join(" UNION ")}) t
+      `SELECT t.v AS id, COALESCE(ei.empresa_fantasia, '') AS name
+         FROM (${TABELAS_COM_EMPRESA.map(
+           (t) => `SELECT empresa_id AS v FROM ${t} WHERE empresa_id <> '' GROUP BY 1`
+         ).join(" UNION ")}) t
+         LEFT JOIN empresa_items ei ON ei.empresa_id = t.v
         -- Numérico quando dá, como fazia o sort do JS.
-        ORDER BY NULLIF(regexp_replace(v, '\\D', '', 'g'), '')::bigint NULLS LAST, v`
+        ORDER BY NULLIF(regexp_replace(t.v, '\\D', '', 'g'), '')::bigint NULLS LAST, t.v`
     ),
     // Universo de TODOS os títulos, sem olhar empresa nem moeda: como os demais,
     // a lista não encolhe conforme o que já está selecionado.
@@ -111,7 +117,7 @@ export async function getOpcoesFiltro(db: PrismaClient, chave: string): Promise<
     canais: canais.map((r) => r.v),
     subgrupos,
     vendedores,
-    empresas: empresas.map((r) => r.v),
+    empresas,
     condicoesPagamento: condicoes,
     temTituloSemCondicao: semCondicao[0]?.existe ?? false,
   };

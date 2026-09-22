@@ -275,7 +275,24 @@ export interface StoredCambio {
 }
 
 // ─── Empresa (matriz / filiais) ──────────────────────────────────────────────
-// O rótulo exibido é montado no idioma ativo (chaves filters.empresa.*).
+
+// Nome de cada empresaId — dataset "empresa" ← view bi_empresa. Uma FOTO como
+// estoque/câmbio: a cada envio, a tabela inteira é substituída.
+export interface EmpresaItem {
+  empresaId: string;        // empresa_id — mesmo valor usado em empresaId de todos os outros datasets
+  empresaFantasia: string;  // empresa_fantasia — "" quando ainda não foi enviado
+}
+
+export interface StoredEmpresas {
+  items: EmpresaItem[];
+  importedAt: string;       // ISO
+  filename: string;
+  rowCount: number;
+}
+
+// O rótulo exibido no filtro vem de `empresaFantasia` quando existe (dataset
+// "empresa" já enviado); sem isso, cai no id cru montado no idioma ativo
+// (chaves filters.empresa.*) — ver getOpcoesFiltro/empresa-switcher.
 export type EmpresaFilter = "all" | string;
 
 // "1"=R$  "2"=US$  "3"=G$  "ALL"=Todas Moedas (converte para R$)

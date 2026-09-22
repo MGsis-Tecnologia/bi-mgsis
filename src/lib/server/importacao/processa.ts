@@ -63,6 +63,7 @@ function itensDe(r: ParseResult): { kind: DatasetKind; itens: unknown[] } | null
   if (r.kind === "orcamento" && r.orcamento) return { kind: "orcamento", itens: r.orcamento.items };
   if (r.kind === "compras" && r.compras) return { kind: "compras", itens: r.compras.items };
   if (r.kind === "cambio" && r.cambio) return { kind: "cambio", itens: r.cambio.items };
+  if (r.kind === "empresa" && r.empresas) return { kind: "empresa", itens: r.empresas.items };
   return null;
 }
 

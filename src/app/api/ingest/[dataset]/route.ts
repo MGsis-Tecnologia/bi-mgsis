@@ -34,6 +34,9 @@ const KIND_DA_META: Record<NomeDataset, DatasetKind> = {
   // Não é um kind da importação CSV — existe só para carimbar dataset_meta,
   // que é o que invalida os caches de análise quando a cotação muda.
   cambio: "cambio" as DatasetKind,
+  // Este carimbo invalida a lista de empresas do filtro global — ver
+  // invalidaOpcoesFiltro/getOpcoesFiltro.
+  empresa: "empresa",
 };
 
 const corpoSchema = z.object({

@@ -22,9 +22,13 @@ export function EmpresaSwitcher() {
   // Só faz sentido oferecer o filtro quando há mais de uma empresa nos dados.
   if (empresas.length <= 1) return null;
 
-  // Os dados só trazem o id numérico — o rótulo é montado no idioma ativo.
-  const label = (id: string) =>
-    id ? t("filters.empresa.item", { id }) : t("filters.empresa.none");
+  // O nome vem do dataset "empresa" (bi_empresa). Enquanto ele não for
+  // enviado — ou para um id que apareceu numa venda mas não no cadastro —
+  // cai no id cru montado no idioma ativo.
+  const label = (id: string) => {
+    const nome = empresas.find((e) => e.id === id)?.name;
+    return nome || (id ? t("filters.empresa.item", { id }) : t("filters.empresa.none"));
+  };
 
   const triggerLabel =
     empresaId === "all" ? t("filters.empresa.all_short") : label(empresaId);
@@ -47,14 +51,14 @@ export function EmpresaSwitcher() {
           {empresaId === "all" && <Check className="h-3.5 w-3.5 text-foreground" />}
         </DropdownMenuItem>
         <DropdownMenuSeparator />
-        {empresas.map((id) => (
+        {empresas.map((e) => (
           <DropdownMenuItem
-            key={id}
-            onClick={() => setEmpresa(id)}
+            key={e.id}
+            onClick={() => setEmpresa(e.id)}
             className="flex items-center justify-between"
           >
-            <span className="text-foreground">{label(id)}</span>
-            {empresaId === id && <Check className="h-3.5 w-3.5 text-foreground" />}
+            <span className="text-foreground">{label(e.id)}</span>
+            {empresaId === e.id && <Check className="h-3.5 w-3.5 text-foreground" />}
           </DropdownMenuItem>
         ))}
       </DropdownMenuContent>

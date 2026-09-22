@@ -116,6 +116,17 @@ Sem data. Envio inteiro, `periodo: "tudo"`.
 | `minStock` | `estoque_minimo` |
 | `currencyId` / `currencyCode` / `empresaId` | `moeda_id` / `moeda_sigla` / `empresa_id` |
 
+## empresa ← `bi_empresa`
+
+Sem data. Envio inteiro, `periodo: "tudo"`. Só dá nome ao `empresa_id` que já
+aparece em todas as outras views — é o que faz o filtro de empresa das telas
+mostrar "Matriz" em vez de "Empresa 1".
+
+| Campo da API | Coluna da view |
+|---|---|
+| `empresaId` | `empresa_id` |
+| `empresaFantasia` | `empresa_fantasia` |
+
 \* campo obrigatório: sem ele a linha é recusada.
 
 ## Duas armadilhas operacionais

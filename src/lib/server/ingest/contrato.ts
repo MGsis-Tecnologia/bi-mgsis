@@ -194,6 +194,15 @@ const linhaCambio = z.object({
   taxa: z.coerce.number().finite().positive(),
 });
 
+// Cadastro de matriz/filiais — só dá nome ao empresaId que aparece em todos os
+// outros datasets. `empresaId` não é `textoOpc`: ele é a CHAVE PRIMÁRIA da
+// tabela (o dataset é substituído por inteiro a cada envio, como estoque), e
+// duas linhas vazias colidiriam no createMany.
+const linhaEmpresa = z.object({
+  empresaId: z.string().min(1).max(255),
+  empresaFantasia: textoOpc,
+});
+
 const linhaEstoque = z.object({
   productId: texto,
   description: textoOpc,
@@ -219,7 +228,7 @@ export interface DefinicaoDataset {
   /** Delegate do Prisma Client, para o createMany. */
   delegate:
     | "saleItem" | "orcamentoItem" | "receivableItem" | "payableItem"
-    | "caixaItem" | "inventoryItem" | "cambioMensal" | "compraItem";
+    | "caixaItem" | "inventoryItem" | "cambioMensal" | "compraItem" | "empresaItem";
   schema: z.ZodType;
   /** Só para a mensagem de erro quando o lote é grande demais. */
   linhasTipicasPorMes: number;
@@ -285,6 +294,13 @@ export const DATASETS = {
     delegate: "cambioMensal",
     schema: linhaCambio,
     linhasTipicasPorMes: 500,
+  },
+  empresa: {
+    tabela: "empresa_items",
+    colunaData: null,
+    delegate: "empresaItem",
+    schema: linhaEmpresa,
+    linhasTipicasPorMes: 10,
   },
 } as const satisfies Record<string, DefinicaoDataset>;
 

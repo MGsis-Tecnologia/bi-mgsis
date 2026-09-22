@@ -328,3 +328,14 @@ FROM item_compra i
 WHERE p.compra_tipo::text IN ('COMPRA', 'DEVOLUCAO COMPRA', 'TRANSFERENCIA COMPRA', 'EXPORTACAO COMPRA')
   AND p.compra_status_estoque = true;
 
+-- ── bi_empresa ──
+-- Só dá NOME ao empresa_id que já aparece em toda venda, compra, título e
+-- movimento de caixa. Sem ela, o filtro de empresa do Analytics mostra só o
+-- código cru. É uma FOTO: vai inteira, com periodo = "tudo". Detalhe em
+-- bi_empresa.sql.
+CREATE OR REPLACE VIEW bi_empresa AS
+SELECT
+    COALESCE(empresa.empresa_id::text, '') AS empresa_id,
+    COALESCE(empresa.empresa_fantasia, '') AS empresa_fantasia
+FROM empresa;
+

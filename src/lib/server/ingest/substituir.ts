@@ -105,4 +105,6 @@ const CAMPO_DE_DATA: Record<NomeDataset, string> = {
   // Sem coluna de data para conferir: o câmbio vai sempre inteiro (periodo
   // "tudo"), então não existe recorte que uma linha possa violar.
   cambio: "",
+  // Idem: empresa é cadastro, não série — sempre inteiro.
+  empresa: "",
 };

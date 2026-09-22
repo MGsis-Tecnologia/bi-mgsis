@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { ArrowLeftRight, Boxes, CheckCircle2, CircleDollarSign, Clock, CreditCard, FileSpreadsheet, Landmark, Loader2, PackagePlus, ShoppingCart, Trash2, Upload, XCircle } from "lucide-react";
+import { ArrowLeftRight, Boxes, Building2, CheckCircle2, CircleDollarSign, Clock, CreditCard, FileSpreadsheet, Landmark, Loader2, PackagePlus, ShoppingCart, Trash2, Upload, XCircle } from "lucide-react";
 import { PageHeader } from "@/components/layout/page-header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -150,6 +150,7 @@ export default function ImportacaoPage() {
     orcamento: <FileSpreadsheet className="h-4 w-4 text-accent" />,
     compras: <PackagePlus className="h-4 w-4 text-accent" />,
     cambio: <ArrowLeftRight className="h-4 w-4 text-accent" />,
+    empresa: <Building2 className="h-4 w-4 text-accent" />,
   };
   const presentes = datasets.filter(d => d.present);
 
@@ -255,6 +256,7 @@ export default function ImportacaoPage() {
           <SchemaTable kind="orcamento" cols={ORCAMENTO_SCHEMA} />
           <SchemaTable kind="compras" cols={COMPRAS_SCHEMA} />
           <SchemaTable kind="cambio" cols={CAMBIO_SCHEMA} />
+          <SchemaTable kind="empresa" cols={EMPRESA_SCHEMA} />
         </CardContent>
       </Card>
     </div>
@@ -549,4 +551,9 @@ const CAMBIO_SCHEMA: SchemaCol[] = [
   { name: "moeda_origem",  type: "currency", example: "2" },
   { name: "moeda_destino", type: "currency", example: "3" },
   { name: "cambio_taxa",   type: "decimal",  example: "7350,00" },
+];
+
+const EMPRESA_SCHEMA: SchemaCol[] = [
+  { name: "empresa_id",        type: "key",  example: "1 / 2" },
+  { name: "empresa_fantasia",  type: "text", example: "Matriz / Filial Assunción" },
 ];

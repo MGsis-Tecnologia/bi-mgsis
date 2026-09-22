@@ -10,8 +10,12 @@ export interface OpcoesFiltro {
   canais: string[];
   subgrupos: { id: string; name: string }[];
   vendedores: { id: string; name: string }[];
-  /** empresa_id presentes em QUALQUER dataset — o filtro de empresa é global. */
-  empresas: string[];
+  /**
+   * empresa_id presentes em QUALQUER dataset — o filtro de empresa é global.
+   * `name` vem do dataset "empresa" (view bi_empresa); "" quando essa empresa
+   * ainda não foi enviada — o rótulo cai então no id cru (ver empresa-switcher).
+   */
+  empresas: { id: string; name: string }[];
   /**
    * Condições de pagamento dos títulos a receber. Só a tela de Receber usa: não
    * é um filtro global, mas a lista vem junto porque é o mesmo endpoint, já

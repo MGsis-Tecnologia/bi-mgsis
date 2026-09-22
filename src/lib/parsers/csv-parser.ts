@@ -4,6 +4,7 @@ import type {
   CaixaItem,
   CambioLinha,
   CompraLineItem,
+  EmpresaItem,
   InventoryItem,
   OrcamentoLineItem,
   OrderLineItem,
@@ -14,6 +15,7 @@ import type {
   StoredCambio,
   StoredCompras,
   StoredDataset,
+  StoredEmpresas,
   StoredInventory,
   StoredOrcamento,
   StoredPayables,
@@ -109,6 +111,12 @@ const COMPRAS_REQUIRED_COLS = [
   "moeda_id",
 ] as const;
 
+// Required column names for the EMPRESA layout (nome de cada matriz/filial)
+const EMPRESA_REQUIRED_COLS = [
+  "empresa_id",
+  "empresa_fantasia",
+] as const;
+
 /**
  * Câmbio: cada campo aceita mais de um nome de coluna.
  *
@@ -137,7 +145,7 @@ function primeiraColuna(colMap: Record<string, string>, nomes: readonly string[]
 
 export type DatasetKind =
   | "sales" | "receivable" | "payable" | "inventory" | "caixa" | "orcamento"
-  | "compras" | "cambio";
+  | "compras" | "cambio" | "empresa";
 
 /**
  * Um resultado carrega UM payload só — o que corresponde ao `kind`. Os demais
@@ -154,6 +162,7 @@ export interface ParseResult {
   orcamento?: StoredOrcamento | null;      // populated when kind === "orcamento"
   compras?: StoredCompras | null;          // populated when kind === "compras"
   cambio?: StoredCambio | null;            // populated when kind === "cambio"
+  empresas?: StoredEmpresas | null;        // populated when kind === "empresa"
   errors: string[];
   warnings: string[];
   skipped: number;
@@ -270,6 +279,11 @@ export function processRows(rawRows: Record<string, unknown>[], filename: string
   if (temTaxa && temOrigem && temDestino) {
     return processCambioRows(rawRows, colMap, filename);
   }
+  // Exclusivo: nenhum outro leiaute tem `empresa_fantasia` — nem mesmo
+  // `empresa_id`, sozinho, bastaria (está em quase todos os outros).
+  if ("empresa_fantasia" in colMap) {
+    return processEmpresaRows(rawRows, colMap, filename);
+  }
   if ("fornecedor_id" in colMap && ("pedido_documento" in colMap || "pedido_data" in colMap)) {
     return processComprasRows(rawRows, colMap, filename);
   }
@@ -303,7 +317,7 @@ export function processRows(rawRows: Record<string, unknown>[], filename: string
     "Leiaute não reconhecido. O arquivo deve conter colunas de Vendas (pedido_documento), " +
       "Compras (fornecedor_id), Contas a Receber (pessoa_cliente_id), Contas a Pagar " +
       "(pessoa_fornecedor_id), Estoque (estoque_item), Caixa (caixa_valor_documento), " +
-      "Orçamentos (orcamento_id) ou Câmbio (cambio_taxa). " +
+      "Orçamentos (orcamento_id), Câmbio (cambio_taxa) ou Empresas (empresa_fantasia). " +
       `Colunas encontradas no arquivo: ${encontradas.slice(0, 30).join(", ")}` +
       (encontradas.length > 30 ? `, … (+${encontradas.length - 30})` : ""),
   ]);
@@ -1044,6 +1058,63 @@ function processCambioRows(
   return {
     kind: "cambio",
     cambio: { items, importedAt: new Date().toISOString(), filename, rowCount: items.length },
+    errors: [],
+    warnings: warnings.slice(0, 20),
+    skipped,
+  };
+}
+
+// ─── EMPRESA (nome de cada matriz/filial) ────────────────────────────────────
+
+function processEmpresaRows(
+  rawRows: Record<string, unknown>[],
+  colMap: Record<string, string>,
+  filename: string
+): ParseResult {
+  const missing = EMPRESA_REQUIRED_COLS.filter((c) => !(c in colMap));
+  if (missing.length > 0) {
+    return errorResult([`Colunas obrigatórias ausentes (Empresas): ${missing.join(", ")}`]);
+  }
+
+  // Mapa, não array: empresaId é a CHAVE PRIMÁRIA na tabela (o dataset é
+  // substituído por inteiro, como estoque). Duas linhas com o mesmo id no
+  // arquivo colidiriam no createMany — aqui, a última ocorrência vence.
+  const map = new Map<string, EmpresaItem>();
+  const warnings: string[] = [];
+  let skipped = 0;
+  let duplicates = 0;
+  let rowNum = 1;
+
+  for (const rawRow of rawRows) {
+    rowNum++;
+    const row = mapRow(rawRow, colMap);
+
+    const empresaId = String(row["empresa_id"] ?? "").trim();
+    if (!empresaId) {
+      warnings.push(`Linha ${rowNum}: empresa_id vazio — ignorada.`);
+      skipped++;
+      continue;
+    }
+
+    if (map.has(empresaId)) duplicates++;
+    map.set(empresaId, {
+      empresaId,
+      empresaFantasia: String(row["empresa_fantasia"] ?? "").trim(),
+    });
+  }
+
+  const items = [...map.values()];
+  if (items.length === 0) {
+    return errorResult(["Nenhuma empresa válida encontrada."], warnings, skipped);
+  }
+
+  if (duplicates > 0) {
+    warnings.unshift(`${duplicates} empresa(s) duplicada(s) no arquivo — mantida a última ocorrência.`);
+  }
+
+  return {
+    kind: "empresa",
+    empresas: { items, importedAt: new Date().toISOString(), filename, rowCount: items.length },
     errors: [],
     warnings: warnings.slice(0, 20),
     skipped,

@@ -367,3 +367,15 @@ model CompraItem {
   @@index([empresaId], map: "idx_compra_empresa")
   @@map("compra_items")
 }
+
+/// Nome de cada matriz/filial (empresa_id) que aparece em todos os outros
+/// datasets — sem esta tabela o filtro de empresa das telas mostra só o código
+/// cru ("Empresa 1"). É uma FOTO como InventoryItem: a cada envio a tabela
+/// inteira é reescrita, e por isso empresaId já é a chave primária — não há
+/// segunda linha para o mesmo id.
+model EmpresaItem {
+  empresaId       String @id @default("") @map("empresa_id")
+  empresaFantasia String @default("") @map("empresa_fantasia")
+
+  @@map("empresa_items")
+}

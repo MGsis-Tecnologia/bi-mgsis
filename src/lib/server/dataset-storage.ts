@@ -8,14 +8,15 @@ import type {
   OrcamentoLineItem,
   CompraLineItem,
   CambioLinha,
+  EmpresaItem,
 } from "@/lib/types/dataset";
 
 export type DatasetKind =
   | "sales" | "receivable" | "payable" | "inventory" | "caixa" | "orcamento"
-  | "compras" | "cambio";
+  | "compras" | "cambio" | "empresa";
 
 const VALID_KINDS = new Set<DatasetKind>([
-  "sales", "receivable", "payable", "inventory", "caixa", "orcamento", "compras", "cambio",
+  "sales", "receivable", "payable", "inventory", "caixa", "orcamento", "compras", "cambio", "empresa",
 ]);
 
 export function isValidKind(s: string): s is DatasetKind {
@@ -76,6 +77,7 @@ const DELEGATE: Record<DatasetKind, string> = {
   orcamento: "orcamentoItem",
   compras: "compraItem",
   cambio: "cambioMensal",
+  empresa: "empresaItem",
 };
 
 /**
@@ -111,6 +113,7 @@ export async function clearRows(db: PrismaClient, kind: DatasetKind): Promise<vo
     // inteira numa transação só, derivando os sentidos. Limpar antes abriria
     // uma janela com as telas sem cotação nenhuma.
     case "cambio":     break;
+    case "empresa":    await db.empresaItem.deleteMany({}); break;
   }
 }
 
@@ -153,6 +156,12 @@ export async function insertRows(db: PrismaClient, kind: DatasetKind, rows: unkn
         // de um lote isolado). Quem chama acumula as linhas e reconstrói no
         // fim — ver importacao/processa.ts e a rota de ingestão.
         return 0;
+      case "empresa":
+        // empresaId é a chave primária: duas linhas com o mesmo id no arquivo
+        // colidiriam. `skipDuplicates` mantém a primeira ocorrência — como o
+        // arquivo inteiro entra num único createMany (poucas linhas), não há
+        // lote anterior para colidir com.
+        return (await db.empresaItem.createMany({ data: rows as EmpresaItem[], skipDuplicates: true })).count;
     }
   } catch (e) {
     console.error(`❌ Erro ao inserir ${kind}:`, e);
@@ -226,6 +235,9 @@ export async function getRows(db: PrismaClient, kind: DatasetKind, skip: number,
         take,
         orderBy: [{ competencia: "asc" }, { moedaOrigem: "asc" }, { moedaDestino: "asc" }],
       });
+    // Idem: sem `id` autoincrementado — a chave é o próprio empresaId.
+    case "empresa":
+      return db.empresaItem.findMany({ skip, take, orderBy: { empresaId: "asc" } });
   }
 }
 
