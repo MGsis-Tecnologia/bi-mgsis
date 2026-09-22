@@ -1,24 +1,33 @@
 "use client";
 
 import * as React from "react";
-import { Package, TrendingUp, ArrowRight, Layers, Tag } from "lucide-react";
+import { ArrowRight, ChevronRight, Download, Layers, Package, Tag, TrendingUp } from "lucide-react";
 import { PageHeader } from "@/components/layout/page-header";
 import { KpiCard } from "@/components/dashboard/kpi-card";
 import { EmptyState } from "@/components/dashboard/empty-state";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { BarChartH } from "@/components/charts/bar-chart-h";
 import { DonutChart } from "@/components/charts/donut-chart";
 import { Money } from "@/components/dashboard/money";
 import {
   useProdutosAnalytics,
+  useProdutosDaMarca,
   useProdutosPagina,
+  type MarcaABC,
   type ProdutoABC,
+  type ProdutoDaMarca,
   type ProdutoLucro,
+  type ProdutosDaMarcaView,
 } from "@/lib/hooks/use-produtos-analytics";
 import { formatNumber, formatPercent } from "@/lib/utils/format";
+import { exportarExcel } from "@/lib/utils/export-excel";
 import { cn } from "@/lib/utils";
 import { useTranslation } from "@/lib/hooks/use-translation";
+
+/** Acima disto o drill-down de uma marca sugere o Excel em vez da lista inteira — espelha o servidor. */
+const MAX_PRODUTOS_POR_MARCA = 500;
 
 /** Estável de propósito: um `[]` novo a cada render reiniciaria a paginação. */
 const SEM_LINHAS: never[] = [];
@@ -75,6 +84,13 @@ export default function ProdutosPage() {
   const lucroPag = useProdutosPagina<ProdutoLucro>(
     "lucro", data?.profitRanking ?? SEM_LINHAS, data?.profitTotals.count ?? 0, filtros
   );
+
+  // Curva ABC por marca: clicar na linha expande os produtos daquela marca,
+  // com curva LOCAL (participação sobre o total DA MARCA, não do catálogo).
+  // Uma marca aberta por vez — abrir outra fecha a anterior.
+  const [marcaAberta, setMarcaAberta] = React.useState<string | null>(null);
+  const toggleMarca = (id: string) => setMarcaAberta((atual) => (atual === id ? null : id));
+  const marcaDrill = useProdutosDaMarca(marcaAberta, filtros);
 
   if (error) {
     return (
@@ -434,30 +450,65 @@ export default function ProdutosPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
-                {marcaABC.map((m, i) => (
-                  <tr key={m.id} className="hover:bg-muted/30 transition-colors">
-                    <td className="py-2 px-5 font-mono text-xs text-muted-foreground tabular">
-                      {(i + 1).toString().padStart(2, "0")}
-                    </td>
-                    <td className="py-2 px-5 max-w-[280px] truncate font-medium">
-                      {m.name || <span className="text-muted-foreground">{t("produtos.marca.none")}</span>}
-                    </td>
-                    <td className="py-2 px-5 text-right tabular text-muted-foreground">{formatNumber(m.productCount)}</td>
-                    <td className="py-2 px-5 text-right tabular">{formatNumber(m.units)}</td>
-                    <td className="py-2 px-5 text-right tabular font-medium">
-                      <Money value={m.revenue} />
-                    </td>
-                    <td className="py-2 px-5 text-right tabular text-muted-foreground">
-                      {formatPercent(m.share, { decimals: 2 })}
-                    </td>
-                    <td className="py-2 px-5 text-right tabular text-muted-foreground">
-                      {formatPercent(m.cumulativeShare, { decimals: 1 })}
-                    </td>
-                    <td className="py-2 px-5">
-                      <CurvaBadge curve={m.curve} />
-                    </td>
-                  </tr>
-                ))}
+                {marcaABC.map((m, i) => {
+                  const aberta = marcaAberta === m.id;
+                  return (
+                    <React.Fragment key={m.id}>
+                      <tr
+                        role="button"
+                        tabIndex={0}
+                        aria-expanded={aberta}
+                        onClick={() => toggleMarca(m.id)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" || e.key === " ") {
+                            e.preventDefault();
+                            toggleMarca(m.id);
+                          }
+                        }}
+                        className={cn(
+                          "cursor-pointer transition-colors hover:bg-muted/30 focus-visible:bg-muted/30 focus-visible:outline-none",
+                          aberta && "bg-accent/5 hover:bg-accent/10"
+                        )}
+                      >
+                        <td className="py-2 px-5">
+                          <span className="inline-flex items-center gap-1.5 font-mono text-xs text-muted-foreground tabular">
+                            <ChevronRight
+                              className={cn(
+                                "h-3.5 w-3.5 shrink-0 text-muted-foreground/60 transition-transform",
+                                aberta && "rotate-90 text-foreground"
+                              )}
+                            />
+                            {(i + 1).toString().padStart(2, "0")}
+                          </span>
+                        </td>
+                        <td className="py-2 px-5 max-w-[280px] truncate font-medium">
+                          {m.name || <span className="text-muted-foreground">{t("produtos.marca.none")}</span>}
+                        </td>
+                        <td className="py-2 px-5 text-right tabular text-muted-foreground">{formatNumber(m.productCount)}</td>
+                        <td className="py-2 px-5 text-right tabular">{formatNumber(m.units)}</td>
+                        <td className="py-2 px-5 text-right tabular font-medium">
+                          <Money value={m.revenue} />
+                        </td>
+                        <td className="py-2 px-5 text-right tabular text-muted-foreground">
+                          {formatPercent(m.share, { decimals: 2 })}
+                        </td>
+                        <td className="py-2 px-5 text-right tabular text-muted-foreground">
+                          {formatPercent(m.cumulativeShare, { decimals: 1 })}
+                        </td>
+                        <td className="py-2 px-5">
+                          <CurvaBadge curve={m.curve} />
+                        </td>
+                      </tr>
+                      {aberta && (
+                        <tr className="bg-muted/10">
+                          <td colSpan={8} className="p-0">
+                            <ProdutosDaMarcaPainel marca={m} drill={marcaDrill} />
+                          </td>
+                        </tr>
+                      )}
+                    </React.Fragment>
+                  );
+                })}
               </tbody>
               <tfoot className="[&_td]:sticky [&_td]:bottom-0 [&_td]:z-10 [&_td]:bg-surface [&_td]:border-t [&_td]:border-border">
                 <tr className="text-[11px] font-medium">
@@ -481,6 +532,143 @@ export default function ProdutosPage() {
           </div>
         </CardContent>
       </Card>
+    </div>
+  );
+}
+
+/** Linhas do Excel de uma marca — números crus, o Excel formata sozinho. */
+function exportarProdutosDaMarcaExcel(nomeMarca: string, itens: ProdutoDaMarca[]) {
+  const linhas = itens.map((p) => ({
+    SKU: p.id,
+    Descrição: p.name,
+    Fabricante: p.manufacturerCode ?? "",
+    Categoria: p.subgroupName,
+    Unidades: p.units,
+    Receita: p.revenue,
+    "% da marca": Number((p.share * 100).toFixed(2)),
+    "Acumulado (%)": Number((p.cumulativeShare * 100).toFixed(1)),
+    Curva: p.curve,
+  }));
+
+  const agora = new Date();
+  const carimbo = [
+    agora.getFullYear(),
+    String(agora.getMonth() + 1).padStart(2, "0"),
+    String(agora.getDate()).padStart(2, "0"),
+  ].join("-");
+  // Nome de arquivo sem caractere problemático em disco (barra, dois-pontos etc.).
+  const slug = (nomeMarca || "sem-marca").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+  exportarExcel(`produtos-marca-${slug || "sem-marca"}-${carimbo}.xlsx`, "Produtos", linhas);
+}
+
+/**
+ * Produtos de uma marca, mostrados ao expandir a linha na Curva ABC por marca.
+ * Curva/participação são LOCAIS à marca — ver o comentário no servidor
+ * (getProdutosDaMarca). Sem paginação por rolagem: uma marca real tem no
+ * máximo algumas centenas de SKUs, cabe inteira num scroll simples.
+ */
+function ProdutosDaMarcaPainel({
+  marca,
+  drill,
+}: {
+  marca: MarcaABC;
+  drill: { data: ProdutosDaMarcaView | null; loading: boolean; error: string | null };
+}) {
+  const { t } = useTranslation();
+  const nomeMarca = marca.name || t("produtos.marca.none");
+  const { data, loading, error } = drill;
+
+  return (
+    <div className="border-l-2 border-accent/40 bg-muted/20 px-5 py-4">
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+        <div>
+          <p className="text-xs font-semibold text-foreground">{nomeMarca}</p>
+          <p className="text-[11px] text-muted-foreground">
+            {data ? `${formatNumber(data.total)} produto${data.total === 1 ? "" : "s"}` : "Carregando…"}
+          </p>
+        </div>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className="h-7 gap-1.5 text-xs"
+          disabled={!data || data.items.length === 0}
+          onClick={(e) => {
+            e.stopPropagation();
+            if (data) exportarProdutosDaMarcaExcel(nomeMarca, data.items);
+          }}
+        >
+          <Download className="h-3 w-3" />
+          Excel
+        </Button>
+      </div>
+
+      {error && <p className="text-xs text-negative">Não foi possível carregar: {error}</p>}
+
+      {loading && (
+        <div className="space-y-1.5">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} className="h-7 animate-pulse rounded bg-muted/40" />
+          ))}
+        </div>
+      )}
+
+      {!loading && data && data.items.length === 0 && (
+        <p className="text-xs text-muted-foreground">Nenhum produto encontrado para esta marca.</p>
+      )}
+
+      {!loading && data && data.items.length > 0 && (
+        <>
+          {data.truncado && (
+            <p className="mb-2 text-[11px] text-warning">
+              Mostrando os {formatNumber(MAX_PRODUTOS_POR_MARCA)} maiores de {formatNumber(data.total)} produtos —
+              baixe o Excel para a lista completa.
+            </p>
+          )}
+          <div className="max-h-[360px] overflow-auto rounded-md border border-border bg-surface">
+            <table className="w-full text-xs">
+              <thead className="sticky top-0 z-10 border-b border-border bg-surface">
+                <tr className="text-[10px] uppercase tracking-[0.12em] text-muted-foreground">
+                  <th className="py-1.5 px-3 text-left font-medium">Produto</th>
+                  <th className="py-1.5 px-3 text-left font-medium">Categoria</th>
+                  <th className="py-1.5 px-3 text-right font-medium">Unid.</th>
+                  <th className="py-1.5 px-3 text-right font-medium">Receita</th>
+                  <th className="py-1.5 px-3 text-right font-medium">% marca</th>
+                  <th className="py-1.5 px-3 text-right font-medium">Acum.</th>
+                  <th className="py-1.5 px-3 text-left font-medium">Curva</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {data.items.map((p) => (
+                  <tr key={p.id} className="hover:bg-muted/30">
+                    <td className="max-w-[220px] truncate py-1.5 px-3">
+                      <div className="font-medium text-foreground">{p.name}</div>
+                      <div className="font-mono text-[10px] text-muted-foreground">
+                        {p.id}
+                        {p.manufacturerCode && <span> · {p.manufacturerCode}</span>}
+                      </div>
+                    </td>
+                    <td className="py-1.5 px-3 text-muted-foreground">{p.subgroupName || "—"}</td>
+                    <td className="py-1.5 px-3 text-right tabular">{formatNumber(p.units)}</td>
+                    <td className="py-1.5 px-3 text-right tabular font-medium">
+                      <Money value={p.revenue} />
+                    </td>
+                    <td className="py-1.5 px-3 text-right tabular text-muted-foreground">
+                      {formatPercent(p.share, { decimals: 2 })}
+                    </td>
+                    <td className="py-1.5 px-3 text-right tabular text-muted-foreground">
+                      {formatPercent(p.cumulativeShare, { decimals: 1 })}
+                    </td>
+                    <td className="py-1.5 px-3">
+                      <CurvaBadge curve={p.curve} />
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </>
+      )}
     </div>
   );
 }

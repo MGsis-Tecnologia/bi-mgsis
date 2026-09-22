@@ -226,3 +226,90 @@ export function useProdutosPagina<T>(
 
   return { rows, total, hasMore, loadingMais, loadMore, error };
 }
+
+/** Um produto no drill-down de uma marca — curva LOCAL àquela marca, ver o servidor. */
+export interface ProdutoDaMarca {
+  id: string;
+  name: string;
+  subgroupName: string;
+  manufacturerCode: string | null;
+  units: number;
+  revenue: number;
+  share: number;
+  cumulativeShare: number;
+  curve: "A" | "B" | "C";
+}
+
+export interface ProdutosDaMarcaView {
+  items: ProdutoDaMarca[];
+  total: number;
+  truncado: boolean;
+}
+
+/**
+ * Produtos de UMA marca (Curva ABC por marca → clicar na linha para expandir).
+ *
+ * `marcaId === null` é "acordeão fechado": não busca nada. Guarda um cache em
+ * memória por (filtros, marcaId) — fechar e reabrir a mesma marca, ou trocar
+ * entre marcas já vistas, não refaz a consulta.
+ */
+export function useProdutosDaMarca(
+  marcaId: string | null,
+  filtros: FiltrosProdutos | null
+): { data: ProdutosDaMarcaView | null; loading: boolean; error: string | null } {
+  const [data, setData] = React.useState<ProdutosDaMarcaView | null>(null);
+  const [loading, setLoading] = React.useState(false);
+  const [error, setError] = React.useState<string | null>(null);
+  const cacheRef = React.useRef(new Map<string, ProdutosDaMarcaView>());
+
+  // Filtro novo invalida o cache inteiro: os números de cada marca mudam junto.
+  const chaveFiltros = filtros ? JSON.stringify(filtros) : null;
+  React.useEffect(() => {
+    cacheRef.current.clear();
+  }, [chaveFiltros]);
+
+  React.useEffect(() => {
+    setError(null);
+    if (marcaId === null || !filtros) {
+      setData(null);
+      setLoading(false);
+      return;
+    }
+
+    const chave = `${chaveFiltros}::${marcaId}`;
+    const guardado = cacheRef.current.get(chave);
+    if (guardado) {
+      setData(guardado);
+      setLoading(false);
+      return;
+    }
+
+    const ctrl = new AbortController();
+    setData(null);
+    setLoading(true);
+
+    fetch("/api/analytics/produtos", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ...filtros, tabela: "marca", marcaId }),
+      signal: ctrl.signal,
+    })
+      .then((res) => leJson<ProdutosDaMarcaView>(res))
+      .then((r) => {
+        if (ctrl.signal.aborted) return;
+        cacheRef.current.set(chave, r);
+        setData(r);
+      })
+      .catch((err: Error) => {
+        if (err.name !== "AbortError") setError(err.message);
+      })
+      .finally(() => {
+        if (!ctrl.signal.aborted) setLoading(false);
+      });
+
+    return () => ctrl.abort();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [marcaId, chaveFiltros]);
+
+  return { data, loading, error };
+}

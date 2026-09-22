@@ -51,6 +51,24 @@ export interface MarcaABC {
   curve: "A" | "B" | "C";
 }
 
+/**
+ * Um produto dentro do drill-down de uma marca (Curva ABC por marca → clicar
+ * na linha). `share`/`cumulativeShare`/`curve` são LOCAIS: calculados sobre o
+ * total DAQUELA marca, não do catálogo inteiro — é a pergunta "quais produtos
+ * sustentam 80% da receita desta marca", não a curva geral.
+ */
+export interface ProdutoDaMarca {
+  id: string;
+  name: string;
+  subgroupName: string;
+  manufacturerCode: string | null;
+  units: number;
+  revenue: number;
+  share: number;
+  cumulativeShare: number;
+  curve: "A" | "B" | "C";
+}
+
 export interface ProdutoLucro {
   productId: string;
   productName: string;
@@ -390,6 +408,82 @@ export async function getProdutosData(
     ...l,
     totalProducts: total,
     hasData,
+  };
+}
+
+/**
+ * Acima disto a lista não é devolvida — o acordeão sugere baixar o Excel em
+ * vez de renderizar centenas de linhas de uma vez. Marcas de verdade nunca
+ * chegam nem perto; quem pode é o balde "Sem marca" (id `""`), que junta todo
+ * produto vendido sem marca informada.
+ */
+export const MAX_PRODUTOS_POR_MARCA = 500;
+
+export interface ProdutosDaMarca {
+  items: ProdutoDaMarca[];
+  total: number;
+  /** `total` > {@link MAX_PRODUTOS_POR_MARCA} — a lista veio cortada. */
+  truncado: boolean;
+}
+
+/**
+ * Produtos de UMA marca, com curva ABC local (ver {@link ProdutoDaMarca}).
+ *
+ * Sem paginação por rolagem de propósito: ao contrário do catálogo inteiro
+ * (que pode ter dezenas de milhares de produtos), uma marca real tem no máximo
+ * algumas centenas — cabe inteira numa consulta e num scroll simples. O balde
+ * "Sem marca" é a exceção, coberto pelo corte em {@link MAX_PRODUTOS_POR_MARCA}.
+ */
+export async function getProdutosDaMarca(
+  db: PrismaClient,
+  f: AnalyticsFilters,
+  marcaId: string
+): Promise<ProdutosDaMarca> {
+  const p = new Params();
+  const prefixo = comPedidos(f, p, escopo);
+  const idBusca = p.add(marcaId);
+  const lim = p.add(MAX_PRODUTOS_POR_MARCA);
+  const sql = `${prefixo},
+    agg AS (
+      SELECT product_id AS id, MIN(product_name) AS name,
+             MIN(subgroup_name) AS subgroup_name,
+             SUM(total) AS revenue, SUM(quantity) AS units
+      FROM l WHERE brand_id = ${idBusca} GROUP BY product_id
+    ),
+    tot AS (SELECT NULLIF(SUM(revenue), 0) AS total FROM agg),
+    classificado AS (
+      SELECT a.*,
+             COALESCE(a.revenue / t.total, 0) AS share,
+             COALESCE(SUM(a.revenue) OVER (ORDER BY a.revenue DESC, a.id) / t.total, 0) AS cum
+      FROM agg a CROSS JOIN tot t
+    )
+    SELECT (SELECT COUNT(*)::int FROM classificado) AS total_produtos,
+           (SELECT COALESCE(json_agg(x ORDER BY x.revenue DESC, x.id), '[]'::json) FROM (
+              SELECT t.id, t.name, t.subgroup_name, t.units, t.revenue, t.share, t.cum,
+                     CASE WHEN t.cum <= 0.8 THEN 'A' WHEN t.cum <= 0.95 THEN 'B' ELSE 'C' END AS curve,
+                     ${MFR} AS mfr
+              FROM classificado t ORDER BY t.revenue DESC, t.id LIMIT ${lim}
+            ) x) AS itens`;
+  const [row] = await consultaAnalitica<{ total_produtos: number; itens: unknown[] }>(db, sql, p.values);
+  const itens = (row?.itens ?? []) as {
+    id: string; name: string; subgroup_name: string; units: unknown; revenue: unknown;
+    share: unknown; cum: unknown; curve: string; mfr: string | null;
+  }[];
+  const total = row?.total_produtos ?? 0;
+  return {
+    items: itens.map((r) => ({
+      id: r.id,
+      name: r.name,
+      subgroupName: r.subgroup_name,
+      manufacturerCode: r.mfr,
+      units: Number(r.units),
+      revenue: Number(r.revenue),
+      share: Number(r.share),
+      cumulativeShare: Number(r.cum),
+      curve: r.curve as "A" | "B" | "C",
+    })),
+    total,
+    truncado: total > MAX_PRODUTOS_POR_MARCA,
   };
 }
 
