@@ -12,8 +12,9 @@ import {
 /**
  * Agregações da tela de Estoque.
  *
- * É a única que cruza duas tabelas grandes: o snapshot `inventory_items`
- * (111.970 linhas) e o movimento de `sale_items` no período. Mandar as linhas
+ * É a única que cruza tabelas grandes: o snapshot `inventory_items`
+ * (111.970 linhas), o movimento de `sale_items` no período, e — só para a data
+ * de última compra — `compra_items`. Mandar as linhas
  * para o navegador está fora de questão — são 76.708 SKUs —, então a busca por
  * texto e o filtro de situação também passam a ser resolvidos aqui, e a tabela
  * volta paginada.
@@ -88,6 +89,31 @@ function coverageBucketRankCase(stock: string, demand: string, days: string): st
   return `CASE\n           ${whens}\n           ELSE ${COVERAGE_BUCKETS.length - 1}\n         END`;
 }
 
+/**
+ * As faixas de "há quanto tempo foi a última compra", no mesmo padrão das de
+ * cobertura — mesmas cinco janelas (1/2/4/6/12 meses) — mais uma faixa própria
+ * para quem nunca teve compra registrada. Existe para o filtro da tabela: quem
+ * acabou de repor um item recém-comprado não precisa reexaminá-lo como Excesso
+ * agora, e essa decisão é do usuário, não de um limiar fixo no código.
+ */
+const LAST_PURCHASE_BUCKETS: { key: string; test: (dias: string) => string }[] = [
+  { key: "sem_compra", test: (dias) => `${dias} IS NULL` },
+  { key: "ate_1", test: (dias) => `${dias} / ${DAYS_PER_MONTH} <= 1` },
+  { key: "1_2", test: (dias) => `${dias} / ${DAYS_PER_MONTH} <= 2` },
+  { key: "2_4", test: (dias) => `${dias} / ${DAYS_PER_MONTH} <= 4` },
+  { key: "4_6", test: (dias) => `${dias} / ${DAYS_PER_MONTH} <= 6` },
+  { key: "6_12", test: (dias) => `${dias} / ${DAYS_PER_MONTH} <= 12` },
+  { key: "mais_12", test: () => "true" },
+];
+
+/** CASE que devolve a CHAVE da faixa de última compra ('sem_compra' ... 'mais_12'). */
+function lastPurchaseBucketCase(dias: string): string {
+  const whens = LAST_PURCHASE_BUCKETS.slice(0, -1)
+    .map((b) => `WHEN ${b.test(dias)} THEN '${b.key}'`)
+    .join("\n           ");
+  return `CASE\n           ${whens}\n           ELSE '${LAST_PURCHASE_BUCKETS.at(-1)!.key}'\n         END`;
+}
+
 export type StockStatus = "rupture" | "risk" | "normal" | "excess" | "no_movement";
 
 export interface EstoqueRow {
@@ -105,12 +131,16 @@ export interface EstoqueRow {
   costSold: number;
   ordersCount: number;
   lastSaleDate: string;
+  /** "" = nenhuma compra registrada (fora do que o agente enviou, ou nunca comprado). */
+  lastPurchaseDate: string;
   /** null = nunca vendido (o `Infinity` do código antigo não sobrevive a JSON). */
   coverageDays: number | null;
   avgDailyDemand: number;
   status: StockStatus;
   /** Mesma faixa do donut de cobertura ('sem_cobertura' ... 'mais_12'), agora por linha. */
   coverageBucket: string;
+  /** Faixa de última compra ('sem_compra' ... 'mais_12') — ver LAST_PURCHASE_BUCKETS. */
+  lastPurchaseBucket: string;
   hasInventory: boolean;
 }
 
@@ -158,6 +188,8 @@ export interface OpcoesEstoque {
   status: StockStatus | "all";
   /** Faixa de cobertura ('sem_cobertura' ... 'mais_12') ou 'all'. */
   coverageBucket: string;
+  /** Faixa de última compra ('sem_compra' ... 'mais_12') ou 'all'. */
+  lastPurchaseBucket: string;
   busca: string;
 }
 
@@ -338,9 +370,30 @@ export async function getEstoqueData(
           JOIN sale_items s ON s.id = k.id`,
   });
 
+  // Última compra de cada SKU — para a coluna "Última compra" e o filtro por
+  // faixa. Só pedidos do tipo COMPRA (devolução e transferência não são
+  // reposição). Sem filtro de moeda: é uma data, não um valor a converter.
+  // Com "todas as empresas", o MAX cobre as duas — a mais recente vence, igual
+  // ao resto do pipeline quando consolida por produto.
+  const pCompra = new Params();
+  const condCompra: string[] = ["pedido_tipo = 'COMPRA'"];
+  if (f.empresaId !== "all") condCompra.push(`empresa_id = ${pCompra.add(f.empresaId)}`);
+  passos.push({
+    nome: "e_compra",
+    params: pCompra.values,
+    sql: `SELECT produto_id AS product_id, MAX(pedido_data) AS ultima_compra
+          FROM compra_items
+          WHERE ${condCompra.join(" AND ")}
+          GROUP BY produto_id`,
+  });
+
   const pFin = new Params();
   const diasFin = pFin.add(periodDays);
   const diasFin2 = pFin.add(periodDays);
+  // Dias desde a última compra são contados contra HOJE (o relógio do
+  // cliente), não contra o fim do período filtrado — "recém-comprado" é uma
+  // pergunta sobre agora, não sobre o recorte de datas em análise.
+  const hojeCompra = pFin.add(o.hoje);
   passos.push({
     nome: "e_fin",
     params: pFin.values,
@@ -359,6 +412,7 @@ export async function getEstoqueData(
            COALESCE(mov.cost_sold, 0)    AS cost_sold,
            COALESCE(mov.orders_count, 0) AS orders_count,
            COALESCE(mov.last_sale, '')   AS last_sale_date,
+           COALESCE(ec.ultima_compra, '') AS last_purchase_date,
            -- ord reproduz a ordem de inserção do array antigo: o snapshot
            -- primeiro (na ordem da tabela), depois os SKUs ausentes dele. Os
            -- sort do JS são estáveis, então é isso que desempatava antes.
@@ -366,6 +420,7 @@ export async function getEstoqueData(
     FROM e_inv inv
     LEFT JOIN e_mov mov ON mov.product_id = inv.product_id
     LEFT JOIN e_cat cat ON cat.product_id = inv.product_id
+    LEFT JOIN e_compra ec ON ec.product_id = inv.product_id
 
     UNION ALL
 
@@ -376,10 +431,12 @@ export async function getEstoqueData(
            0 AS stock, 0 AS min_stock, 0 AS cost_total,
            mov.units_sold, mov.revenue_sold, mov.cost_sold, mov.orders_count,
            COALESCE(mov.last_sale, '') AS last_sale_date,
+           COALESCE(ec.ultima_compra, '') AS last_purchase_date,
            false AS has_inventory,
            2000000000 + row_number() OVER (ORDER BY mov.product_id) AS ord
     FROM e_mov mov
     LEFT JOIN e_cat cat ON cat.product_id = mov.product_id
+    LEFT JOIN e_compra ec ON ec.product_id = mov.product_id
     WHERE NOT EXISTS (SELECT 1 FROM e_inv inv WHERE inv.product_id = mov.product_id)
       -- Venda inteira devolvida no período não é "vendeu": sem isso o SKU
       -- viraria ruptura com saída zero.
@@ -395,7 +452,10 @@ export async function getEstoqueData(
            CASE WHEN b.stock > 0 AND b.units_sold > 0
                 THEN b.stock / (b.units_sold / ${diasFin2}::double precision)
            END AS coverage_days,
-           CASE WHEN b.stock > 0 THEN b.cost_total / b.stock ELSE 0 END AS unit_cost
+           CASE WHEN b.stock > 0 THEN b.cost_total / b.stock ELSE 0 END AS unit_cost,
+           CASE WHEN b.last_purchase_date <> ''
+                THEN (${hojeCompra}::date - b.last_purchase_date::date)
+           END AS dias_desde_compra
     FROM base b
   )
   SELECT c.*,
@@ -409,7 +469,8 @@ export async function getEstoqueData(
            ELSE 'normal'
          END AS status,
          ${coverageBucketCase("c.stock", "c.avg_daily_demand", "c.coverage_days")} AS coverage_bucket,
-         ${coverageBucketRankCase("c.stock", "c.avg_daily_demand", "c.coverage_days")} AS bucket_rank
+         ${coverageBucketRankCase("c.stock", "c.avg_daily_demand", "c.coverage_days")} AS bucket_rank,
+         ${lastPurchaseBucketCase("c.dias_desde_compra")} AS last_purchase_bucket
   FROM calc c`,
   });
 
@@ -530,12 +591,14 @@ export async function getEstoqueData(
     costSold: Number(x.cost_sold),
     ordersCount: Number(x.orders_count),
     lastSaleDate: String(x.last_sale_date ?? ""),
+    lastPurchaseDate: String(x.last_purchase_date ?? ""),
     coverageDays: x.coverage_days === null || x.coverage_days === undefined
       ? null
       : Number(x.coverage_days),
     avgDailyDemand: Number(x.avg_daily_demand),
     status: x.status as StockStatus,
     coverageBucket: String(x.coverage_bucket),
+    lastPurchaseBucket: String(x.last_purchase_bucket ?? "sem_compra"),
     hasInventory: Boolean(x.has_inventory),
   });
 
@@ -601,6 +664,7 @@ function filtroTabela(o: OpcoesEstoque, p: Params): string {
   const cond: string[] = [];
   if (o.status !== "all") cond.push(`status = ${p.add(o.status)}`);
   if (o.coverageBucket !== "all") cond.push(`coverage_bucket = ${p.add(o.coverageBucket)}`);
+  if (o.lastPurchaseBucket !== "all") cond.push(`last_purchase_bucket = ${p.add(o.lastPurchaseBucket)}`);
   const q = o.busca.trim();
   if (q) {
     const alvo = p.add(`%${q.replace(/([%_\\])/g, "\\$1").toLowerCase()}%`);

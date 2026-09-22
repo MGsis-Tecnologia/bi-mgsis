@@ -28,6 +28,8 @@ export type { StockStatus };
 export interface EstoqueRow extends Omit<EstoqueRowServidor, "coverageDays"> {
   coverageDays: number;
   daysSinceLastSale: number;
+  /** `Infinity` quando nunca houve compra registrada (mesma convenção de `daysSinceLastSale`). */
+  daysSincePurchase: number;
 }
 
 /** Dias por mês usado só pra exibição (coluna Cobertura em meses) — mesmo valor do servidor. */
@@ -35,12 +37,17 @@ export const DAYS_PER_MONTH = 30.44;
 
 function paraTela(r: EstoqueRowServidor, agora: number): EstoqueRow {
   const ts = r.lastSaleDate ? new Date(r.lastSaleDate + "T00:00:00").getTime() : 0;
+  const tsCompra = r.lastPurchaseDate ? new Date(r.lastPurchaseDate + "T00:00:00").getTime() : 0;
   return {
     ...r,
     coverageDays: r.coverageDays === null ? Number.POSITIVE_INFINITY : r.coverageDays,
     daysSinceLastSale:
       ts > 0
         ? Math.max(0, Math.floor((agora - ts) / 86400000))
+        : Number.POSITIVE_INFINITY,
+    daysSincePurchase:
+      tsCompra > 0
+        ? Math.max(0, Math.floor((agora - tsCompra) / 86400000))
         : Number.POSITIVE_INFINITY,
   };
 }
@@ -58,6 +65,22 @@ export const STATUS_ORDER: StockStatus[] = ["rupture", "risk", "normal", "excess
 const COVERAGE_ORDER: { key: string; label: string }[] = [
   { key: "sem_cobertura", label: "Sem cobertura" },
   { key: "fora_analise", label: "Fora de análise" },
+  { key: "ate_1", label: "Até 1 mês" },
+  { key: "1_2", label: "1 a 2 meses" },
+  { key: "2_4", label: "2 a 4 meses" },
+  { key: "4_6", label: "4 a 6 meses" },
+  { key: "6_12", label: "6 a 12 meses" },
+  { key: "mais_12", label: "Mais de 12 meses" },
+];
+
+/**
+ * Faixas do filtro "Última compra" — mesmo padrão da Cobertura (as cinco
+ * janelas de 1/2/4/6/12 meses), mas sem contagem por opção: ao contrário de
+ * Status e Cobertura, o servidor não devolve quantos SKUs caem em cada uma.
+ * Um seletor estático é suficiente porque a lista de opções não muda.
+ */
+export const LAST_PURCHASE_ORDER: { key: string; label: string }[] = [
+  { key: "sem_compra", label: "Sem compra registrada" },
   { key: "ate_1", label: "Até 1 mês" },
   { key: "1_2", label: "1 a 2 meses" },
   { key: "2_4", label: "2 a 4 meses" },
@@ -90,6 +113,7 @@ function iso(d: Date): string {
 export function useEstoqueAnalytics(opcoes: {
   status: StockStatus | "all";
   coverageBucket: string;
+  lastPurchaseBucket: string;
   busca: string;
 }): { data: EstoqueView | null; loading: boolean; error: string | null } {
   const preset = useFilters((s) => s.preset);
@@ -127,9 +151,13 @@ export function useEstoqueAnalytics(opcoes: {
       hoje: iso(new Date()),
       status: opcoes.status,
       coverageBucket: opcoes.coverageBucket,
+      lastPurchaseBucket: opcoes.lastPurchaseBucket,
       busca: buscaAdiada,
     }),
-    [range, currency, empresaId, channel, sellerId, subgroupId, opcoes.status, opcoes.coverageBucket, buscaAdiada]
+    [
+      range, currency, empresaId, channel, sellerId, subgroupId,
+      opcoes.status, opcoes.coverageBucket, opcoes.lastPurchaseBucket, buscaAdiada,
+    ]
   );
 
   React.useEffect(() => {

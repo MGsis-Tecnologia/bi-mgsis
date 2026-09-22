@@ -31,6 +31,7 @@ import { Money } from "@/components/dashboard/money";
 import type { AppCurrencyId } from "@/lib/types/dataset";
 import {
   DAYS_PER_MONTH,
+  LAST_PURCHASE_ORDER,
   STATUS_ORDER,
   statusLabel,
   useEstoqueAnalytics,
@@ -48,13 +49,16 @@ export default function EstoquePage() {
 
   const [statusFilter, setStatusFilter] = React.useState<StockStatus | "all">("all");
   const [coverageFilter, setCoverageFilter] = React.useState<string>("all");
+  const [lastPurchaseFilter, setLastPurchaseFilter] = React.useState<string>("all");
   const [query, setQuery] = React.useState("");
 
-  // Busca, situação e faixa de cobertura vão para o servidor: são 76 mil SKUs,
-  // o navegador não tem a lista pra filtrar — só pra rolar (virtualizado).
+  // Busca, situação, faixa de cobertura e última compra vão para o servidor:
+  // são 76 mil SKUs, o navegador não tem a lista pra filtrar — só pra rolar
+  // (virtualizado).
   const { data, loading, error } = useEstoqueAnalytics({
     status: statusFilter,
     coverageBucket: coverageFilter,
+    lastPurchaseBucket: lastPurchaseFilter,
     busca: query,
   });
 
@@ -502,13 +506,16 @@ export default function EstoquePage() {
                 <CardTitle>Detalhamento por SKU</CardTitle>
                 <p className="mt-0.5 text-[11px] text-muted-foreground">
                   {formatNumber(data.rowsTotal)} de {formatNumber(totals.skus)} itens
-                  {(statusFilter !== "all" || coverageFilter !== "all") && (
+                  {(statusFilter !== "all" || coverageFilter !== "all" || lastPurchaseFilter !== "all") && (
                     <>
                       {" · filtro: "}
                       {[
                         statusFilter !== "all" ? statusLabel(statusFilter) : null,
                         coverageFilter !== "all"
                           ? (data.coverage.find((c) => c.key === coverageFilter)?.label ?? coverageFilter)
+                          : null,
+                        lastPurchaseFilter !== "all"
+                          ? (LAST_PURCHASE_ORDER.find((c) => c.key === lastPurchaseFilter)?.label ?? lastPurchaseFilter)
                           : null,
                       ]
                         .filter(Boolean)
@@ -558,6 +565,17 @@ export default function EstoquePage() {
                   <SelectContent>
                     <SelectItem value="all">Todas as faixas</SelectItem>
                     {data.coverage.map((c) => (
+                      <SelectItem key={c.key} value={c.key}>{c.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Select value={lastPurchaseFilter} onValueChange={setLastPurchaseFilter}>
+                  <SelectTrigger className="h-8 w-[170px] text-xs">
+                    <SelectValue placeholder="Última compra" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Última compra: todas</SelectItem>
+                    {LAST_PURCHASE_ORDER.map((c) => (
                       <SelectItem key={c.key} value={c.key}>{c.label}</SelectItem>
                     ))}
                   </SelectContent>
@@ -737,6 +755,7 @@ function exportarEstoqueExcel(rows: InventoryRow[], displayCode: string) {
       Receita: r.revenueSold > 0 ? r.revenueSold : "",
       "Cobertura (meses)": meses,
       "Cobertura (anos)": anos,
+      "Última compra": r.lastPurchaseDate || "",
       "Última saída": r.lastSaleDate || "",
       "Há dias": Number.isFinite(r.daysSinceLastSale) ? r.daysSinceLastSale : "",
       Status: statusLabel(r.status),
@@ -774,8 +793,8 @@ function CoverageCell({ row }: { row: InventoryRow }) {
 }
 
 type ColunaSkuId =
-  | "sku" | "fabricante" | "descricao" | "categoria" | "estoque" | "minimo"
-  | "custo" | "saidas" | "receita" | "cobertura" | "ultSaida" | "status";
+  | "sku" | "fabricante" | "descricao" | "categoria" | "estoque"
+  | "custo" | "saidas" | "receita" | "cobertura" | "ultimaCompra" | "ultSaida" | "status";
 type DirecaoOrdem = "asc" | "desc";
 interface OrdemSku { col: ColunaSkuId; dir: DirecaoOrdem }
 
@@ -813,7 +832,14 @@ function textoOrdenavel(s: string): string | null {
  *
  * Cada largura comporta o valor mais largo ("US$ 8.448,16" em Custo) e o
  * cabeçalho em maiúsculas MAIS a seta de ordenação (16px reservados sempre, para
- * o cabeçalho não "pular" ao ordenar). Soma: 1352px.
+ * o cabeçalho não "pular" ao ordenar). Soma: 1392px.
+ *
+ * "Mínimo" saiu daqui em favor de "Última compra" (22/09/2026) — hoje pouco
+ * cliente preenche estoque mínimo, e quem precisa dele continua tendo a seção
+ * "SKUs abaixo do mínimo" mais acima na tela, com tabela própria. "Última
+ * compra" existe para o mesmo problema que motivou o filtro de mesmo nome no
+ * cabeçalho: um item com estoque alto porque acabou de ser reposto não é
+ * excesso de verdade — a data sozinha já avisa isso, sem exigir cálculo novo.
  */
 const COLUNAS_SKU: ColunaSku[] = [
   // SKU numérico ordena como número (9 vem antes de 10); alfanumérico, como texto.
@@ -827,8 +853,6 @@ const COLUNAS_SKU: ColunaSku[] = [
     chave: (r) => textoOrdenavel(r.subgroupName) },
   { id: "estoque", rotulo: () => "Estoque", align: "right", largura: 86, primeira: "desc",
     chave: (r) => r.stock },
-  { id: "minimo", rotulo: () => "Mínimo", align: "right", largura: 78, primeira: "desc",
-    chave: (r) => (r.minStock > 0 ? r.minStock : null) },
   { id: "custo", rotulo: (m) => `Custo ${m}`, align: "right", largura: 120, primeira: "desc",
     chave: (r) => r.costTotalUSD },
   { id: "saidas", rotulo: () => "Saídas", align: "right", largura: 80, primeira: "desc",
@@ -838,6 +862,10 @@ const COLUNAS_SKU: ColunaSku[] = [
   // Igual ao que CoverageCell mostra: estoque zerado é "0m"; sem cobertura é "—".
   { id: "cobertura", rotulo: () => "Cobertura", align: "right", largura: 104, primeira: "desc",
     chave: (r) => (r.stock <= 0 ? 0 : Number.isFinite(r.coverageDays) ? r.coverageDays : null) },
+  // Data ISO, sem o "· há Nd" que Últ. saída tem — isso vira dica ao passar o
+  // mouse, pra não repetir a largura de 150px por uma segunda coluna de data.
+  { id: "ultimaCompra", rotulo: () => "Últ. compra", align: "right", largura: 118, primeira: "desc",
+    chave: (r) => r.lastPurchaseDate || null },
   // Data ISO: a comparação de texto já é a cronológica.
   { id: "ultSaida", rotulo: () => "Últ. saída", align: "right", largura: 150, primeira: "desc",
     chave: (r) => r.lastSaleDate || null },
@@ -1094,15 +1122,6 @@ function VirtualizedSkuTable({
                   {r.subgroupName || "—"}
                 </div>
                 <div className="py-2 px-3 text-right tabular">{formatNumber(r.stock)}</div>
-                <div className="py-2 px-3 text-right tabular text-muted-foreground">
-                  {r.minStock > 0 ? (
-                    <span className={cn(r.stock <= r.minStock && "text-warning font-medium")}>
-                      {formatNumber(r.minStock)}
-                    </span>
-                  ) : (
-                    "—"
-                  )}
-                </div>
                 <div className="py-2 px-3 text-right tabular font-medium">
                   {formatCurrency(r.costTotalUSD, currency, { compact: r.costTotalUSD >= 10000 })}
                 </div>
@@ -1114,6 +1133,16 @@ function VirtualizedSkuTable({
                 </div>
                 <div className="py-2 px-3 text-right tabular">
                   <CoverageCell row={r} />
+                </div>
+                <div
+                  className="py-2 px-3 truncate text-right tabular text-xs text-muted-foreground"
+                  title={
+                    r.lastPurchaseDate && Number.isFinite(r.daysSincePurchase)
+                      ? `Última compra há ${r.daysSincePurchase} dia${r.daysSincePurchase === 1 ? "" : "s"}`
+                      : undefined
+                  }
+                >
+                  {r.lastPurchaseDate || "—"}
                 </div>
                 <div className="py-2 px-3 truncate text-right tabular text-xs text-muted-foreground">
                   {r.lastSaleDate
