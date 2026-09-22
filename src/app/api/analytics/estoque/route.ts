@@ -28,6 +28,7 @@ const corpoSchema = z.object({
   lastPurchaseBucket: z
     .enum(["all", "sem_compra", "ate_1", "1_2", "2_4", "4_6", "6_12", "mais_12"])
     .default("all"),
+  fornecedorId: z.string().max(255).default("all"),
   busca: z.string().max(120).default(""),
 });
 
@@ -70,6 +71,7 @@ export async function POST(req: NextRequest) {
     status: corpo.status,
     coverageBucket: corpo.coverageBucket,
     lastPurchaseBucket: corpo.lastPurchaseBucket,
+    fornecedorId: corpo.fornecedorId,
     busca: corpo.busca,
   });
 

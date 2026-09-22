@@ -13,8 +13,8 @@ import {
  * Agregações da tela de Estoque.
  *
  * É a única que cruza tabelas grandes: o snapshot `inventory_items`
- * (111.970 linhas), o movimento de `sale_items` no período, e — só para a data
- * de última compra — `compra_items`. Mandar as linhas
+ * (111.970 linhas), o movimento de `sale_items` no período, e — para a data de
+ * última compra e o filtro por fornecedor — `compra_items`. Mandar as linhas
  * para o navegador está fora de questão — são 76.708 SKUs —, então a busca por
  * texto e o filtro de situação também passam a ser resolvidos aqui, e a tabela
  * volta paginada.
@@ -114,6 +114,9 @@ function lastPurchaseBucketCase(dias: string): string {
   return `CASE\n           ${whens}\n           ELSE '${LAST_PURCHASE_BUCKETS.at(-1)!.key}'\n         END`;
 }
 
+/** Valor do filtro de fornecedor para "SKU sem nenhuma compra registrada". */
+export const SEM_FORNECEDOR = "__none__";
+
 export type StockStatus = "rupture" | "risk" | "normal" | "excess" | "no_movement";
 
 export interface EstoqueRow {
@@ -190,6 +193,14 @@ export interface OpcoesEstoque {
   coverageBucket: string;
   /** Faixa de última compra ('sem_compra' ... 'mais_12') ou 'all'. */
   lastPurchaseBucket: string;
+  /**
+   * Fornecedor do SKU: "all", o id exato, ou {@link SEM_FORNECEDOR}. Regra do
+   * usuário: quem forneceu (pedido_tipo = 'COMPRA') o produto UMA vez fica
+   * associado a ele para sempre — sem prazo de validade, sem "principal"
+   * (é N:N, diferente da regra de fornecedor-principal do Comparativo/tela de
+   * Fornecedores). Devolução e transferência de compra não contam.
+   */
+  fornecedorId: string;
   busca: string;
 }
 
@@ -385,6 +396,21 @@ export async function getEstoqueData(
           FROM compra_items
           WHERE ${condCompra.join(" AND ")}
           GROUP BY produto_id`,
+  });
+
+  // Fornecedores do SKU, para o filtro por fornecedor da tabela — ver a nota em
+  // OpcoesEstoque.fornecedorId. Uma linha por (produto, fornecedor): é
+  // semi-join em filtroTabela, não agregação, porque a relação é N:N (um
+  // produto pode ter vários fornecedores ao longo do tempo).
+  const pForn = new Params();
+  const condForn: string[] = ["pedido_tipo = 'COMPRA'"];
+  if (f.empresaId !== "all") condForn.push(`empresa_id = ${pForn.add(f.empresaId)}`);
+  passos.push({
+    nome: "e_forn",
+    params: pForn.values,
+    sql: `SELECT DISTINCT produto_id AS product_id, fornecedor_id
+          FROM compra_items
+          WHERE ${condForn.join(" AND ")}`,
   });
 
   const pFin = new Params();
@@ -665,6 +691,13 @@ function filtroTabela(o: OpcoesEstoque, p: Params): string {
   if (o.status !== "all") cond.push(`status = ${p.add(o.status)}`);
   if (o.coverageBucket !== "all") cond.push(`coverage_bucket = ${p.add(o.coverageBucket)}`);
   if (o.lastPurchaseBucket !== "all") cond.push(`last_purchase_bucket = ${p.add(o.lastPurchaseBucket)}`);
+  if (o.fornecedorId === SEM_FORNECEDOR) {
+    cond.push(`NOT EXISTS (SELECT 1 FROM e_forn ef WHERE ef.product_id = e_fin.product_id)`);
+  } else if (o.fornecedorId !== "all") {
+    cond.push(
+      `EXISTS (SELECT 1 FROM e_forn ef WHERE ef.product_id = e_fin.product_id AND ef.fornecedor_id = ${p.add(o.fornecedorId)})`
+    );
+  }
   const q = o.busca.trim();
   if (q) {
     const alvo = p.add(`%${q.replace(/([%_\\])/g, "\\$1").toLowerCase()}%`);

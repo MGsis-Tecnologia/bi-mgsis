@@ -25,6 +25,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Combobox } from "@/components/ui/combobox";
 import { BarChartH } from "@/components/charts/bar-chart-h";
 import { LabeledDonut } from "@/components/charts/labeled-donut";
 import { Money } from "@/components/dashboard/money";
@@ -41,24 +42,35 @@ import {
 } from "@/lib/hooks/use-estoque-analytics";
 import { formatCurrency, formatNumber, formatPercent } from "@/lib/utils/format";
 import { useMoedaExibicao } from "@/lib/hooks/use-moeda-exibicao";
+import { useOpcoesFiltro } from "@/lib/hooks/use-opcoes-filtro";
 import { exportarExcel } from "@/lib/utils/export-excel";
 import { cn } from "@/lib/utils";
 
+/**
+ * Mesmo sentinela de `SEM_FORNECEDOR` em `estoque.ts` — repetido aqui (em vez
+ * de importado) para não trazer o Prisma pro bundle do cliente, mesmo padrão
+ * de `SEM_CONDICAO` na tela de Receber.
+ */
+const SEM_FORNECEDOR = "__none__";
+
 export default function EstoquePage() {
   const currency = useMoedaExibicao();
+  const opcoesFiltro = useOpcoesFiltro();
 
   const [statusFilter, setStatusFilter] = React.useState<StockStatus | "all">("all");
   const [coverageFilter, setCoverageFilter] = React.useState<string>("all");
   const [lastPurchaseFilter, setLastPurchaseFilter] = React.useState<string>("all");
+  const [fornecedorFilter, setFornecedorFilter] = React.useState<string>("all");
   const [query, setQuery] = React.useState("");
 
-  // Busca, situação, faixa de cobertura e última compra vão para o servidor:
-  // são 76 mil SKUs, o navegador não tem a lista pra filtrar — só pra rolar
-  // (virtualizado).
+  // Busca, situação, faixa de cobertura, última compra e fornecedor vão para o
+  // servidor: são 76 mil SKUs, o navegador não tem a lista pra filtrar — só pra
+  // rolar (virtualizado).
   const { data, loading, error } = useEstoqueAnalytics({
     status: statusFilter,
     coverageBucket: coverageFilter,
     lastPurchaseBucket: lastPurchaseFilter,
+    fornecedorId: fornecedorFilter,
     busca: query,
   });
 
@@ -506,7 +518,7 @@ export default function EstoquePage() {
                 <CardTitle>Detalhamento por SKU</CardTitle>
                 <p className="mt-0.5 text-[11px] text-muted-foreground">
                   {formatNumber(data.rowsTotal)} de {formatNumber(totals.skus)} itens
-                  {(statusFilter !== "all" || coverageFilter !== "all" || lastPurchaseFilter !== "all") && (
+                  {(statusFilter !== "all" || coverageFilter !== "all" || lastPurchaseFilter !== "all" || fornecedorFilter !== "all") && (
                     <>
                       {" · filtro: "}
                       {[
@@ -516,6 +528,11 @@ export default function EstoquePage() {
                           : null,
                         lastPurchaseFilter !== "all"
                           ? (LAST_PURCHASE_ORDER.find((c) => c.key === lastPurchaseFilter)?.label ?? lastPurchaseFilter)
+                          : null,
+                        fornecedorFilter !== "all"
+                          ? (fornecedorFilter === SEM_FORNECEDOR
+                              ? "Sem fornecedor"
+                              : (opcoesFiltro.fornecedores.find((f) => f.id === fornecedorFilter)?.name ?? fornecedorFilter))
                           : null,
                       ]
                         .filter(Boolean)
@@ -580,6 +597,18 @@ export default function EstoquePage() {
                     ))}
                   </SelectContent>
                 </Select>
+                <Combobox
+                  className="w-[190px]"
+                  value={fornecedorFilter}
+                  onChange={setFornecedorFilter}
+                  placeholder="Todos os fornecedores"
+                  searchPlaceholder="Buscar fornecedor…"
+                  options={[
+                    { value: "all", label: "Todos os fornecedores" },
+                    { value: SEM_FORNECEDOR, label: "Sem fornecedor" },
+                    ...opcoesFiltro.fornecedores.map((f) => ({ value: f.id, label: f.name })),
+                  ]}
+                />
                 <div className="relative">
                   <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
                   <input

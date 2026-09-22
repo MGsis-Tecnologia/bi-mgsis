@@ -65,7 +65,7 @@ export async function getOpcoesFiltro(db: PrismaClient, chave: string): Promise<
     "orcamento_items",
   ];
 
-  const [canais, subgrupos, vendedores, empresas, condicoes, semCondicao] = await Promise.all([
+  const [canais, subgrupos, vendedores, empresas, condicoes, semCondicao, fornecedores] = await Promise.all([
     consultaAnalitica<{ v: string }>(
       db,
       `SELECT channel AS v FROM sale_items
@@ -111,6 +111,15 @@ export async function getOpcoesFiltro(db: PrismaClient, chave: string): Promise<
       db,
       `SELECT EXISTS (SELECT 1 FROM receivable_items WHERE payment_term_id = '') AS existe`
     ),
+    // Só pedidos do tipo COMPRA: devolução e transferência não tornam alguém
+    // fornecedor do produto — mesma regra de `e_compra`/`e_forn` em estoque.ts.
+    consultaAnalitica<{ id: string; name: string }>(
+      db,
+      `SELECT fornecedor_id AS id,
+              COALESCE(MIN(NULLIF(fornecedor_nome, '')), fornecedor_id) AS name
+         FROM compra_items WHERE pedido_tipo = 'COMPRA' AND fornecedor_id <> ''
+         GROUP BY 1 ORDER BY 2, 1`
+    ),
   ]);
 
   const opcoes: OpcoesFiltro = {
@@ -120,6 +129,7 @@ export async function getOpcoesFiltro(db: PrismaClient, chave: string): Promise<
     empresas,
     condicoesPagamento: condicoes,
     temTituloSemCondicao: semCondicao[0]?.existe ?? false,
+    fornecedores,
   };
 
   cache.set(chave, { versao, opcoes });

@@ -24,6 +24,13 @@ export interface OpcoesFiltro {
   condicoesPagamento: { id: string; name: string }[];
   /** Há título a receber sem condição — vira a opção "Sem condição informada". */
   temTituloSemCondicao: boolean;
+  /**
+   * Fornecedores que já compraram algo (pedido_tipo = 'COMPRA') alguma vez. Só
+   * a tela de Estoque usa, no filtro por fornecedor do Detalhamento por SKU —
+   * mesma lógica de `condicoesPagamento`: não é global, mas vem no mesmo
+   * endpoint já em cache.
+   */
+  fornecedores: { id: string; name: string }[];
 }
 
 export const OPCOES_VAZIAS: OpcoesFiltro = {
@@ -33,4 +40,5 @@ export const OPCOES_VAZIAS: OpcoesFiltro = {
   empresas: [],
   condicoesPagamento: [],
   temTituloSemCondicao: false,
+  fornecedores: [],
 };

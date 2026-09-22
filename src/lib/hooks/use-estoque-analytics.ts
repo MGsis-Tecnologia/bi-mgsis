@@ -114,6 +114,7 @@ export function useEstoqueAnalytics(opcoes: {
   status: StockStatus | "all";
   coverageBucket: string;
   lastPurchaseBucket: string;
+  fornecedorId: string;
   busca: string;
 }): { data: EstoqueView | null; loading: boolean; error: string | null } {
   const preset = useFilters((s) => s.preset);
@@ -152,11 +153,12 @@ export function useEstoqueAnalytics(opcoes: {
       status: opcoes.status,
       coverageBucket: opcoes.coverageBucket,
       lastPurchaseBucket: opcoes.lastPurchaseBucket,
+      fornecedorId: opcoes.fornecedorId,
       busca: buscaAdiada,
     }),
     [
       range, currency, empresaId, channel, sellerId, subgroupId,
-      opcoes.status, opcoes.coverageBucket, opcoes.lastPurchaseBucket, buscaAdiada,
+      opcoes.status, opcoes.coverageBucket, opcoes.lastPurchaseBucket, opcoes.fornecedorId, buscaAdiada,
     ]
   );
 
