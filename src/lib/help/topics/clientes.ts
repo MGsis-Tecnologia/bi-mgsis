@@ -31,13 +31,15 @@ export const clientes: HelpSection = {
     {
       id: "base-clientes",
       title: "Base de clientes",
-      description: "Tabela com todos os clientes do período, seu segmento, receita e frequência.",
+      description: "Tabela com TODOS os clientes ativos no período, seu segmento, receita e frequência — com busca por nome ou código, e rolagem para carregar o restante (começa com 15 e vai completando).",
+      logic:
+        "A busca filtra quais linhas aparecem, mas não recalcula segmento, participação nem curva ABC — esses três continuam vendo TODOS os clientes ativos, buscado ou não. Por isso digitar um nome não muda a curva do cliente encontrado.",
     },
     {
       id: "clientes-lucrativos",
       title: "Clientes mais lucrativos",
-      description: "Top 25 clientes ordenados por margem de lucro, não por receita.",
-      logic: "margem = (receita − custo) ÷ receita, em %.",
+      description: "TODOS os clientes ativos, ordenados por lucro total (receita − custo), não por receita nem por margem — com busca por nome ou código e rolagem para carregar o restante.",
+      logic: "Os totais do rodapé somam TODOS os clientes do período, não só os carregados na tela.",
     },
     {
       id: "churn-risk",

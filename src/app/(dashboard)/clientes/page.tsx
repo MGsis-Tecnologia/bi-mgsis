@@ -1,16 +1,22 @@
 "use client";
 
 import * as React from "react";
-import { Users } from "lucide-react";
+import { Search, Users, X } from "lucide-react";
 import { PageHeader } from "@/components/layout/page-header";
 import { KpiCard } from "@/components/dashboard/kpi-card";
 import { EmptyState } from "@/components/dashboard/empty-state";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
 import { BarChartH } from "@/components/charts/bar-chart-h";
 import { DonutChart } from "@/components/charts/donut-chart";
 import { Money } from "@/components/dashboard/money";
-import { useClientesAnalytics } from "@/lib/hooks/use-clientes-analytics";
+import {
+  useClientesAnalytics,
+  useClientesTabela,
+  type ClienteLucro,
+  type ClienteMetrica,
+} from "@/lib/hooks/use-clientes-analytics";
 import { formatNumber, formatPercent } from "@/lib/utils/format";
 import { cn } from "@/lib/utils";
 import { useTranslation } from "@/lib/hooks/use-translation";
@@ -33,14 +39,90 @@ const SEGMENT_TONE: Record<string, "positive" | "accent" | "warning" | "negative
   inativo: "negative",
 } as const;
 
+/** Estável de propósito: um `[]` novo a cada render reiniciaria a paginação. */
+const SEM_LINHAS: never[] = [];
+
+/** Chegou perto do fim do container de rolagem? Hora de pedir a próxima página. */
+function aoRolar(loadMore: () => void) {
+  return (e: React.UIEvent<HTMLDivElement>) => {
+    const el = e.currentTarget;
+    if (el.scrollHeight - el.scrollTop - el.clientHeight < 240) loadMore();
+  };
+}
+
+/** Busca de uma tabela: campo com ícone e botão de limpar. */
+function BuscaTabela({
+  value, onChange, placeholder,
+}: { value: string; onChange: (v: string) => void; placeholder: string }) {
+  return (
+    <div className="relative w-full sm:w-72">
+      <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+      <Input
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={placeholder}
+        aria-label={placeholder}
+        className="h-9 pl-9 pr-9"
+      />
+      {value && (
+        <button
+          type="button"
+          onClick={() => onChange("")}
+          className="absolute right-2 top-1/2 flex h-6 w-6 -translate-y-1/2 items-center justify-center rounded text-muted-foreground hover:text-foreground"
+          title="Limpar busca"
+        >
+          <X className="h-3.5 w-3.5" />
+        </button>
+      )}
+    </div>
+  );
+}
+
+/** "50 de 3.412 — role para carregar o restante." + estado da carga. */
+function RodapePaginacao({
+  shown, total, hasMore, loading, error,
+}: { shown: number; total: number; hasMore: boolean; loading: boolean; error: string | null }) {
+  const { t } = useTranslation();
+  return (
+    <p className="border-t border-border px-5 pt-3 text-[11px] text-muted-foreground">
+      {error
+        ? <span className="text-negative">{error}</span>
+        : loading
+          ? t("clientes.table.loading")
+          : t(hasMore ? "clientes.table.loaded.more" : "clientes.table.loaded.all", {
+              shown: formatNumber(shown),
+              total: formatNumber(total),
+            })}
+    </p>
+  );
+}
+
 export default function ClientesPage() {
   const { t } = useTranslation();
 
   // Tudo agregado no servidor: segmentação RFM, curvas ABC e ranking por lucro
   // chegam prontos, com as contagens calculadas sobre a base inteira.
-  const { data, loading, error } = useClientesAnalytics();
+  const { data, loading, error, filtros } = useClientesAnalytics();
 
-  const abc = data?.topClients ?? [];
+  const [buscaBase, setBuscaBase] = React.useState("");
+  const [buscaLucro, setBuscaLucro] = React.useState("");
+
+  // As duas tabelas grandes listam TODOS os clientes ativos no período: a
+  // primeira página vem na resposta da tela, o resto é pedido ao rolar (ou ao
+  // buscar). O gráfico de LTV continua usando só `topClients` (as 10 primeiras).
+  const baseTabela = useClientesTabela<ClienteMetrica>(
+    "base", data?.topClients ?? SEM_LINHAS, data?.activeCustomers ?? 0, filtros, buscaBase
+  );
+  const lucroTabela = useClientesTabela<ClienteLucro>(
+    "lucro", data?.profitRanking ?? SEM_LINHAS, data?.profitTotals.count ?? 0, filtros, buscaLucro
+  );
+
+  // Outra busca é outra lista: volta ao topo em vez de ficar no meio dela.
+  const scrollBaseRef = React.useRef<HTMLDivElement>(null);
+  const scrollLucroRef = React.useRef<HTMLDivElement>(null);
+  React.useEffect(() => { scrollBaseRef.current?.scrollTo({ top: 0 }); }, [buscaBase]);
+  React.useEffect(() => { scrollLucroRef.current?.scrollTo({ top: 0 }); }, [buscaLucro]);
+
   const segments = data?.segments ?? {};
   const segmentsArr = Object.entries(segments).map(([k, v]) => ({
     key: k,
@@ -51,9 +133,9 @@ export default function ClientesPage() {
   const activeCustomers = data?.activeCustomers ?? 0;
   const avgLTV = data?.avgLTV ?? 0;
   const churnRisk = data?.churnRisk ?? 0;
-  // O gráfico de LTV usa os 10 primeiros do mesmo ranking por receita.
-  const topByLTV = abc.slice(0, 10);
-  const profitRanking = data?.profitRanking ?? [];
+  // O gráfico de LTV usa os 10 primeiros da PRIMEIRA página (por receita) — não
+  // recorta pela busca da tabela, que é independente dele.
+  const topByLTV = (data?.topClients ?? []).slice(0, 10);
 
   if (error) {
     return (
@@ -137,15 +219,24 @@ export default function ClientesPage() {
         </Card>
       </section>
 
+      {/* ── Base de Clientes ──────────────────────────────────────────────── */}
       <Card>
         <CardHeader>
-          <CardTitle>{t("clientes.table.title")}</CardTitle>
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <CardTitle>{t("clientes.table.title")}</CardTitle>
+              <p className="mt-0.5 text-[11px] text-muted-foreground">
+                {t("clientes.table.count", { count: formatNumber(baseTabela.total) })}
+              </p>
+            </div>
+            <BuscaTabela value={buscaBase} onChange={setBuscaBase} placeholder={t("clientes.table.search")} />
+          </div>
         </CardHeader>
         <CardContent className="px-0">
-          <div className="overflow-x-auto">
+          <div ref={scrollBaseRef} onScroll={aoRolar(baseTabela.loadMore)} className="max-h-[560px] overflow-auto">
             <table className="w-full text-sm">
-              <thead>
-                <tr className="border-y border-border text-[10px] uppercase tracking-[0.14em] text-muted-foreground">
+              <thead className="[&_th]:sticky [&_th]:top-0 [&_th]:z-10 [&_th]:bg-surface [&_th]:border-b [&_th]:border-border">
+                <tr className="text-[10px] uppercase tracking-[0.14em] text-muted-foreground">
                   <th className="text-left font-medium py-2 px-5">{t("clientes.table.col.customer")}</th>
                   <th className="text-right font-medium py-2 px-5">{t("clientes.table.col.orders")}</th>
                   <th className="text-right font-medium py-2 px-5">{t("clientes.table.col.ltv")}</th>
@@ -156,7 +247,23 @@ export default function ClientesPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
-                {abc.map((e) => (
+                {baseTabela.loading && Array.from({ length: 6 }).map((_, i) => (
+                  <tr key={`sk-${i}`}>
+                    <td colSpan={7} className="px-5 py-2.5">
+                      <div className="h-8 animate-pulse rounded bg-muted/40" />
+                    </td>
+                  </tr>
+                ))}
+
+                {!baseTabela.loading && baseTabela.rows.length === 0 && (
+                  <tr>
+                    <td colSpan={7} className="px-5 py-8 text-center text-sm text-muted-foreground">
+                      {buscaBase ? t("clientes.table.empty.search") : "Sem dados para o período selecionado."}
+                    </td>
+                  </tr>
+                )}
+
+                {baseTabela.rows.map((e) => (
                   <tr key={e.id} className="hover:bg-muted/30 transition-colors">
                     <td className="py-2.5 px-5">
                       <div className="font-medium truncate max-w-[220px]">{e.name}</div>
@@ -191,28 +298,50 @@ export default function ClientesPage() {
                     </td>
                   </tr>
                 ))}
+
+                {baseTabela.loadingMais && (
+                  <tr>
+                    <td colSpan={7} className="px-5 py-3 text-center text-xs text-muted-foreground">
+                      {t("clientes.table.loading")}
+                    </td>
+                  </tr>
+                )}
               </tbody>
             </table>
           </div>
+          {!baseTabela.loading && baseTabela.rows.length > 0 && (
+            <RodapePaginacao
+              shown={baseTabela.rows.length}
+              total={baseTabela.total}
+              hasMore={baseTabela.hasMore}
+              loading={baseTabela.loadingMais}
+              error={baseTabela.error}
+            />
+          )}
         </CardContent>
       </Card>
+
+      {/* ── Clientes mais lucrativos ──────────────────────────────────────── */}
       <Card>
         <CardHeader>
-          <div className="flex items-center justify-between">
+          <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
-              <CardTitle>Clientes mais lucrativos</CardTitle>
+              <CardTitle>{t("clientes.lucro.title")}</CardTitle>
               <p className="mt-0.5 text-[11px] text-muted-foreground">
-                Ordenado por lucro total (receita − custo) no período.
+                {t("clientes.lucro.desc")} · {t("clientes.table.count", { count: formatNumber(lucroTabela.total) })}
               </p>
             </div>
-            <Badge variant="ghost">{data.profitTotals.count} clientes</Badge>
+            <div className="flex items-center gap-2">
+              <BuscaTabela value={buscaLucro} onChange={setBuscaLucro} placeholder={t("clientes.table.search")} />
+              <Badge variant="ghost">{data.profitTotals.count} clientes</Badge>
+            </div>
           </div>
         </CardHeader>
         <CardContent className="px-0">
-          <div className="overflow-x-auto">
+          <div ref={scrollLucroRef} onScroll={aoRolar(lucroTabela.loadMore)} className="max-h-[560px] overflow-auto">
             <table className="w-full text-sm">
-              <thead>
-                <tr className="border-y border-border text-[10px] uppercase tracking-[0.14em] text-muted-foreground">
+              <thead className="[&_th]:sticky [&_th]:top-0 [&_th]:z-10 [&_th]:bg-surface [&_th]:border-b [&_th]:border-border">
+                <tr className="text-[10px] uppercase tracking-[0.14em] text-muted-foreground">
                   <th className="text-left font-medium py-2 px-5">#</th>
                   <th className="text-left font-medium py-2 px-5">Cliente</th>
                   <th className="text-right font-medium py-2 px-5">Pedidos</th>
@@ -224,7 +353,23 @@ export default function ClientesPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
-                {profitRanking.map((e, i) => (
+                {lucroTabela.loading && Array.from({ length: 6 }).map((_, i) => (
+                  <tr key={`sk-${i}`}>
+                    <td colSpan={8} className="px-5 py-2.5">
+                      <div className="h-8 animate-pulse rounded bg-muted/40" />
+                    </td>
+                  </tr>
+                ))}
+
+                {!lucroTabela.loading && lucroTabela.rows.length === 0 && (
+                  <tr>
+                    <td colSpan={8} className="px-5 py-8 text-center text-sm text-muted-foreground">
+                      {buscaLucro ? t("clientes.table.empty.search") : "Sem dados para o período selecionado."}
+                    </td>
+                  </tr>
+                )}
+
+                {lucroTabela.rows.map((e, i) => (
                   <tr key={e.clientId} className="hover:bg-muted/30 transition-colors">
                     <td className="py-2.5 px-5 font-mono text-xs text-muted-foreground tabular">
                       {(i + 1).toString().padStart(2, "0")}
@@ -254,11 +399,19 @@ export default function ClientesPage() {
                     </td>
                   </tr>
                 ))}
+
+                {lucroTabela.loadingMais && (
+                  <tr>
+                    <td colSpan={8} className="px-5 py-3 text-center text-xs text-muted-foreground">
+                      {t("clientes.table.loading")}
+                    </td>
+                  </tr>
+                )}
               </tbody>
-              <tfoot>
-                <tr className="border-t border-border text-[11px] font-medium">
+              <tfoot className="[&_td]:sticky [&_td]:bottom-0 [&_td]:z-10 [&_td]:bg-surface [&_td]:border-t [&_td]:border-border">
+                <tr className="text-[11px] font-medium">
                   <td className="py-2.5 px-5" />
-                  {/* Totais sobre TODOS os clientes do período, não só os 25 exibidos. */}
+                  {/* Totais sobre TODOS os clientes do período, não só os carregados na tela. */}
                   <td className="py-2.5 px-5 uppercase tracking-[0.1em] text-muted-foreground">
                     Total · {data.profitTotals.count} clientes
                   </td>
@@ -296,6 +449,15 @@ export default function ClientesPage() {
               </tfoot>
             </table>
           </div>
+          {!lucroTabela.loading && lucroTabela.rows.length > 0 && (
+            <RodapePaginacao
+              shown={lucroTabela.rows.length}
+              total={lucroTabela.total}
+              hasMore={lucroTabela.hasMore}
+              loading={lucroTabela.loadingMais}
+              error={lucroTabela.error}
+            />
+          )}
         </CardContent>
       </Card>
     </div>

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { getSession } from "@/lib/server/auth";
 import { getTenantContext } from "@/lib/server/tenant";
-import { getClientesData } from "@/lib/server/analytics/clientes";
+import { getClientesData, getClientesPagina } from "@/lib/server/analytics/clientes";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -23,6 +23,12 @@ const filtrosSchema = z.object({
   // Date.now() no cliente. Vindo daqui, o resultado não muda com o fuso do
   // servidor nem com a hora em que a página é aberta.
   hoje: dataISO,
+  // Presente = pede UMA PÁGINA de uma das tabelas grandes (Base de Clientes ou
+  // Clientes mais lucrativos), em vez da tela inteira.
+  tabela: z.enum(["base", "lucro"]).optional(),
+  busca: z.string().max(100).default(""),
+  offset: z.number().int().min(0).max(1_000_000).default(0),
+  limite: z.number().int().min(1).max(100).default(50),
 });
 
 export async function POST(req: NextRequest) {
@@ -43,10 +49,15 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Período invertido: 'from' é maior que 'to'" }, { status: 400 });
   }
 
-  const { hoje, ...filtros } = corpo;
+  const { hoje, tabela, busca, offset, limite, ...filtros } = corpo;
   const { db, moedaPadrao } = await getTenantContext(session);
   const inicio = Date.now();
-  const data = await getClientesData(db, { ...filtros, moedaPadrao }, hoje);
 
+  if (tabela) {
+    const r = await getClientesPagina(db, { ...filtros, moedaPadrao }, hoje, tabela, offset, limite, busca);
+    return NextResponse.json({ ...r, ms: Date.now() - inicio });
+  }
+
+  const data = await getClientesData(db, { ...filtros, moedaPadrao }, hoje);
   return NextResponse.json({ ...data, ms: Date.now() - inicio });
 }
