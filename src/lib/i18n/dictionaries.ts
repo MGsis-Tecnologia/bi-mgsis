@@ -337,6 +337,14 @@ export const dictionaries = {
     "clientes.table.col.recency": "Recência",
     "clientes.table.col.segment": "Segmento",
     "clientes.table.col.curve": "Curva",
+    "clientes.table.search": "Buscar cliente ou código…",
+    "clientes.table.count": "{{count}} clientes",
+    "clientes.table.empty.search": "Nenhum cliente encontrado para essa busca.",
+    "clientes.table.loading": "Carregando mais…",
+    "clientes.table.loaded.more": "{{shown}} de {{total}} — role para carregar o restante.",
+    "clientes.table.loaded.all": "{{shown}} de {{total}}.",
+    "clientes.lucro.title": "Clientes mais lucrativos",
+    "clientes.lucro.desc": "Ordenado por lucro total (receita − custo) no período.",
 
     // Vendedores Page
     "vendedores.header.eyebrow": "Time comercial",
@@ -514,7 +522,7 @@ export const dictionaries = {
     "importacao.status.error": "Falhou",
 
     // Importação — upload, fila e dados importados
-    "importacao.upload.kinds": "Vendas, Compras, Contas a Receber, Contas a Pagar, Estoque, Caixa/Banco, Orçamentos e Câmbio — o tipo é identificado automaticamente pelas colunas.",
+    "importacao.upload.kinds": "Vendas, Compras, Contas a Receber, Contas a Pagar, Estoque, Caixa/Banco, Orçamentos, Câmbio e Empresas — o tipo é identificado automaticamente pelas colunas.",
     "importacao.upload.multi": "Selecione vários arquivos de uma vez para importar em fila.",
     "importacao.queue.title": "Fila de importação",
     "importacao.queue.progress": "{{done}}/{{total}} concluídos",
@@ -539,6 +547,7 @@ export const dictionaries = {
     "importacao.kind.orcamento": "Orçamentos",
     "importacao.kind.compras": "Compras",
     "importacao.kind.cambio": "Câmbio",
+    "importacao.kind.empresa": "Empresas",
     "importacao.unit.sales": "linhas",
     "importacao.unit.receivable": "títulos",
     "importacao.unit.payable": "títulos",
@@ -547,6 +556,7 @@ export const dictionaries = {
     "importacao.unit.orcamento": "itens",
     "importacao.unit.compras": "itens",
     "importacao.unit.cambio": "cotações",
+    "importacao.unit.empresa": "empresas",
 
     // Importação — tabelas de leiaute
     "importacao.schema.col": "Coluna",
@@ -571,6 +581,7 @@ export const dictionaries = {
     "importacao.schema.heading.orcamento": "Leiaute · Orçamentos (Prospecção)",
     "importacao.schema.heading.compras": "Leiaute · Compras",
     "importacao.schema.heading.cambio": "Leiaute · Câmbio (moedas)",
+    "importacao.schema.heading.empresa": "Leiaute · Empresas (matriz/filiais)",
     "importacao.schema.note.sales": "Datas: DD/MM/AAAA · Decimais: vírgula (padrão BR) · moeda_id: 1=R$ 2=US$ 3=G$ · importa linhas com pedido_tipo = VENDA e DEVOLUCAO VENDA (os indicadores consideram apenas VENDA, exceto as saídas e a receita da tela de Estoque, que descontam as devoluções). empresa_id identifica a matriz/filial e alimenta o filtro global de empresa (presente em todos os leiautes). item_desconto (opcional) é o desconto da linha; produto_valor_total já é líquido, então a venda bruta = total + desconto. marca_id/marca_descricao (opcionais) alimentam o Comparativo por marca e a Curva ABC por marca; sem elas a venda entra como \"Sem marca\".",
     "importacao.schema.note.receivable": "Cada linha é um título. data_recebimento preenchida = título recebido; vazia = pendente. pessoa_cidade é opcional. condicao_pagamento_id/condicao_pagamento_descricao (opcionais) trazem a condição de pagamento do título; sem elas o título entra sem condição.",
     "importacao.schema.note.payable": "Cada linha é uma obrigação de pagamento. data_pagamento preenchida = pago; vazia = pendente.",
@@ -579,6 +590,7 @@ export const dictionaries = {
     "importacao.schema.note.orcamento": "Cada linha é um item de orçamento. O status vem de status_orcamento (Confirmado/Pendente) ou de orcamento_confirmado (true/false) — a exportação padrão da view bi_orcamentos usa status_orcamento. orcamento_data_confirmacao é preenchida quando confirmado. item_quantidade_confirmada = quantidade que virou venda. produto_fabricante é opcional: quando ausente, a Prospecção busca o código pelo produto_id no dataset de Estoque.",
     "importacao.schema.note.compras": "Cada linha é um item comprado — o cabeçalho da compra se repete em cada uma, como na view bi_compras. pedido_data é a data da fatura, e é ela que define o período; pedido_emissao é a emissão do documento no fornecedor e é opcional. produto_valor_total já é o custo da linha na moeda de moeda_id; não há desconto nem vendedor. subgrupo_id/subgrupo_descricao são a categoria do produto, os mesmos códigos de Vendas — é o que permite comparar o que se compra com o que se vende. empresa_id identifica a matriz/filial. O que separa este leiaute do de Vendas é o fornecedor_id.",
     "importacao.schema.note.cambio": "Uma linha por cotação: em cambio_data, 1 unidade de moeda_origem valia cambio_taxa unidades de moeda_destino. Não separe compra e venda — o sentido inverso é calculado como 1/taxa. O arquivo substitui o câmbio inteiro e a tabela de cotações diárias é reconstruída ao final, preenchendo os dias sem movimento com a cotação mais próxima.",
+    "importacao.schema.note.empresa": "Uma linha por matriz/filial — é o que dá nome ao empresa_id que aparece em todos os outros leiautes. Sem este arquivo, o filtro de empresa das telas mostra só o código cru (\"Empresa 1\"). O arquivo substitui o cadastro inteiro; empresa_id repetido mantém a última ocorrência.",
   },
   "es-PY": {
     // Sidebar
@@ -917,6 +929,14 @@ export const dictionaries = {
     "clientes.table.col.recency": "Recencia",
     "clientes.table.col.segment": "Segmento",
     "clientes.table.col.curve": "Curva",
+    "clientes.table.search": "Buscar cliente o código…",
+    "clientes.table.count": "{{count}} clientes",
+    "clientes.table.empty.search": "Ningún cliente encontrado para esa búsqueda.",
+    "clientes.table.loading": "Cargando más…",
+    "clientes.table.loaded.more": "{{shown}} de {{total}} — desplazá para cargar el resto.",
+    "clientes.table.loaded.all": "{{shown}} de {{total}}.",
+    "clientes.lucro.title": "Clientes más rentables",
+    "clientes.lucro.desc": "Ordenado por ganancia total (ingresos − costo) en el período.",
 
     // Vendedores Page
     "vendedores.header.eyebrow": "Equipo comercial",
@@ -1094,7 +1114,7 @@ export const dictionaries = {
     "importacao.status.error": "Falló",
 
     // Importación — upload, cola y datos importados
-    "importacao.upload.kinds": "Ventas, Compras, Cuentas por Cobrar, Cuentas por Pagar, Stock, Caja/Banco, Presupuestos y Cambio — el tipo se identifica automáticamente por las columnas.",
+    "importacao.upload.kinds": "Ventas, Compras, Cuentas por Cobrar, Cuentas por Pagar, Stock, Caja/Banco, Presupuestos, Cambio y Empresas — el tipo se identifica automáticamente por las columnas.",
     "importacao.upload.multi": "Seleccione varios archivos a la vez para importar en cola.",
     "importacao.queue.title": "Cola de importación",
     "importacao.queue.progress": "{{done}}/{{total}} concluidos",
@@ -1119,6 +1139,7 @@ export const dictionaries = {
     "importacao.kind.orcamento": "Presupuestos",
     "importacao.kind.compras": "Compras",
     "importacao.kind.cambio": "Cambio",
+    "importacao.kind.empresa": "Empresas",
     "importacao.unit.sales": "líneas",
     "importacao.unit.receivable": "títulos",
     "importacao.unit.payable": "títulos",
@@ -1127,6 +1148,7 @@ export const dictionaries = {
     "importacao.unit.orcamento": "ítems",
     "importacao.unit.compras": "ítems",
     "importacao.unit.cambio": "cotizaciones",
+    "importacao.unit.empresa": "empresas",
 
     // Importación — tablas de diseño
     "importacao.schema.col": "Columna",
@@ -1151,6 +1173,7 @@ export const dictionaries = {
     "importacao.schema.heading.orcamento": "Diseño · Presupuestos (Prospección)",
     "importacao.schema.heading.compras": "Diseño · Compras",
     "importacao.schema.heading.cambio": "Diseño · Cambio (monedas)",
+    "importacao.schema.heading.empresa": "Diseño · Empresas (matriz/sucursales)",
     "importacao.schema.note.sales": "Fechas: DD/MM/AAAA · Decimales: coma (estándar BR) · moeda_id: 1=R$ 2=US$ 3=G$ · importa filas con pedido_tipo = VENDA y DEVOLUCAO VENDA (los indicadores consideran solo VENDA, excepto las salidas y los ingresos de la pantalla de Stock, que descuentan las devoluciones). empresa_id identifica la matriz/sucursal y alimenta el filtro global de empresa (presente en todos los diseños). item_desconto (opcional) es el descuento de la línea; produto_valor_total ya es neto, por lo tanto la venta bruta = total + descuento. marca_id/marca_descricao (opcionales) alimentan el Comparativo por marca y la Curva ABC por marca; sin ellas la venta entra como \"Sin marca\".",
     "importacao.schema.note.receivable": "Cada fila es un título. data_recebimento completada = título cobrado; vacía = pendiente. pessoa_cidade es opcional. condicao_pagamento_id/condicao_pagamento_descricao (opcionales) traen la condición de pago del título; sin ellas el título entra sin condición.",
     "importacao.schema.note.payable": "Cada fila es una obligación de pago. data_pagamento completada = pagado; vacía = pendiente.",
@@ -1159,6 +1182,7 @@ export const dictionaries = {
     "importacao.schema.note.orcamento": "Cada fila es un ítem de presupuesto. El estado viene de status_orcamento (Confirmado/Pendente) o de orcamento_confirmado (true/false) — la exportación estándar de la vista bi_orcamentos usa status_orcamento. orcamento_data_confirmacao se completa cuando está confirmado. item_quantidade_confirmada = cantidad que se convirtió en venta. produto_fabricante es opcional: cuando falta, la Prospección busca el código por produto_id en el dataset de Stock.",
     "importacao.schema.note.compras": "Cada fila es un ítem comprado — el encabezado de la compra se repite en cada una, como en la vista bi_compras. pedido_data es la fecha de la factura, y es ella la que define el período; pedido_emissao es la emisión del documento en el proveedor y es opcional. produto_valor_total ya es el costo de la línea en la moneda de moeda_id; no hay descuento ni vendedor. subgrupo_id/subgrupo_descricao son la categoría del producto, los mismos códigos de Ventas — es lo que permite comparar lo que se compra con lo que se vende. empresa_id identifica la matriz/sucursal. Lo que separa este diseño del de Ventas es el fornecedor_id.",
     "importacao.schema.note.cambio": "Una fila por cotización: en cambio_data, 1 unidad de moeda_origem equivalía a cambio_taxa unidades de moeda_destino. No separe compra y venta — el sentido inverso se calcula como 1/tasa. El archivo reemplaza el cambio entero y la tabla de cotizaciones diarias se reconstruye al final, completando los días sin movimiento con la cotización más cercana.",
+    "importacao.schema.note.empresa": "Una fila por matriz/sucursal — es lo que le da nombre al empresa_id que aparece en todos los demás diseños. Sin este archivo, el filtro de empresa de las pantallas muestra solo el código crudo (\"Empresa 1\"). El archivo reemplaza el registro entero; empresa_id repetido conserva la última ocurrencia.",
   }
 };
 
