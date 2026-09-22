@@ -166,26 +166,6 @@ passa dos 80 MB), ou se combina uma janela de retenção — só títulos emitid
 
 ## Telas
 
-### 8. Estoque → Detalhamento por SKU: filtro por fornecedor
-
-Pedido de compras: filtrar o detalhamento por fornecedor, para decidir o que
-comprar de quem. Não existe hoje, e não é só UI: nem `inventory_items` nem
-`sale_items` têm fornecedor
-([`prisma/schema.prisma:259`](prisma/schema.prisma#L259)). Quem tem é
-`compra_items` (`fornecedor_id`/`fornecedor_nome`), então o vínculo
-SKU → fornecedor teria de ser derivado da compra — o último que forneceu, ou
-todos os que já forneceram, porque um produto pode ter mais de um — ou o ERP
-passa a mandar o fornecedor na foto de estoque. Decidir isso antes de desenhar a
-tela; "último fornecedor" é o mais simples e provavelmente o que compras quer.
-
-Vale olhar junto com o item 10, que também precisa de `compra_items` por SKU — e
-os dois dependem do reenvio das compras.
-
-(A outra metade deste item, descontar devolução das saídas e da receita, foi
-feita em 21/09/2026.)
-
-**Peso:** médio.
-
 ### 9. Baixar em Excel os itens de uma marca vendida — confirmar com o cliente
 
 Pedido: na tabela de vendas por marca, poder baixar os itens daquela marca.
