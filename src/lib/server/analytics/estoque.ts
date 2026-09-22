@@ -708,3 +708,255 @@ function filtroTabela(o: OpcoesEstoque, p: Params): string {
   }
   return cond.length ? cond.join(" AND ") : "true";
 }
+
+// ─── Extrato de um SKU ───────────────────────────────────────────────────────
+
+/**
+ * Teto de linhas por aba do extrato. Um SKU real raramente chega perto: a
+ * média é de 3 compras e 27 vendas na base inteira, e o percentil 99 fica em
+ * 21 e 377. O teto existe para o caso extremo (o campeão da base tem 5.716
+ * vendas em 4 anos), e quando corta a tela avisa e oferece o Excel, que leva
+ * tudo.
+ */
+export const MAX_LINHAS_MOVIMENTO = 500;
+
+/** Teto do mesmo extrato quando a lista vai para o Excel. */
+export const MAX_LINHAS_MOVIMENTO_EXCEL = 20_000;
+
+/** Uma linha de compra ou de venda do SKU, já convertida e com sinal. */
+export interface MovimentoLinha {
+  data: string;
+  documento: string;
+  /** 'COMPRA' | 'DEVOLUCAO COMPRA' | 'TRANSFERENCIA COMPRA' | 'VENDA' | 'DEVOLUCAO VENDA'. */
+  tipo: string;
+  /** Fornecedor na aba de compras, cliente na de vendas. */
+  contraparte: string;
+  /** Sigla da moeda ORIGINAL da linha, antes da conversão ("G$", "U$"…). */
+  moeda: string;
+  /** Negativa nas devoluções — ver a nota sobre o sinal em {@link getMovimentoDoSku}. */
+  quantidade: number;
+  /** Idem: negativo nas devoluções. Já convertido para a moeda de exibição. */
+  valorTotal: number;
+  /** Preço por unidade, sempre positivo. `null` quando a linha veio com quantidade 0. */
+  valorUnitario: number | null;
+  devolucao: boolean;
+}
+
+export interface MovimentoAba {
+  linhas: MovimentoLinha[];
+  /** Quantas linhas existem no período — pode ser maior que `linhas.length`. */
+  totalLinhas: number;
+  /** Soma com sinal: devolução subtrai. */
+  quantidade: number;
+  valor: number;
+  truncado: boolean;
+  /** Linhas do SKU fora do período filtrado (0 quando o escopo já é "tudo"). */
+  foraDoPeriodo: number;
+}
+
+export interface MovimentoDoSku {
+  compras: MovimentoAba;
+  vendas: MovimentoAba;
+}
+
+export interface OpcoesMovimento {
+  /** "periodo" respeita o filtro de datas da tela; "tudo" ignora as datas. */
+  escopo: "periodo" | "tudo";
+  limite: number;
+}
+
+/** Linha crua da consulta — o json_agg chega como texto/número do Postgres. */
+interface MovimentoRow {
+  linhas: number;
+  qtd_total: unknown;
+  valor_total: unknown;
+  linhas_sem_periodo: number;
+  itens: {
+    data: string; documento: string; tipo: string; contraparte: string;
+    moeda: string; devolucao: boolean; qtd: unknown; total: unknown;
+  }[];
+}
+
+/**
+ * Monta a consulta de uma das abas. As duas fontes têm formato diferente
+ * (`compra_items` e `sale_items` não compartilham nome de coluna nenhum), mas a
+ * forma da resposta é a mesma: totais do período, contagem sem período e a
+ * página de linhas mais recentes.
+ *
+ * A contagem "sem período" repete as mesmas condições MENOS as de data — é ela
+ * que sustenta o aviso "há N linhas fora do período" quando o SKU abre vazio
+ * pelo recorte de datas, e não por falta de movimento.
+ */
+function sqlMovimento(cfg: {
+  tabela: string;
+  alias: string;
+  data: string;
+  documento: string;
+  tipo: string;
+  contraparte: string;
+  moeda: string;
+  quantidade: string;
+  total: string;
+  /** Expressão booleana: a linha desfaz um movimento e entra negativa. */
+  devolucao: string;
+  join: string;
+  taxa: string;
+  /** Produto, empresa, moeda e escopo — valem nas duas contagens. */
+  cond: string[];
+  /** Só as de data: ficam de fora da contagem "sem período". */
+  condPeriodo: string[];
+  limite: string;
+}): string {
+  const { alias, tabela } = cfg;
+  return `
+  WITH base AS (
+    SELECT ${cfg.data}         AS data,
+           ${cfg.documento}    AS documento,
+           ${cfg.tipo}         AS tipo,
+           ${cfg.contraparte}  AS contraparte,
+           ${cfg.moeda}        AS moeda,
+           (${cfg.devolucao})  AS devolucao,
+           ${cfg.quantidade}   AS qtd,
+           ${cfg.total} * ${cfg.taxa} AS total
+    FROM ${tabela} ${alias}
+    ${cfg.join}
+    WHERE ${[...cfg.cond, ...cfg.condPeriodo].join(" AND ")}
+  )
+  SELECT (SELECT count(*)::int FROM base) AS linhas,
+         (SELECT COALESCE(SUM(CASE WHEN devolucao THEN -qtd   ELSE qtd   END), 0) FROM base) AS qtd_total,
+         (SELECT COALESCE(SUM(CASE WHEN devolucao THEN -total ELSE total END), 0) FROM base) AS valor_total,
+         (SELECT count(*)::int FROM ${tabela} ${alias} WHERE ${cfg.cond.join(" AND ")}) AS linhas_sem_periodo,
+         (SELECT COALESCE(json_agg(x ORDER BY x.data DESC, x.documento DESC), '[]'::json)
+            FROM (SELECT data, documento, tipo, contraparte, moeda, devolucao, qtd, total
+                  FROM base ORDER BY data DESC, documento DESC LIMIT ${cfg.limite}) x) AS itens`;
+}
+
+function montaAba(row: MovimentoRow | undefined, escopoTudo: boolean): MovimentoAba {
+  const totalLinhas = row?.linhas ?? 0;
+  const linhas = (row?.itens ?? []).map((i): MovimentoLinha => {
+    const qtd = Number(i.qtd);
+    const total = Number(i.total);
+    const sinal = i.devolucao ? -1 : 1;
+    return {
+      data: i.data,
+      documento: i.documento,
+      tipo: i.tipo,
+      contraparte: i.contraparte,
+      moeda: i.moeda,
+      quantidade: qtd * sinal,
+      valorTotal: total * sinal,
+      // O unitário é preço, não saldo: fica positivo mesmo na devolução, que já
+      // carrega o sinal na quantidade e no total.
+      valorUnitario: qtd !== 0 ? total / qtd : null,
+      devolucao: i.devolucao,
+    };
+  });
+  return {
+    linhas,
+    totalLinhas,
+    quantidade: Number(row?.qtd_total ?? 0),
+    valor: Number(row?.valor_total ?? 0),
+    truncado: totalLinhas > linhas.length,
+    foraDoPeriodo: escopoTudo ? 0 : Math.max(0, (row?.linhas_sem_periodo ?? 0) - totalLinhas),
+  };
+}
+
+/**
+ * Extrato de um SKU: as linhas de compra e as de venda que o produziram.
+ *
+ * É o detalhe por trás de uma linha do Detalhamento por SKU — clicar no item
+ * abre isto. As duas abas seguem os mesmos filtros da tela (período, empresa,
+ * moeda e, nas vendas, canal/vendedor/subgrupo), para que os totais do extrato
+ * conversem com os números da linha de fora.
+ *
+ * **Devolução e transferência entram na lista, marcadas.** A tabela de fora já
+ * mostra a saída LÍQUIDA de devolução (ver a nota no topo do arquivo); se o
+ * extrato listasse só VENDA pura, a soma não fecharia com a linha que o
+ * usuário clicou. Por isso a devolução entra com quantidade e valor negativos
+ * — o ERP manda tudo como magnitude positiva, o sinal é decidido aqui. A
+ * transferência de compra fica positiva: é entrada de mercadoria, só não é
+ * reposição de fornecedor (e por isso segue fora do filtro por fornecedor).
+ *
+ * Custo: uma consulta por aba, as duas por índice de produto
+ * (`idx_compra_produto`, `idx_sale_items_product_id`). Medido no pior SKU da
+ * base (5.716 vendas) sem recorte de data: 25–30 ms nas vendas, 1 ms nas
+ * compras.
+ */
+export async function getMovimentoDoSku(
+  db: PrismaClient,
+  f: AnalyticsFilters,
+  productId: string,
+  o: OpcoesMovimento
+): Promise<MovimentoDoSku> {
+  const escopoTudo = o.escopo === "tudo";
+
+  // ── Compras ───────────────────────────────────────────────────────────────
+  // Sem os filtros de canal/vendedor/subgrupo: são eixos de venda e não existem
+  // em compra_items. Empresa e moeda valem, como no resto da tela.
+  const pc = new Params();
+  const condC = [
+    `c.produto_id = ${pc.add(productId)}`,
+    `c.pedido_tipo IN ('COMPRA', 'DEVOLUCAO COMPRA', 'TRANSFERENCIA COMPRA')`,
+  ];
+  if (f.empresaId !== "all") condC.push(`c.empresa_id = ${pc.add(f.empresaId)}`);
+  if (f.currency !== "ALL") condC.push(`c.moeda_id = ${pc.add(f.currency)}`);
+  const condPerC = escopoTudo
+    ? []
+    : [`c.pedido_data >= ${pc.add(f.from)}`, `c.pedido_data <= ${pc.add(f.to)}`];
+  const sqlCompras = sqlMovimento({
+    tabela: "compra_items",
+    alias: "c",
+    data: "c.pedido_data",
+    documento: "c.pedido_documento",
+    tipo: "c.pedido_tipo",
+    contraparte: "c.fornecedor_nome",
+    moeda: "c.moeda_sigla",
+    quantidade: "c.produto_quantidade",
+    total: "c.produto_valor_total",
+    devolucao: "c.pedido_tipo = 'DEVOLUCAO COMPRA'",
+    join: joinCambio(f, pc, "c.pedido_data", "c.moeda_id"),
+    taxa: exprTaxa(f),
+    cond: condC,
+    condPeriodo: condPerC,
+    limite: pc.add(o.limite),
+  });
+
+  // ── Vendas ────────────────────────────────────────────────────────────────
+  // Mesmo escopo do `e_l` que alimenta a demanda da tabela, com a devolução
+  // junto em vez de numa consulta à parte.
+  const pv = new Params();
+  const condV = [
+    whereGraficos(f, pv, ["VENDA", "DEVOLUCAO VENDA"]),
+    `s.product_id = ${pv.add(productId)}`,
+  ];
+  const condPerV = escopoTudo
+    ? []
+    : [`s.date >= ${pv.add(f.from)}`, `s.date <= ${pv.add(f.to)}`];
+  const sqlVendas = sqlMovimento({
+    tabela: "sale_items",
+    alias: "s",
+    data: "s.date",
+    documento: "s.order_id",
+    tipo: "s.order_type",
+    contraparte: "s.client_name",
+    moeda: "s.currency_code",
+    quantidade: "s.quantity",
+    total: "s.total_orig",
+    devolucao: "s.order_type = 'DEVOLUCAO VENDA'",
+    join: joinCambio(f, pv, "s.date", "s.currency_id"),
+    taxa: exprTaxa(f),
+    cond: condV,
+    condPeriodo: condPerV,
+    limite: pv.add(o.limite),
+  });
+
+  const [compras, vendas] = await Promise.all([
+    consultaAnalitica<MovimentoRow>(db, sqlCompras, pc.values),
+    consultaAnalitica<MovimentoRow>(db, sqlVendas, pv.values),
+  ]);
+
+  return {
+    compras: montaAba(compras[0], escopoTudo),
+    vendas: montaAba(vendas[0], escopoTudo),
+  };
+}

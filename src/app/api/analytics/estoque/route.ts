@@ -2,7 +2,12 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { getSession } from "@/lib/server/auth";
 import { getTenantContext } from "@/lib/server/tenant";
-import { getEstoqueData } from "@/lib/server/analytics/estoque";
+import {
+  MAX_LINHAS_MOVIMENTO,
+  MAX_LINHAS_MOVIMENTO_EXCEL,
+  getEstoqueData,
+  getMovimentoDoSku,
+} from "@/lib/server/analytics/estoque";
 import type { AnalyticsFilters } from "@/lib/server/analytics/base";
 
 export const runtime = "nodejs";
@@ -30,6 +35,13 @@ const corpoSchema = z.object({
     .default("all"),
   fornecedorId: z.string().max(255).default("all"),
   busca: z.string().max(120).default(""),
+  // Extrato de um SKU (o painel que abre ao clicar numa linha da tabela). Quando
+  // vem, a rota responde SÓ o extrato — a tela já tem o resto na mão, e refazer
+  // a agregação inteira a cada clique seria o caro desta tela.
+  detalhe: z.literal("sku").optional(),
+  skuId: z.string().max(255).default(""),
+  escopoDetalhe: z.enum(["periodo", "tudo"]).default("periodo"),
+  limiteDetalhe: z.number().int().min(1).max(MAX_LINHAS_MOVIMENTO_EXCEL).default(MAX_LINHAS_MOVIMENTO),
 });
 
 export async function POST(req: NextRequest) {
@@ -66,6 +78,18 @@ export async function POST(req: NextRequest) {
   };
 
   const inicio = Date.now();
+
+  if (corpo.detalhe === "sku") {
+    if (!corpo.skuId) {
+      return NextResponse.json({ error: "Detalhe do SKU exige 'skuId'" }, { status: 400 });
+    }
+    const movimento = await getMovimentoDoSku(db, filtros, corpo.skuId, {
+      escopo: corpo.escopoDetalhe,
+      limite: corpo.limiteDetalhe,
+    });
+    return NextResponse.json({ ...movimento, ms: Date.now() - inicio });
+  }
+
   const data = await getEstoqueData(db, filtros, {
     hoje: corpo.hoje,
     status: corpo.status,

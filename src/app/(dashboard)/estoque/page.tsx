@@ -36,10 +36,14 @@ import {
   STATUS_ORDER,
   statusLabel,
   useEstoqueAnalytics,
+  useMovimentoDoSku,
   type EstoqueRow as InventoryRow,
   type EstoqueView,
+  type MovimentoAba,
   type StockStatus,
 } from "@/lib/hooks/use-estoque-analytics";
+import { Sheet, SheetContent, SheetDescription, SheetTitle } from "@/components/ui/sheet";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { formatCurrency, formatNumber, formatPercent } from "@/lib/utils/format";
 import { useMoedaExibicao } from "@/lib/hooks/use-moeda-exibicao";
 import { useOpcoesFiltro } from "@/lib/hooks/use-opcoes-filtro";
@@ -82,6 +86,17 @@ export default function EstoquePage() {
   // se um erro no recarregamento o tirasse, a página ficaria com a rolagem
   // travada e sem botão para sair.
   const [maximizado, setMaximizado] = React.useState(false);
+
+  // Linha clicada da tabela → painel com o extrato de compras e vendas do SKU.
+  // Guarda a LINHA inteira, não só o id: o cabeçalho do painel mostra descrição,
+  // estoque e custo, que a tela já tem em mãos e não precisa consultar de novo.
+  const [skuAberto, setSkuAberto] = React.useState<InventoryRow | null>(null);
+  const [escopoDetalhe, setEscopoDetalhe] = React.useState<"periodo" | "tudo">("periodo");
+  const abreSku = React.useCallback((linha: InventoryRow) => {
+    // Cada SKU abre no período filtrado; "ver tudo" é uma escolha por item.
+    setEscopoDetalhe("periodo");
+    setSkuAberto(linha);
+  }, []);
   const telaCheia = maximizado && !error && !!data?.hasData;
   const botaoTelaCheiaRef = React.useRef<HTMLButtonElement>(null);
 
@@ -143,8 +158,11 @@ export default function EstoquePage() {
 
     // `defaultPrevented`: um Select aberto trata o próprio Esc e o marca como
     // tratado — o primeiro Esc fecha a lista, o segundo é que fecha a tela cheia.
+    // O painel do SKU não marca (o Radix fecha o próprio diálogo sem isso), por
+    // isso o Esc é ignorado enquanto ele estiver aberto: fecha o painel, e só o
+    // Esc seguinte fecha a tela cheia.
     const aoTeclar = (e: KeyboardEvent) => {
-      if (e.key === "Escape" && !e.defaultPrevented) setMaximizado(false);
+      if (e.key === "Escape" && !e.defaultPrevented && !skuAberto) setMaximizado(false);
     };
     window.addEventListener("keydown", aoTeclar);
 
@@ -159,7 +177,7 @@ export default function EstoquePage() {
       // O foco volta ao botão que abriu, para quem navega pelo teclado.
       botao?.focus();
     };
-  }, [telaCheia]);
+  }, [telaCheia, skuAberto]);
 
   const cabecalho = (
     <PageHeader
@@ -663,11 +681,20 @@ export default function EstoquePage() {
                 telaCheia={telaCheia}
                 ordem={ordemSku}
                 onOrdena={ordenaPor}
+                onAbrirSku={abreSku}
               />
             )}
           </CardContent>
         </Card>
       </div>
+
+      <PainelMovimentoSku
+        linha={skuAberto}
+        currency={currency}
+        escopo={escopoDetalhe}
+        onEscopo={setEscopoDetalhe}
+        onFechar={() => setSkuAberto(null)}
+      />
     </div>
   );
 }
@@ -1065,6 +1092,7 @@ function VirtualizedSkuTable({
   telaCheia,
   ordem,
   onOrdena,
+  onAbrirSku,
 }: {
   rows: InventoryRow[];
   currency: AppCurrencyId | string;
@@ -1073,6 +1101,8 @@ function VirtualizedSkuTable({
   telaCheia: boolean;
   ordem: OrdemSku | null;
   onOrdena: (id: ColunaSkuId) => void;
+  /** Clique (ou Enter/Espaço) na linha: abre o extrato do SKU. */
+  onAbrirSku: (linha: InventoryRow) => void;
 }) {
   const parentRef = React.useRef<HTMLDivElement>(null);
   const { template: gridCols, minWidth } = colunasSku(telaCheia);
@@ -1122,7 +1152,20 @@ function VirtualizedSkuTable({
             return (
               <div
                 key={r.productId}
-                className="absolute left-0 top-0 grid w-full items-center border-b border-border text-sm hover:bg-muted/30"
+                role="button"
+                tabIndex={0}
+                title="Ver compras e vendas deste item"
+                onClick={() => onAbrirSku(r)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    onAbrirSku(r);
+                  }
+                }}
+                className={cn(
+                  "absolute left-0 top-0 grid w-full cursor-pointer items-center border-b border-border text-sm",
+                  "hover:bg-muted/30 focus-visible:bg-muted/40 focus-visible:outline-none"
+                )}
                 style={{
                   gridTemplateColumns: gridCols,
                   height: vRow.size,
@@ -1402,5 +1445,305 @@ function DormantMeta({ row, displayCurrencyId }: { row: InventoryRow; displayCur
         {row.lastSaleDate ? ` · última saída ${row.lastSaleDate}` : " · sem histórico"}
       </div>
     </div>
+  );
+}
+
+// ─── Extrato do SKU ───────────────────────────────────────────────────────────
+
+/**
+ * Rótulo curto do tipo da linha. 'COMPRA' e 'VENDA' não viram etiqueta: são o
+ * caso comum, e marcar todas as linhas com o óbvio só tiraria atenção das duas
+ * que realmente mudam a leitura (devolução e transferência).
+ */
+const TIPO_MOVIMENTO: Record<string, { rotulo: string; variant: "warning" | "ghost" }> = {
+  "DEVOLUCAO COMPRA": { rotulo: "Devolução", variant: "warning" },
+  "DEVOLUCAO VENDA": { rotulo: "Devolução", variant: "warning" },
+  "TRANSFERENCIA COMPRA": { rotulo: "Transferência", variant: "ghost" },
+};
+
+/** Colunas do extrato. A de moeda só existe em Compras — ver `PainelMovimentoSku`. */
+const MOV_COLS_COMPRA = "84px 104px minmax(120px,1fr) 44px 74px 92px 104px";
+const MOV_COLS_VENDA = "84px 104px minmax(120px,1fr) 74px 92px 104px";
+
+/**
+ * Painel lateral com o extrato do SKU: as compras e as vendas que estão por
+ * trás da linha clicada, em abas, da mais recente para a mais antiga.
+ *
+ * Sem virtualização de propósito: o servidor corta em 500 linhas por aba, e
+ * 500 linhas de grid num painel que rola são baratas — trazer o virtualizador
+ * para cá custaria mais em complexidade do que economiza em DOM.
+ */
+function PainelMovimentoSku({
+  linha,
+  currency,
+  escopo,
+  onEscopo,
+  onFechar,
+}: {
+  linha: InventoryRow | null;
+  currency: AppCurrencyId | string;
+  escopo: "periodo" | "tudo";
+  onEscopo: (e: "periodo" | "tudo") => void;
+  onFechar: () => void;
+}) {
+  const { data, loading, error, baixarCompleto } = useMovimentoDoSku(
+    linha?.productId ?? null,
+    escopo
+  );
+  const [baixando, setBaixando] = React.useState<"compras" | "vendas" | null>(null);
+
+  async function baixarExcel(aba: "compras" | "vendas") {
+    if (!linha) return;
+    setBaixando(aba);
+    try {
+      // Busca de novo sem o teto de 500: o Excel leva o extrato inteiro.
+      const completo = await baixarCompleto(linha.productId);
+      const linhas = completo[aba].linhas.map((m) => ({
+        Data: m.data,
+        Documento: m.documento,
+        Tipo: m.tipo,
+        [aba === "compras" ? "Fornecedor" : "Cliente"]: m.contraparte,
+        ...(aba === "compras" ? { Moeda: m.moeda } : {}),
+        Quantidade: m.quantidade,
+        "Valor unitário": m.valorUnitario ?? "",
+        "Valor total": m.valorTotal,
+      }));
+      exportarExcel(
+        `${aba}-${linha.productId}.xlsx`,
+        aba === "compras" ? "Compras" : "Vendas",
+        linhas
+      );
+    } finally {
+      setBaixando(null);
+    }
+  }
+
+  return (
+    <Sheet open={!!linha} onOpenChange={(aberto) => !aberto && onFechar()}>
+      <SheetContent
+        // O foco automático cairia no botão de fechar; o painel é para ler.
+        onOpenAutoFocus={(e) => e.preventDefault()}
+      >
+        {linha && (
+          <>
+            <div className="shrink-0 border-b border-border px-5 py-4 pr-12">
+              <SheetTitle className="flex items-baseline gap-2">
+                <span className="font-mono text-xs text-muted-foreground">{linha.productId}</span>
+                <span className="truncate">{linha.description || "Sem descrição"}</span>
+              </SheetTitle>
+              <SheetDescription className="mt-1">
+                Estoque {formatNumber(linha.stock)} un ·{" "}
+                {formatCurrency(linha.costTotalUSD, currency, { compact: true })} em capital
+                {linha.subgroupName ? ` · ${linha.subgroupName}` : ""}
+                {escopo === "tudo" ? " · histórico completo" : " · período filtrado"}
+              </SheetDescription>
+            </div>
+
+            {error ? (
+              <p className="px-5 py-10 text-center text-xs text-negative">{error}</p>
+            ) : (
+              <Tabs defaultValue="compras" className="flex min-h-0 flex-1 flex-col">
+                <div className="shrink-0 px-5 pt-4">
+                  <TabsList>
+                    <TabsTrigger value="compras">
+                      Compras{data ? ` · ${formatNumber(data.compras.totalLinhas)}` : ""}
+                    </TabsTrigger>
+                    <TabsTrigger value="vendas">
+                      Vendas{data ? ` · ${formatNumber(data.vendas.totalLinhas)}` : ""}
+                    </TabsTrigger>
+                  </TabsList>
+                </div>
+                {/*
+                  `data-[state=active]:flex`, e não `flex` direto: a aba inativa
+                  continua no DOM com o atributo `hidden`, e um `display: flex`
+                  de classe vence o `display: none` que o atributo traz do
+                  navegador. A aba escondida voltava a ocupar espaço — como ela
+                  também é `flex-1`, sobrava meio painel em branco acima da
+                  lista da aba visível.
+                */}
+                <TabsContent
+                  value="compras"
+                  className="mt-3 min-h-0 flex-1 flex-col data-[state=active]:flex"
+                >
+                  <AbaMovimento
+                    aba={data?.compras ?? null}
+                    tipo="compras"
+                    loading={loading}
+                    currency={currency}
+                    escopo={escopo}
+                    onEscopo={onEscopo}
+                    onExcel={() => baixarExcel("compras")}
+                    baixando={baixando === "compras"}
+                  />
+                </TabsContent>
+                <TabsContent
+                  value="vendas"
+                  className="mt-3 min-h-0 flex-1 flex-col data-[state=active]:flex"
+                >
+                  <AbaMovimento
+                    aba={data?.vendas ?? null}
+                    tipo="vendas"
+                    loading={loading}
+                    currency={currency}
+                    escopo={escopo}
+                    onEscopo={onEscopo}
+                    onExcel={() => baixarExcel("vendas")}
+                    baixando={baixando === "vendas"}
+                  />
+                </TabsContent>
+              </Tabs>
+            )}
+          </>
+        )}
+      </SheetContent>
+    </Sheet>
+  );
+}
+
+function AbaMovimento({
+  aba,
+  tipo,
+  loading,
+  currency,
+  escopo,
+  onEscopo,
+  onExcel,
+  baixando,
+}: {
+  aba: MovimentoAba | null;
+  tipo: "compras" | "vendas";
+  loading: boolean;
+  currency: AppCurrencyId | string;
+  escopo: "periodo" | "tudo";
+  onEscopo: (e: "periodo" | "tudo") => void;
+  onExcel: () => void;
+  baixando: boolean;
+}) {
+  const compras = tipo === "compras";
+  const cols = compras ? MOV_COLS_COMPRA : MOV_COLS_VENDA;
+
+  if (loading || !aba) {
+    return (
+      <div className="flex flex-1 items-center justify-center gap-2 text-xs text-muted-foreground">
+        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+        Carregando…
+      </div>
+    );
+  }
+
+  return (
+    <>
+      <div className="flex shrink-0 flex-wrap items-center justify-between gap-2 px-5 pb-3">
+        <p className="text-[11px] text-muted-foreground">
+          {aba.totalLinhas === 0 ? (
+            compras ? "Nenhuma compra" : "Nenhuma venda"
+          ) : (
+            <>
+              <span className="tabular text-foreground">{formatNumber(aba.quantidade)}</span> un ·{" "}
+              <span className="tabular text-foreground">
+                {formatCurrency(aba.valor, currency, { compact: Math.abs(aba.valor) >= 10000 })}
+              </span>
+              {aba.truncado && (
+                <> · mostrando {formatNumber(aba.linhas.length)} de {formatNumber(aba.totalLinhas)}</>
+              )}
+            </>
+          )}
+        </p>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className="h-7 gap-1.5 text-[11px]"
+          disabled={aba.totalLinhas === 0 || baixando}
+          onClick={onExcel}
+        >
+          {baixando ? <Loader2 className="h-3 w-3 animate-spin" /> : <Download className="h-3 w-3" />}
+          Excel
+        </Button>
+      </div>
+
+      {(aba.foraDoPeriodo > 0 || escopo === "tudo") && (
+        <div className="mx-5 mb-3 shrink-0 rounded-md border border-border bg-surface-sunken px-3 py-2 text-[11px] text-muted-foreground">
+          {escopo === "tudo" ? (
+            <>
+              Mostrando o histórico completo, fora do período filtrado.{" "}
+              <button
+                type="button"
+                className="font-medium text-accent underline-offset-2 hover:underline"
+                onClick={() => onEscopo("periodo")}
+              >
+                Voltar ao período
+              </button>
+            </>
+          ) : (
+            <>
+              Há {formatNumber(aba.foraDoPeriodo)}{" "}
+              {aba.foraDoPeriodo === 1 ? "linha" : "linhas"} fora do período filtrado.{" "}
+              <button
+                type="button"
+                className="font-medium text-accent underline-offset-2 hover:underline"
+                onClick={() => onEscopo("tudo")}
+              >
+                Ver tudo
+              </button>
+            </>
+          )}
+        </div>
+      )}
+
+      {aba.linhas.length === 0 ? (
+        <p className="px-5 py-10 text-center text-xs text-muted-foreground">
+          Nada {compras ? "comprado" : "vendido"} neste recorte.
+        </p>
+      ) : (
+        <div className="min-h-0 flex-1 overflow-auto overscroll-contain border-t border-border">
+          <div
+            className="sticky top-0 z-10 grid items-center border-b border-border bg-surface px-5 py-2 text-[10px] uppercase tracking-[0.14em] text-muted-foreground"
+            style={{ gridTemplateColumns: cols }}
+          >
+            <div>Data</div>
+            <div>Documento</div>
+            <div>{compras ? "Fornecedor" : "Cliente"}</div>
+            {compras && <div>Moeda</div>}
+            <div className="text-right">Qtd</div>
+            <div className="text-right">Unitário</div>
+            <div className="text-right">Total</div>
+          </div>
+          {aba.linhas.map((m, i) => {
+            const marca = TIPO_MOVIMENTO[m.tipo];
+            return (
+              <div
+                key={`${m.documento}-${m.data}-${i}`}
+                className="grid items-center border-b border-border/60 px-5 py-2 text-xs hover:bg-muted/20"
+                style={{ gridTemplateColumns: cols }}
+              >
+                <div className="tabular text-muted-foreground">{m.data}</div>
+                <div className="truncate font-mono text-[11px]" title={m.documento}>
+                  {m.documento || "—"}
+                </div>
+                <div className="truncate pr-2" title={m.contraparte}>
+                  {m.contraparte || "—"}
+                  {marca && (
+                    <Badge variant={marca.variant} className="ml-1.5 px-1.5 py-0 text-[9px]">
+                      {marca.rotulo}
+                    </Badge>
+                  )}
+                </div>
+                {compras && <div className="text-muted-foreground">{m.moeda || "—"}</div>}
+                <div className={cn("text-right tabular", m.devolucao && "text-warning")}>
+                  {formatNumber(m.quantidade)}
+                </div>
+                <div className="text-right tabular text-muted-foreground">
+                  {m.valorUnitario === null ? "—" : formatCurrency(m.valorUnitario, currency)}
+                </div>
+                <div className={cn("text-right tabular font-medium", m.devolucao && "text-warning")}>
+                  {formatCurrency(m.valorTotal, currency, { compact: Math.abs(m.valorTotal) >= 10000 })}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </>
   );
 }

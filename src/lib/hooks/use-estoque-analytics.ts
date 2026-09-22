@@ -6,6 +6,9 @@ import { leJson } from "@/lib/utils/resposta-json";
 import type {
   EstoqueData,
   EstoqueRow as EstoqueRowServidor,
+  MovimentoAba,
+  MovimentoDoSku,
+  MovimentoLinha,
   StockStatus,
 } from "@/lib/server/analytics/estoque";
 
@@ -110,13 +113,15 @@ function iso(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
-export function useEstoqueAnalytics(opcoes: {
-  status: StockStatus | "all";
-  coverageBucket: string;
-  lastPurchaseBucket: string;
-  fornecedorId: string;
-  busca: string;
-}): { data: EstoqueView | null; loading: boolean; error: string | null } {
+/**
+ * A parte do corpo que vem dos filtros GLOBAIS — a mesma para a tabela e para o
+ * extrato de um SKU. Sai daqui, e não de cada hook, para que o painel não possa
+ * consultar um período diferente do que a tabela por trás dele está mostrando.
+ */
+function useFiltrosGlobais(): {
+  from: string; to: string; currency: string; empresaId: string;
+  channel: string; sellerId: string; subgroupId: string;
+} {
   const preset = useFilters((s) => s.preset);
   const customRange = useFilters((s) => s.customRange);
   const currency = useFilters((s) => s.currency);
@@ -125,6 +130,32 @@ export function useEstoqueAnalytics(opcoes: {
   const sellerId = useFilters((s) => s.sellerId);
   const subgroupId = useFilters((s) => s.subgroupId);
   const getRange = useFilters((s) => s.getRange);
+
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const range = React.useMemo(() => getRange(), [preset, customRange, getRange]);
+
+  return React.useMemo(
+    () => ({
+      from: iso(range.from),
+      to: iso(range.to),
+      currency,
+      empresaId,
+      channel,
+      sellerId,
+      subgroupId,
+    }),
+    [range, currency, empresaId, channel, sellerId, subgroupId]
+  );
+}
+
+export function useEstoqueAnalytics(opcoes: {
+  status: StockStatus | "all";
+  coverageBucket: string;
+  lastPurchaseBucket: string;
+  fornecedorId: string;
+  busca: string;
+}): { data: EstoqueView | null; loading: boolean; error: string | null } {
+  const filtrosGlobais = useFiltrosGlobais();
 
   const [resposta, setResposta] = React.useState<EstoqueData | null>(null);
   const [loading, setLoading] = React.useState(true);
@@ -137,18 +168,9 @@ export function useEstoqueAnalytics(opcoes: {
     return () => clearTimeout(t);
   }, [opcoes.busca]);
 
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  const range = React.useMemo(() => getRange(), [preset, customRange, getRange]);
-
   const corpo = React.useMemo(
     () => ({
-      from: iso(range.from),
-      to: iso(range.to),
-      currency,
-      empresaId,
-      channel,
-      sellerId,
-      subgroupId,
+      ...filtrosGlobais,
       hoje: iso(new Date()),
       status: opcoes.status,
       coverageBucket: opcoes.coverageBucket,
@@ -157,7 +179,7 @@ export function useEstoqueAnalytics(opcoes: {
       busca: buscaAdiada,
     }),
     [
-      range, currency, empresaId, channel, sellerId, subgroupId,
+      filtrosGlobais,
       opcoes.status, opcoes.coverageBucket, opcoes.lastPurchaseBucket, opcoes.fornecedorId, buscaAdiada,
     ]
   );
@@ -215,4 +237,116 @@ export function useEstoqueAnalytics(opcoes: {
   }, [resposta]);
 
   return { data, loading, error };
+}
+
+// ─── Extrato de um SKU ───────────────────────────────────────────────────────
+
+export type { MovimentoAba, MovimentoDoSku, MovimentoLinha };
+
+/**
+ * Mesmos tetos de `estoque.ts`, repetidos aqui em vez de importados: aquele
+ * módulo carrega o Prisma, e importar um valor (não só tipo) dele traria o
+ * servidor inteiro para o bundle do cliente — mesmo motivo do `SEM_FORNECEDOR`
+ * duplicado na página.
+ */
+const MAX_LINHAS_MOVIMENTO_EXCEL = 20_000;
+
+/**
+ * Compras e vendas de um SKU, para o painel que abre ao clicar numa linha da
+ * tabela. `skuId = null` mantém o hook parado.
+ *
+ * Cache em memória por (filtros, escopo, SKU): fechar e reabrir o mesmo item,
+ * ou alternar entre itens já vistos, não refaz a consulta. Qualquer mudança nos
+ * filtros globais esvazia o cache inteiro — os números de todo SKU mudam junto.
+ */
+export function useMovimentoDoSku(
+  skuId: string | null,
+  escopo: "periodo" | "tudo"
+): {
+  data: MovimentoDoSku | null;
+  loading: boolean;
+  error: string | null;
+  /** Busca o extrato SEM o teto de linhas, para o Excel. Não passa pelo cache. */
+  baixarCompleto: (id: string) => Promise<MovimentoDoSku>;
+} {
+  const filtrosGlobais = useFiltrosGlobais();
+  const [data, setData] = React.useState<MovimentoDoSku | null>(null);
+  const [loading, setLoading] = React.useState(false);
+  const [error, setError] = React.useState<string | null>(null);
+  const cacheRef = React.useRef(new Map<string, MovimentoDoSku>());
+
+  const chaveFiltros = JSON.stringify(filtrosGlobais);
+  React.useEffect(() => {
+    cacheRef.current.clear();
+  }, [chaveFiltros]);
+
+  React.useEffect(() => {
+    setError(null);
+    if (skuId === null) {
+      setData(null);
+      setLoading(false);
+      return;
+    }
+
+    const chave = `${chaveFiltros}::${escopo}::${skuId}`;
+    const guardado = cacheRef.current.get(chave);
+    if (guardado) {
+      setData(guardado);
+      setLoading(false);
+      return;
+    }
+
+    const ctrl = new AbortController();
+    setData(null);
+    setLoading(true);
+
+    fetch("/api/analytics/estoque", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        ...filtrosGlobais,
+        hoje: iso(new Date()),
+        detalhe: "sku",
+        skuId,
+        escopoDetalhe: escopo,
+      }),
+      signal: ctrl.signal,
+    })
+      .then((res) => leJson<MovimentoDoSku>(res))
+      .then((r) => {
+        if (ctrl.signal.aborted) return;
+        cacheRef.current.set(chave, r);
+        setData(r);
+      })
+      .catch((err: Error) => {
+        if (err.name !== "AbortError") setError(err.message);
+      })
+      .finally(() => {
+        if (!ctrl.signal.aborted) setLoading(false);
+      });
+
+    return () => ctrl.abort();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [skuId, escopo, chaveFiltros]);
+
+  const baixarCompleto = React.useCallback(
+    async (id: string): Promise<MovimentoDoSku> => {
+      const res = await fetch("/api/analytics/estoque", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ...filtrosGlobais,
+          hoje: iso(new Date()),
+          detalhe: "sku",
+          skuId: id,
+          escopoDetalhe: escopo,
+          limiteDetalhe: MAX_LINHAS_MOVIMENTO_EXCEL,
+        }),
+      });
+      return leJson<MovimentoDoSku>(res);
+    },
+    [filtrosGlobais, escopo]
+  );
+
+  return { data, loading, error, baixarCompleto };
 }

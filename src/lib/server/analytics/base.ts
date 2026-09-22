@@ -132,9 +132,18 @@ export function exprTaxa(f: AnalyticsFilters): string {
 
 // ─── Filtros → WHERE ─────────────────────────────────────────────────────────
 
-/** Empresa e moeda: valem para qualquer escopo. `tipo` separa venda de devolução. */
-export function whereBase(f: AnalyticsFilters, p: Params, tipo = "VENDA"): string {
-  const cond = [`s.order_type = ${p.add(tipo)}`];
+/**
+ * Empresa e moeda: valem para qualquer escopo. `tipo` separa venda de devolução
+ * — uma lista quando as duas têm de vir juntas, como no extrato de um SKU, em
+ * que a devolução aparece na mesma tabela da venda que ela desfaz.
+ */
+export function whereBase(f: AnalyticsFilters, p: Params, tipo: string | string[] = "VENDA"): string {
+  const tipos = Array.isArray(tipo) ? tipo : [tipo];
+  const cond = [
+    tipos.length === 1
+      ? `s.order_type = ${p.add(tipos[0])}`
+      : `s.order_type IN (${tipos.map((t) => p.add(t)).join(", ")})`,
+  ];
   if (f.empresaId !== "all") cond.push(`s.empresa_id = ${p.add(f.empresaId)}`);
   if (f.currency !== "ALL") cond.push(`s.currency_id = ${p.add(f.currency)}`);
   return cond.join(" AND ");
@@ -147,7 +156,11 @@ export function whereBase(f: AnalyticsFilters, p: Params, tipo = "VENDA"): strin
  * QUALQUER item dele for do subgrupo, e aí o pedido INTEIRO é somado
  * (`o.items.some(...)`). Filtrar linha a linha mudaria os totais.
  */
-export function whereGraficos(f: AnalyticsFilters, p: Params, tipo = "VENDA"): string {
+export function whereGraficos(
+  f: AnalyticsFilters,
+  p: Params,
+  tipo: string | string[] = "VENDA"
+): string {
   const cond = [whereBase(f, p, tipo)];
   if (f.channel !== "all") cond.push(`lower(s.channel) = lower(${p.add(f.channel)})`);
   if (f.sellerId !== "all") cond.push(`s.seller_id = ${p.add(f.sellerId)}`);
