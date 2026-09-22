@@ -17,7 +17,10 @@ const PopoverContent = React.forwardRef<
       align={align}
       sideOffset={sideOffset}
       className={cn(
-        "z-50 w-72 rounded-md border border-border bg-surface-elevated p-3 text-foreground shadow-xl shadow-foreground/[0.08] outline-none",
+        // z-[80] acompanha o `SelectContent`: a tabela maximizada do
+        // Detalhamento por SKU é um `fixed inset-0 z-[70]` e, como o popover
+        // vai para um portal no body, com z-50 ele abria atrás dela.
+        "z-[80] w-72 rounded-md border border-border bg-surface-elevated p-3 text-foreground shadow-xl shadow-foreground/[0.08] outline-none",
         "data-[state=open]:animate-fade-in",
         className
       )}

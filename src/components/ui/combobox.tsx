@@ -73,6 +73,9 @@ export function Combobox({
       e.preventDefault();
       if (filtradas[destaque]) selecionar(filtradas[destaque].value);
     } else if (e.key === "Escape") {
+      // Marcar como tratado (como o Select do Radix faz) para que o Esc que
+      // fecha esta lista não feche junto a tela cheia que estiver por trás.
+      e.preventDefault();
       setOpen(false);
     }
   }
