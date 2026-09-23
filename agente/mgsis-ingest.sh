@@ -403,8 +403,16 @@ inicio_historico() { # <bi_receber|bi_pagar>
     printf '%s' "$INICIO_HISTORICO"
     return 0
   fi
-  local r
-  r="$(echo "SELECT COALESCE(to_char(min(data_emissao), 'YYYY-MM'), '') FROM $1" \
+  # Piso em 1990, o mesmo da API: título com emissão digitada errada (ano 1759)
+  # fazia a carga andar mês a mês por 270 anos vazios antes de chegar ao real,
+  # e o mês dele seria recusado com 422 de qualquer jeito.
+  local r antigos
+  antigos="$(echo "SELECT count(*) FROM $1 WHERE data_emissao < '1990-01-01'" \
+        | psql -X -A -t -q -v ON_ERROR_STOP=1 -f - | tr -d '[:space:]')" || antigos=""
+  if [[ -n "$antigos" && "$antigos" != "0" ]]; then
+    log "  AVISO: $antigos título(s) em $1 com emissão antes de 1990 — ignorados (corrija a data no ERP)"
+  fi
+  r="$(echo "SELECT COALESCE(to_char(min(data_emissao), 'YYYY-MM'), '') FROM $1 WHERE data_emissao >= '1990-01-01'" \
         | psql -X -A -t -q -v ON_ERROR_STOP=1 -f - | tr -d '[:space:]')" || r=""
   [[ "$r" =~ ^[0-9]{4}-[0-9]{2}$ ]] || {
     erro "não consegui descobrir o primeiro mês de $1 — defina INICIO_HISTORICO no conf."
