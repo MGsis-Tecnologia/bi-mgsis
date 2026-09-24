@@ -15,7 +15,7 @@ O script fará perguntas interativas e depois:
 3. Instalará o agente em `/usr/local/bin/`
 4. Configurará `/etc/mgsis-ingest.conf`
 5. Instalará o token em `/etc/mgsis-token`
-6. Configurará automação (systemd ou cron)
+6. Configurará cron com ciclo + recarga noturna
 7. Testará todas as conexões
 
 ## 📋 Pré-requisitos
@@ -65,15 +65,6 @@ Cole o token de 64 caracteres hexadecimais:
 
 - **Tem o token agora:** Cole aqui. O script valida que tem exatamente 64 hex.
 - **Não tem:** O script deixa em branco e você configura depois manualmente.
-
-#### **Automação**
-
-```
-Usar systemd (recomendado)? [Y/n]
-```
-
-- **systemd:** Moderno, melhor logging com `journalctl`. Use em sistemas recentes (Ubuntu 18+, Debian 10+, etc).
-- **cron:** Tradicional, compatível com tudo. Logs em `/var/log/mgsis-ingest.log`.
 
 #### **Histórico (Opcional)**
 
@@ -172,10 +163,10 @@ Cole o token de 64 caracteres hexadecimais:
 
 ──────────────────────────────────────────────────────────
 
-ℹ  Automação — como executar o agente periodicamente?
-
-Usar systemd (recomendado)? [Y/n] y
-ℹ  Vou instalar mgsis-ingest.timer (executa a cada hora)
+ℹ  Automação — Cron
+ℹ  Vou configurar dois agendamentos:
+  • Cada hora (:07): mgsis-ingest.sh --ciclo
+  • 3 da manhã: mgsis-ingest.sh --recarga-financeira
 
 ──────────────────────────────────────────────────────────
 
@@ -186,7 +177,7 @@ Usar systemd (recomendado)? [Y/n] y
   ✓ Instalar agente em /usr/local/bin/
   ✓ Instalar token em /etc/mgsis-token
   ✓ Gerar /etc/mgsis-ingest.conf
-  ✓ Instalar systemd timer
+  ✓ Instalar cron (ciclo horário + recarga noturna)
   ✓ Testar conexões e views
 
 Confirma? (s/n) s
@@ -226,8 +217,9 @@ Confirma? (s/n) s
 ℹ  Teste de simulação (sem enviar dados)...
 ✓  Simulação funcionou
 
-ℹ  Instalando systemd timer...
-✓  Timer instalado e ativado
+ℹ  Instalando cron...
+✓  Cron instalado em /etc/cron.d/mgsis-ingest
+✓  Arquivo de log criado em /var/log/mgsis-ingest.log
 
 ╔════════════════════════════════════════════════════════════╗
 ║  INSTALAÇÃO CONCLUÍDA COM SUCESSO                         ║
@@ -251,7 +243,7 @@ Confirma? (s/n) s
   4. Verificar no Analytics se os dados chegaram
 
   5. Acompanhar logs automáticos:
-       sudo journalctl -u mgsis-ingest.service -f
+       sudo tail -f /var/log/mgsis-ingest.log
 
 ✓ Documentação:
   • Guia completo:  agente/README.md
@@ -275,22 +267,16 @@ Resposta esperada: mostra quantas linhas de cada dataset, tamanho em KB, e **SIM
 sudo -u analytics mgsis-ingest.sh --periodo 2026-09
 ```
 
-### Acompanhar automação
+### Acompanhar automação (Cron)
 
-**Com systemd:**
-```bash
-sudo journalctl -u mgsis-ingest.service -f
-```
-
-**Com cron:**
 ```bash
 sudo tail -f /var/log/mgsis-ingest.log
 ```
 
-### Listar próximas execuções (systemd)
+### Verificar agendamento (Cron)
 
 ```bash
-sudo systemctl list-timers mgsis-ingest.timer
+sudo cat /etc/cron.d/mgsis-ingest
 ```
 
 ## ⚙️ Configuração Manual Posterior
@@ -301,14 +287,7 @@ Se precisar ajustar depois, edite:
 sudo nano /etc/mgsis-ingest.conf
 ```
 
-Então recarregue o timer (se systemd):
-
-```bash
-sudo systemctl daemon-reload
-sudo systemctl restart mgsis-ingest.timer
-```
-
-Ou reinicie manualmente o cron (com `crontab -e` para o usuário `analytics`).
+Cron recarrega automaticamente — a próxima execução usa a nova configuração.
 
 ## 🔄 Atualizando o Agente
 
@@ -386,7 +365,7 @@ psql -U postgres -d seu_erp -c "GRANT SELECT ON bi_movimento TO analytics;"
 
 3. **Guarde o token:** Não é possível recuperar um token já criado — apenas gerar um novo (o anterior vira inválido).
 
-4. **Log de execução:** Com cron, confira `/var/log/mgsis-ingest.log` regularmente. Com systemd, use `journalctl`.
+4. **Logs:** Confira `/var/log/mgsis-ingest.log` regularmente. O cron gera logs automáticos de cada execução.
 
 5. **Primeira carga grande:** Se o histórico for grande (5+ anos), a primeira carga de vendas/receber pode levar alguns minutos. É normal — você pode acompanhar com `--simular` primeiro.
 
