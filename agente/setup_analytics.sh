@@ -139,20 +139,11 @@ ask_token() {
 
 ask_automation() {
   separator
-  info "Automação — como executar o agente periodicamente?"
-
-  printf "\nUsar systemd (recomendado em sistemas modernos)? [Y/n] "
-  read -r use_systemd
-  use_systemd="${use_systemd:-y}"
-
-  if [[ "$use_systemd" =~ ^[Yy]$ ]]; then
-    USE_SYSTEMD=true
-    info "Vou instalar mgsis-ingest.timer (executa a cada hora)"
-  else
-    USE_SYSTEMD=false
-    info "Vou instalar cron (executa a cada hora no minuto 07)"
-    warn "Você precisará ter cron ativo no sistema"
-  fi
+  info "Automação — Cron"
+  info "Vou configurar dois agendamentos:"
+  printf "  • Cada hora (:07): mgsis-ingest.sh --ciclo\n"
+  printf "  • 3 da manhã: mgsis-ingest.sh --recarga-financeira\n"
+  info "Cron precisa estar ativo no sistema"
 }
 
 ask_ingest_path() {
@@ -600,27 +591,6 @@ test_simulation() {
 
 # ─── Instalação de automação ────────────────────────────────────────────────
 
-install_systemd() {
-  separator
-  info "Instalando systemd timer..."
-
-  local script_dir
-  script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-
-  if [[ ! -f "$script_dir/systemd/mgsis-ingest.service" ]]; then
-    fatal "Arquivo systemd/mgsis-ingest.service não encontrado"
-  fi
-
-  install -m 644 "$script_dir/systemd/mgsis-ingest.service" /etc/systemd/system/
-  install -m 644 "$script_dir/systemd/mgsis-ingest.timer" /etc/systemd/system/
-
-  systemctl daemon-reload
-  systemctl enable --now mgsis-ingest.timer
-
-  ok "Timer instalado e ativado"
-  info "Próxima execução: $(systemctl list-timers mgsis-ingest.timer | tail -1)"
-}
-
 install_cron() {
   separator
   info "Instalando cron..."
@@ -666,12 +636,7 @@ print_summary() {
   printf "       sudo -u analytics mgsis-ingest.sh --periodo $(date +%Y-%m)\n"
   printf "\n  4. Verificar no Analytics se os dados chegaram\n"
   printf "\n  5. Acompanhar logs automáticos:\n"
-
-  if [[ "$USE_SYSTEMD" == true ]]; then
-    printf "       sudo journalctl -u mgsis-ingest.service -f\n"
-  else
-    printf "       sudo tail -f /var/log/mgsis-ingest.log\n"
-  fi
+  printf "       sudo tail -f /var/log/mgsis-ingest.log\n"
 
   printf "\n${GREEN}Documentação:${NC}\n"
   printf "  • Guia completo:  agente/README.md\n"
@@ -703,11 +668,7 @@ main() {
   printf "  ✓ Instalar agente em /usr/local/bin/\n"
   printf "  ✓ Instalar token em /etc/mgsis-token\n"
   printf "  ✓ Gerar /etc/mgsis-ingest.conf\n"
-  if [[ "$USE_SYSTEMD" == true ]]; then
-    printf "  ✓ Instalar systemd timer\n"
-  else
-    printf "  ✓ Instalar cron\n"
-  fi
+  printf "  ✓ Instalar cron (ciclo horário + recarga noturna)\n"
   printf "  ✓ Testar conexões e views\n"
 
   printf "\n"
@@ -729,11 +690,7 @@ main() {
   test_agent_permissions
   test_simulation
 
-  if [[ "$USE_SYSTEMD" == true ]]; then
-    install_systemd
-  else
-    install_cron
-  fi
+  install_cron
 
   print_summary
 }
