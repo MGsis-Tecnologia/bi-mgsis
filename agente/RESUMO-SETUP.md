@@ -56,23 +56,14 @@ Quando você roda `sudo bash setup_analytics.sh`, ele cria:
 - Autenticação na API do Analytics
 - Só você fornece (colado no setup)
 
-**Logs:** `/var/log/mgsis-ingest.log` (cron) ou `journalctl` (systemd)
+**Logs:** `/var/log/mgsis-ingest.log`
 - Rastreabilidade de cada envio
 
-### 3. Automação
+### 3. Automação (Cron)
 
-Escolha entre:
-
-**Systemd Timer** (recomendado em moderno)
-- Dispara a cada hora no minuto :07
-- Retry automático
-- Logging centralizado com `journalctl`
-- Ativa com `sudo systemctl enable --now mgsis-ingest.timer`
-
-**Cron** (tradicional)
-- Dois agendamentos:
-  - `7 * * * *` — ciclo horário (minuto 07, cada hora)
-  - `0 3 * * *` — recarga noturna (3 da manhã)
+**Cron** — Dois agendamentos:
+- `7 * * * *` — Ciclo horário (minuto 07, cada hora)
+- `0 3 * * *` — Recarga noturna (3 da manhã)
 - Logs em `/var/log/mgsis-ingest.log`
 
 ## 🔄 Como Funciona
@@ -180,7 +171,6 @@ sudo bash setup_analytics.sh
 # Responda perguntas interativas:
 # - Banco de dados (nome, host, porta)
 # - Token (cole ou deixe vazio para depois)
-# - Automação (systemd ou cron)
 # - Histórico (mês inicial ou auto-descobrir)
 
 # O script faz tudo:
@@ -203,13 +193,9 @@ sudo -u analytics mgsis-ingest.sh --periodo 2026-09
 # Verificar no Analytics se os dados chegaram
 ```
 
-### Acompanhar Automação
+### Acompanhar Automação (Cron)
 
 ```bash
-# Com systemd:
-sudo journalctl -u mgsis-ingest.service -f
-
-# Com cron:
 sudo tail -f /var/log/mgsis-ingest.log
 ```
 
@@ -238,10 +224,6 @@ sudo tail -f /var/log/mgsis-ingest.log
 
 5. **Confira logs:**
    ```bash
-   # systemd:
-   sudo journalctl -u mgsis-ingest.service -n 100 -p err
-
-   # cron:
    sudo grep "ERRO\|error" /var/log/mgsis-ingest.log | tail -20
    ```
 
@@ -304,14 +286,9 @@ Próxima execução usa o novo.
 
 ### Limpar Logs
 
-Cron (opcional, eles rotacionam automaticamente):
+Cron rotaciona automaticamente os logs. Se necessário:
 ```bash
 sudo truncate -s 0 /var/log/mgsis-ingest.log
-```
-
-Systemd (gerenciado automaticamente):
-```bash
-sudo journalctl -u mgsis-ingest.service --vacuum-time=30d
 ```
 
 ## 📚 Documentação Completa
@@ -339,13 +316,13 @@ sudo journalctl -u mgsis-ingest.service --vacuum-time=30d
 │  3. Instala agente mgsis-ingest.sh      │
 │  4. Configura /etc/mgsis-ingest.conf    │
 │  5. Instala token /etc/mgsis-token      │
-│  6. Configura automação (systemd/cron)  │
+│  6. Configura cron (ciclo + recarga)    │
 │  7. Testa tudo                          │
 │       ↓                                 │
 │  ✓ Pronto para usar                     │
 │                                         │
-│  Execução automática:                   │
-│  • Cada hora: ciclo (2 meses + fotos)   │
+│  Execução automática (cron):            │
+│  • Cada hora :07: ciclo horário         │
 │  • 3 da manhã: recarga financeira       │
 │                                         │
 │  Dados no Analytics em minutos          │
