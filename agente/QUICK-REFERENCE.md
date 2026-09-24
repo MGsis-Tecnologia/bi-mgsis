@@ -20,14 +20,9 @@ sudo -u analytics mgsis-ingest.sh --periodo 2026-09
 sudo -u analytics mgsis-ingest.sh --inicial 2022-01
 ```
 
-## 📋 Acompanhar Automação
+## 📋 Acompanhar Automação (Cron)
 
 ```bash
-# systemd
-sudo journalctl -u mgsis-ingest.service -f
-sudo systemctl list-timers mgsis-ingest.timer
-
-# cron
 sudo tail -f /var/log/mgsis-ingest.log
 sudo cat /etc/cron.d/mgsis-ingest
 ```

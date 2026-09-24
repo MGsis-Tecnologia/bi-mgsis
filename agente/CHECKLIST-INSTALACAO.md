@@ -30,10 +30,6 @@ Token (64 hex):
 
 Histórico:
   Mês inicial (ex: 2022-01) ou deixar vazio: ___________________________
-
-Automação:
-  [ ] systemd (recomendado)
-  [ ] cron (tradicional)
 ```
 
 ## 🚀 Execução do Setup
@@ -84,9 +80,9 @@ Acompanhe cada seção:
 - [ ] ✓ Permissões do usuário OK
 - [ ] ✓ Simulação funcionou
 
-### Automação
-- [ ] systemd timer instalado E ativado (se escolheu systemd)
-- [ ] cron criado em `/etc/cron.d/mgsis-ingest` (se escolheu cron)
+### Automação (Cron)
+- [ ] Cron criado em `/etc/cron.d/mgsis-ingest` com dois agendamentos
+- [ ] Log criado em `/var/log/mgsis-ingest.log`
 
 ## 🧪 Testes Pós-Instalação
 
@@ -156,26 +152,14 @@ Vá para https://analytics.mgsis.com:
 - [ ] Mês enviado mostra dados (vendas, orçamentos, etc.)
 - [ ] Nenhum erro de token ou autenticação
 
-### 6. Verificar automação
+### 6. Verificar automação (Cron)
 
-**Se systemd:**
-```bash
-sudo systemctl list-timers mgsis-ingest.timer
-sudo systemctl status mgsis-ingest.timer
-sudo journalctl -u mgsis-ingest.service -n 20
-```
-
-- [ ] Timer está ativo/enabled
-- [ ] Próxima execução está agendada
-- [ ] Log mostra execuções bem-sucedidas
-
-**Se cron:**
 ```bash
 sudo cat /etc/cron.d/mgsis-ingest
 sudo tail -50 /var/log/mgsis-ingest.log
 ```
 
-- [ ] Arquivo cron existe
+- [ ] Arquivo cron existe com dois agendamentos
 - [ ] Log mostra execuções programadas
 
 ## 📊 Carga Inicial (Opcional)
@@ -270,9 +254,9 @@ Você saberá que deu certo quando:
 
 Se tudo deu certo mas ainda tem dúvidas:
 
-- Confira [README.md](README.md) para instru detalhadas
+- Confira [README.md](README.md) para instruções detalhadas
 - Confira [INGESTAO-API.md](../INGESTAO-API.md) para especificação da API
-- Confira os logs: `journalctl` ou `/var/log/mgsis-ingest.log`
+- Confira os logs: `/var/log/mgsis-ingest.log`
 
 ---
 
