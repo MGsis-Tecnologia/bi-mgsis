@@ -502,6 +502,62 @@ print_summary() {
   printf "\n${BLUE}Dúvidas?${NC} Confira os arquivos .md no repositório.\n\n"
 }
 
+test_agent_permissions() {
+  separator
+  info "Testando permissões do usuário analytics..."
+
+  local PSQL_OPTS
+
+  if [[ -z "$PGHOST" ]]; then
+    PSQL_OPTS="-U $ADMIN_USER -d $PGDATABASE"
+  else
+    PSQL_OPTS="-h $PGHOST -p $PGPORT -U $ADMIN_USER -d $PGDATABASE"
+  fi
+
+  if psql $PSQL_OPTS -c "SELECT COUNT(*) FROM bi_movimento" >/dev/null 2>&1; then
+    ok "Usuário analytics consegue ler as views"
+  else
+    warn "Usuário analytics NÃO consegue ler as views"
+  fi
+}
+
+test_simulation() {
+  separator
+  info "Teste de simulação (sem enviar dados)..."
+
+  if [[ ! -f /etc/mgsis-token ]]; then
+    warn "Token não instalado, pulando teste de simulação"
+    return
+  fi
+
+  if sudo -u analytics /usr/local/bin/mgsis-ingest.sh --periodo "$(date +%Y-%m)" --simular >/dev/null 2>&1; then
+    ok "Simulação funcionou"
+  else
+    warn "Simulação retornou erro — confira o log"
+  fi
+}
+
+install_cron() {
+  separator
+  info "Instalando cron..."
+
+  local CRON_FILE="/etc/cron.d/mgsis-ingest"
+  local CRON_CONTENT="# MGSIS Analytics ingest schedule
+# Criado por setup_analytics.sh
+
+7 * * * * analytics /usr/local/bin/mgsis-ingest.sh --ciclo >> /var/log/mgsis-ingest.log 2>&1
+0 3 * * * analytics /usr/local/bin/mgsis-ingest.sh --recarga-financeira >> /var/log/mgsis-ingest.log 2>&1
+"
+
+  printf '%s' "$CRON_CONTENT" | install -m 644 /dev/stdin "$CRON_FILE"
+  ok "Cron instalado em $CRON_FILE"
+
+  touch /var/log/mgsis-ingest.log
+  chown analytics:analytics /var/log/mgsis-ingest.log
+  chmod 640 /var/log/mgsis-ingest.log
+  ok "Arquivo de log criado em /var/log/mgsis-ingest.log"
+}
+
 # ─── Fluxo principal ───────────────────────────────────────────────────────
 
 main() {
