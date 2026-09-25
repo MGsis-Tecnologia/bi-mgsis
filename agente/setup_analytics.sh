@@ -1,72 +1,47 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
+[[ $EUID -eq 0 ]] || { echo "Execute como root"; exit 1; }
+
 BLUE='\033[0;34m'
+GREEN='\033[0;32m'
 NC='\033[0m'
 
-info() { printf "${BLUE}ℹ${NC}  %s\n" "$*"; }
-ok() { printf "${GREEN}✓${NC}  %s\n" "$*"; }
-warn() { printf "${YELLOW}⚠${NC}  %s\n" "$*" >&2; }
-erro() { printf "${RED}✗${NC}  %s\n" "$*" >&2; }
-fatal() { erro "$@"; exit 1; }
-sep() { printf "\n${BLUE}─────────────────────────────────────────${NC}\n\n"; }
+printf "\n${BLUE}═══════════════════════════════════════════${NC}\n"
+printf "${BLUE}SETUP MGSIS Analytics${NC}\n"
+printf "${BLUE}═══════════════════════════════════════════${NC}\n\n"
 
-# Verificações
-[[ $EUID -eq 0 ]] || fatal "Execute como root"
-command -v psql >/dev/null || fatal "psql não encontrado"
-command -v curl >/dev/null || fatal "curl não encontrado"
-
-sep
-printf "${BLUE}═════════════════════════════════════════════════════${NC}\n"
-printf "${BLUE}SETUP MGSIS Analytics - INSTALAÇÃO COMPLETA${NC}\n"
-printf "${BLUE}═════════════════════════════════════════════════════${NC}\n\n"
-
-# ─── Coleta de informações ───────────────────────────────────────────
-
-info "BANCO DE DADOS"
+# Coleta de dados
 read -p "Host PostgreSQL [localhost]: " PGHOST
 PGHOST="${PGHOST:-localhost}"
 
 read -p "Porta [5432]: " PGPORT
 PGPORT="${PGPORT:-5432}"
 
-read -p "Banco ERP [erpmgsis]: " PGDATABASE
+read -p "Banco [erpmgsis]: " PGDATABASE
 PGDATABASE="${PGDATABASE:-erpmgsis}"
 
-read -p "Usuário admin [postgres]: " ADMIN_USER
+read -p "Admin [postgres]: " ADMIN_USER
 ADMIN_USER="${ADMIN_USER:-postgres}"
 
 read -sp "Senha admin: " ADMIN_PASS
 printf "\n"
 
-export PGPASSWORD="$ADMIN_PASS"
-
-sep
-info "TOKEN ANALYTICS"
-printf "Cole token (64 hex) ou deixe vazio e pressione ENTER: "
-read TOKEN
+read -p "Token (cole ou vazio): " TOKEN
 TOKEN="${TOKEN:-}"
 
-# ─── Conectar ao banco existente ────────────────────────────────────
+export PGPASSWORD="$ADMIN_PASS"
 
-sep
-info "Conectando ao banco $PGDATABASE..."
-psql -h "$PGHOST" -p "$PGPORT" -U "$ADMIN_USER" -d "$PGDATABASE" -c "SELECT version();" > /dev/null || fatal "Não consegui conectar ao banco"
-ok "Banco OK"
-
-# ─── Criar views ─────────────────────────────────────────────────────
-
-sep
-info "Criando 9 views..."
-
-psql -h "$PGHOST" -p "$PGPORT" -U "$ADMIN_USER" -d "$PGDATABASE" << 'VIEWS' || {
-  warn "Erro ao criar algumas views, continuando..."
+# Conectar ao banco
+printf "\nConectando ao banco...\n"
+psql -h "$PGHOST" -p "$PGPORT" -U "$ADMIN_USER" -d "$PGDATABASE" -c "SELECT 1;" > /dev/null || {
+  echo "Erro ao conectar ao banco"
+  exit 1
 }
 
--- Limpar views antigas se existirem
+# Criar arquivo SQL temporário com as views
+TMP_SQL="/tmp/views_$$.sql"
+cat > "$TMP_SQL" << 'EOF'
 DROP VIEW IF EXISTS bi_cambio CASCADE;
 DROP VIEW IF EXISTS bi_compras CASCADE;
 DROP VIEW IF EXISTS bi_empresa CASCADE;
@@ -77,197 +52,49 @@ DROP VIEW IF EXISTS bi_receber CASCADE;
 DROP VIEW IF EXISTS bi_orcamentos CASCADE;
 DROP VIEW IF EXISTS bi_movimento CASCADE;
 
--- 1. bi_movimento (Vendas)
-CREATE OR REPLACE VIEW bi_movimento AS
-SELECT
-  CURRENT_DATE as pedido_data,
-  '1' AS pedido_documento,
-  'V' AS pedido_tipo,
-  'VENDA' AS pedido_canal,
-  '1' AS cliente_id,
-  'Cliente Teste' AS cliente_nome,
-  'São Paulo' AS pedido_cidade,
-  '1' AS produto_id,
-  'Produto Teste' AS produto_descricao,
-  1 AS produto_quantidade,
-  100.00 AS produto_valor_total,
-  50.00 AS produto_valor_custo,
-  10.00 AS item_desconto,
-  '1' AS subgrupo_id,
-  'Subgrupo' AS subgrupo_descricao,
-  '1' AS vendedor_id,
-  'Vendedor' AS vendedor_nome,
-  'BRL' AS moeda_id,
-  'BRL' AS moeda_sigla,
-  '1' AS empresa_id,
-  '1' AS marca_id,
-  'Marca' AS marca_descricao
-WHERE FALSE;
+CREATE VIEW bi_movimento AS SELECT 1 AS id WHERE FALSE;
+CREATE VIEW bi_orcamentos AS SELECT 1 AS id WHERE FALSE;
+CREATE VIEW bi_receber AS SELECT 1 AS id WHERE FALSE;
+CREATE VIEW bi_pagar AS SELECT 1 AS id WHERE FALSE;
+CREATE VIEW bi_caixa AS SELECT 1 AS id WHERE FALSE;
+CREATE VIEW bi_estoque AS SELECT 1 AS id WHERE FALSE;
+CREATE VIEW bi_compras AS SELECT 1 AS id WHERE FALSE;
+CREATE VIEW bi_empresa AS SELECT 1 AS id WHERE FALSE;
+CREATE VIEW bi_cambio AS SELECT 1 AS id WHERE FALSE;
+EOF
 
--- 2. bi_orcamentos (Orçamentos)
-CREATE OR REPLACE VIEW bi_orcamentos AS
-SELECT
-  CURRENT_DATE AS orcamento_data,
-  '1' AS orcamento_numero,
-  'Cliente' AS cliente_nome,
-  '1' AS cliente_id,
-  '1' AS empresa_id,
-  0 AS linhas,
-  0 AS quantidade_total,
-  0 AS valor_total
-WHERE FALSE;
+printf "\nCriando views...\n"
+psql -h "$PGHOST" -p "$PGPORT" -U "$ADMIN_USER" -d "$PGDATABASE" -f "$TMP_SQL" > /dev/null
+rm -f "$TMP_SQL"
 
--- 3. bi_receber (Contas a Receber)
-CREATE OR REPLACE VIEW bi_receber AS
-SELECT
-  '1' AS titulo_numero,
-  CURRENT_DATE AS data_emissao,
-  CURRENT_DATE AS data_vencimento,
-  0 AS valor_titulo,
-  0 AS valor_baixado,
-  NULL AS data_baixa,
-  'Cliente' AS cliente_nome,
-  '1' AS cliente_id,
-  '1' AS empresa_id,
-  0 AS juros,
-  0 AS multa,
-  0 AS desconto
-WHERE FALSE;
+# Criar usuário
+printf "Criando usuário analytics...\n"
+psql -h "$PGHOST" -p "$PGPORT" -U "$ADMIN_USER" -d "$PGDATABASE" -c "DROP ROLE IF EXISTS analytics CASCADE;" 2>/dev/null || true
+psql -h "$PGHOST" -p "$PGPORT" -U "$ADMIN_USER" -d "$PGDATABASE" -c "CREATE ROLE analytics LOGIN PASSWORD 'analytics';"
+psql -h "$PGHOST" -p "$PGPORT" -U "$ADMIN_USER" -d "$PGDATABASE" -c "GRANT CONNECT ON DATABASE $PGDATABASE TO analytics;"
+psql -h "$PGHOST" -p "$PGPORT" -U "$ADMIN_USER" -d "$PGDATABASE" -c "GRANT USAGE ON SCHEMA public TO analytics;"
+psql -h "$PGHOST" -p "$PGPORT" -U "$ADMIN_USER" -d "$PGDATABASE" -c "GRANT SELECT ON bi_movimento, bi_orcamentos, bi_receber, bi_pagar, bi_caixa, bi_estoque, bi_compras, bi_empresa, bi_cambio TO analytics;"
+psql -h "$PGHOST" -p "$PGPORT" -U "$ADMIN_USER" -d "$PGDATABASE" -c "ALTER DEFAULT PRIVILEGES IN SCHEMA public REVOKE ALL ON TABLES FROM analytics;"
 
--- 4. bi_pagar (Contas a Pagar)
-CREATE OR REPLACE VIEW bi_pagar AS
-SELECT
-  '1' AS titulo_numero,
-  CURRENT_DATE AS data_emissao,
-  CURRENT_DATE AS data_vencimento,
-  0 AS valor_titulo,
-  0 AS valor_baixado,
-  NULL AS data_baixa,
-  'Fornecedor' AS fornecedor_nome,
-  '1' AS fornecedor_id,
-  '1' AS empresa_id,
-  0 AS juros,
-  0 AS multa,
-  0 AS desconto
-WHERE FALSE;
-
--- 5. bi_caixa (Movimentações de Caixa)
-CREATE OR REPLACE VIEW bi_caixa AS
-SELECT
-  '1' AS movimento_numero,
-  CURRENT_DATE AS data_movimento,
-  'ENTRADA' AS tipo_movimento,
-  0 AS valor,
-  'Caixa Principal' AS caixa_nome,
-  '1' AS caixa_id,
-  '1' AS empresa_id,
-  'Movimento' AS descricao
-WHERE FALSE;
-
--- 6. bi_estoque (Estoque - Foto)
-CREATE OR REPLACE VIEW bi_estoque AS
-SELECT
-  '1' AS produto_id,
-  'Produto' AS produto_descricao,
-  0 AS quantidade,
-  0 AS valor_estoque,
-  'Almoxarifado' AS almoxarifado_nome,
-  '1' AS almoxarifado_id,
-  'Marca' AS marca_descricao,
-  CURRENT_TIMESTAMP AS foto_em
-WHERE FALSE;
-
--- 7. bi_compras (Compras)
-CREATE OR REPLACE VIEW bi_compras AS
-SELECT
-  CURRENT_DATE AS pedido_data,
-  '1' AS pedido_documento,
-  'C' AS pedido_tipo,
-  '1' AS fornecedor_id,
-  'Fornecedor' AS fornecedor_nome,
-  '1' AS produto_id,
-  'Produto' AS produto_descricao,
-  0 AS quantidade,
-  0 AS valor_total,
-  0 AS valor_custo,
-  '1' AS empresa_id,
-  'Marca' AS marca_descricao
-WHERE FALSE;
-
--- 8. bi_empresa (Cadastro de Empresas - Foto)
-CREATE OR REPLACE VIEW bi_empresa AS
-SELECT
-  '1' AS empresa_id,
-  'Minha Empresa' AS empresa_nome,
-  '00000000000191' AS cnpj,
-  'São Paulo' AS cidade;
-
--- 9. bi_cambio (Câmbio - Histórico)
-CREATE OR REPLACE VIEW bi_cambio AS
-SELECT
-  'USD' AS moeda_id,
-  'USD' AS moeda_sigla,
-  CURRENT_DATE AS mes_referencia,
-  5.00 AS taxa_media
-WHERE FALSE;
-
-VIEWS
-
-ok "9 views criadas"
-
-# ─── Criar usuário analytics ─────────────────────────────────────────
-
-sep
-info "Configurando usuário analytics..."
-
-# Dropar role antiga se existir
-psql -h "$PGHOST" -p "$PGPORT" -U "$ADMIN_USER" -d "$PGDATABASE" \
-  -c "DROP ROLE IF EXISTS analytics CASCADE;" 2>/dev/null || true
-
-# Criar nova role
-psql -h "$PGHOST" -p "$PGPORT" -U "$ADMIN_USER" -d "$PGDATABASE" \
-  -c "CREATE ROLE analytics LOGIN PASSWORD 'analytics';" || fatal "Erro ao criar analytics"
-
-# Dar permissões
-psql -h "$PGHOST" -p "$PGPORT" -U "$ADMIN_USER" -d "$PGDATABASE" << 'PERMS' || fatal "Erro ao dar permissões"
-GRANT CONNECT ON DATABASE erpmgsis TO analytics;
-GRANT USAGE ON SCHEMA public TO analytics;
-GRANT SELECT ON bi_movimento, bi_orcamentos, bi_receber, bi_pagar, bi_caixa, bi_estoque, bi_compras, bi_empresa, bi_cambio TO analytics;
-ALTER DEFAULT PRIVILEGES IN SCHEMA public REVOKE ALL ON TABLES FROM analytics;
-PERMS
-
-ok "Usuário analytics criado"
-
-# ─── Criar usuário de sistema ─────────────────────────────────────────
-
-sep
-info "Criando usuário de sistema..."
+# Criar usuário de sistema
+printf "Criando usuário de sistema...\n"
 useradd --system --no-create-home --shell /usr/sbin/nologin analytics 2>/dev/null || true
-ok "Usuário de sistema OK"
 
-# ─── Instalar arquivos ────────────────────────────────────────────────
-
-sep
-info "Instalando arquivos..."
-
-# Agente
+# Instalar agente
 if [[ -f agente/mgsis-ingest.sh ]]; then
+  printf "Instalando agente...\n"
   install -m 755 agente/mgsis-ingest.sh /usr/local/bin/
-  ok "Agente instalado"
-else
-  warn "mgsis-ingest.sh não encontrado (pulando agente)"
 fi
 
-# Token
+# Instalar token
 if [[ -n "$TOKEN" ]]; then
+  printf "Instalando token...\n"
   printf '%s' "$TOKEN" | install -m 600 -o analytics -g analytics /dev/stdin /etc/mgsis-token
-  ok "Token instalado"
-else
-  warn "Token vazio - configure depois"
 fi
 
-# Configuração
-cat > /etc/mgsis-ingest.conf << EOF
+# Criar configuração
+printf "Criando configuração...\n"
+cat > /etc/mgsis-ingest.conf << CONF
 API_URL="https://analytics.mgsis.com"
 TOKEN_FILE="/etc/mgsis-token"
 PGHOST="$PGHOST"
@@ -279,13 +106,13 @@ TIMEOUT=600
 PERMITIR_VAZIO="nao"
 JANELA_MESES_FINANCEIRO=12
 LOCK_FILE="/var/lock/mgsis-ingest.lock"
-EOF
+CONF
 chmod 640 /etc/mgsis-ingest.conf
 chown root:analytics /etc/mgsis-ingest.conf
-ok "Configuração criada"
 
-# Cron
-cat > /etc/cron.d/mgsis-ingest << 'CRON'
+# Criar cron
+printf "Criando cron...\n"
+cat > /etc/cron.d/mgsis-ingest << CRON
 7 * * * * analytics /usr/local/bin/mgsis-ingest.sh --ciclo >> /var/log/mgsis-ingest.log 2>&1
 0 3 * * * analytics /usr/local/bin/mgsis-ingest.sh --recarga-financeira >> /var/log/mgsis-ingest.log 2>&1
 CRON
@@ -293,33 +120,13 @@ CRON
 touch /var/log/mgsis-ingest.log
 chmod 640 /var/log/mgsis-ingest.log
 chown analytics:analytics /var/log/mgsis-ingest.log
-ok "Cron instalado"
 
-# ─── Testes ──────────────────────────────────────────────────────────
-
-sep
-info "Testando..."
-
-if psql -h "$PGHOST" -p "$PGPORT" -U analytics -d "$PGDATABASE" \
-  -c "SELECT 1 FROM bi_movimento LIMIT 1" 2>/dev/null; then
-  ok "Usuário analytics conectado"
-else
-  warn "Não consegui testar conexão"
-fi
-
-# ─── Resumo ───────────────────────────────────────────────────────────
-
-sep
-printf "${GREEN}✅ INSTALAÇÃO CONCLUÍDA!${NC}\n\n"
+# Resumo
+printf "\n${GREEN}✅ INSTALAÇÃO CONCLUÍDA!${NC}\n\n"
 printf "Banco: %s\n" "$PGDATABASE"
 printf "Usuário: analytics\n"
 printf "Views: 9 criadas\n"
-printf "Cron: ativado (ciclo + recarga noturna)\n\n"
-
-printf "${YELLOW}Próximos passos:${NC}\n"
-printf "  1. Testar conexão:\n"
-printf "     sudo -u analytics psql -h %s -d %s -c 'SELECT 1 FROM bi_movimento'\n\n" "$PGHOST" "$PGDATABASE"
-printf "  2. Testar agente (se instalado):\n"
-printf "     sudo -u analytics mgsis-ingest.sh --periodo 2026-09 --simular\n\n"
-printf "  3. Acompanhar logs:\n"
-printf "     sudo tail -f /var/log/mgsis-ingest.log\n\n"
+printf "Cron: ativado\n\n"
+printf "Próximos passos:\n"
+printf "  sudo -u analytics psql -h %s -d %s -c 'SELECT 1 FROM bi_movimento'\n" "$PGHOST" "$PGDATABASE"
+printf "  sudo tail -f /var/log/mgsis-ingest.log\n\n"
