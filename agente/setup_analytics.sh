@@ -50,18 +50,12 @@ printf "Cole token (64 hex) ou deixe vazio e pressione ENTER: "
 read TOKEN
 TOKEN="${TOKEN:-}"
 
-# ─── Criar banco se não existir ───────────────────────────────────────
+# ─── Conectar ao banco existente ────────────────────────────────────
 
 sep
-info "Verificando banco de dados..."
-
-if ! psql -h "$PGHOST" -p "$PGPORT" -U "$ADMIN_USER" -tc "SELECT 1 FROM pg_database WHERE datname = '$PGDATABASE'" | grep -q 1; then
-  info "Criando banco $PGDATABASE..."
-  psql -h "$PGHOST" -p "$PGPORT" -U "$ADMIN_USER" -c "CREATE DATABASE $PGDATABASE;" || fatal "Erro ao criar banco"
-  ok "Banco criado"
-else
-  ok "Banco já existe"
-fi
+info "Conectando ao banco $PGDATABASE..."
+psql -h "$PGHOST" -p "$PGPORT" -U "$ADMIN_USER" -d "$PGDATABASE" -c "SELECT version();" > /dev/null || fatal "Não consegui conectar ao banco"
+ok "Banco OK"
 
 # ─── Criar views ─────────────────────────────────────────────────────
 
