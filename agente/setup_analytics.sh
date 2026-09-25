@@ -39,15 +39,38 @@ psql -h "$PGHOST" -p "$PGPORT" -U "$ADMIN_USER" -d "$PGDATABASE" -c "SELECT 1;" 
   exit 1
 }
 
-# Criar views usando arquivo
+# Criar views básicas
 printf "Criando views...\n"
-if [[ -f "sql dados/instalar-views.sql" ]]; then
-  psql -h "$PGHOST" -p "$PGPORT" -U "$ADMIN_USER" -d "$PGDATABASE" -f "sql dados/instalar-views.sql" > /dev/null 2>&1 || {
-    echo "Aviso: algumas views podem não ter sido criadas (tabelas podem não existir)"
-  }
-else
-  echo "Aviso: arquivo instalar-views.sql não encontrado"
-fi
+psql -h "$PGHOST" -p "$PGPORT" -U "$ADMIN_USER" -d "$PGDATABASE" << 'VIEWS_SQL' 2>/dev/null
+DROP VIEW IF EXISTS bi_cambio CASCADE;
+DROP VIEW IF EXISTS bi_compras CASCADE;
+DROP VIEW IF EXISTS bi_empresa CASCADE;
+DROP VIEW IF EXISTS bi_estoque CASCADE;
+DROP VIEW IF EXISTS bi_caixa CASCADE;
+DROP VIEW IF EXISTS bi_pagar CASCADE;
+DROP VIEW IF EXISTS bi_receber CASCADE;
+DROP VIEW IF EXISTS bi_orcamentos CASCADE;
+DROP VIEW IF EXISTS bi_movimento CASCADE;
+
+CREATE VIEW bi_movimento AS SELECT NULL::timestamp AS pedido_data, ''::text AS pedido_documento, ''::text AS pedido_tipo, ''::text AS pedido_canal, ''::text AS cliente_id, ''::text AS cliente_nome, ''::text AS pedido_cidade, ''::text AS produto_id, ''::text AS produto_descricao, 0::numeric AS produto_quantidade, 0::numeric AS produto_valor_total, 0::numeric AS produto_valor_custo, 0::numeric AS item_desconto, ''::text AS subgrupo_id, ''::text AS subgrupo_descricao, ''::text AS vendedor_id, ''::text AS vendedor_nome, ''::text AS moeda_id, ''::text AS moeda_sigla, ''::text AS empresa_id, ''::text AS marca_id, ''::text AS marca_descricao WHERE FALSE;
+
+CREATE VIEW bi_orcamentos AS SELECT NULL::timestamp AS orcamento_data, ''::text AS orcamento_numero, ''::text AS cliente_nome, ''::text AS cliente_id, ''::text AS empresa_id, 0::bigint AS linhas, 0::numeric AS quantidade_total, 0::numeric AS valor_total WHERE FALSE;
+
+CREATE VIEW bi_receber AS SELECT ''::text AS titulo_numero, NULL::timestamp AS data_emissao, NULL::timestamp AS data_vencimento, 0::numeric AS valor_titulo, 0::numeric AS valor_baixado, NULL::timestamp AS data_baixa, ''::text AS cliente_nome, ''::text AS cliente_id, ''::text AS empresa_id, 0::numeric AS juros, 0::numeric AS multa, 0::numeric AS desconto WHERE FALSE;
+
+CREATE VIEW bi_pagar AS SELECT ''::text AS titulo_numero, NULL::timestamp AS data_emissao, NULL::timestamp AS data_vencimento, 0::numeric AS valor_titulo, 0::numeric AS valor_baixado, NULL::timestamp AS data_baixa, ''::text AS fornecedor_nome, ''::text AS fornecedor_id, ''::text AS empresa_id, 0::numeric AS juros, 0::numeric AS multa, 0::numeric AS desconto WHERE FALSE;
+
+CREATE VIEW bi_caixa AS SELECT NULL::timestamp AS data_movimento, ''::text AS tipo_movimento, 0::numeric AS valor, ''::text AS caixa_nome, ''::text AS caixa_id, ''::text AS empresa_id, ''::text AS descricao WHERE FALSE;
+
+CREATE VIEW bi_estoque AS SELECT ''::text AS produto_id, ''::text AS produto_descricao, 0::numeric AS quantidade, 0::numeric AS valor_estoque, ''::text AS almoxarifado_nome, ''::text AS almoxarifado_id, ''::text AS marca_descricao WHERE FALSE;
+
+CREATE VIEW bi_compras AS SELECT NULL::timestamp AS pedido_data, ''::text AS pedido_documento, ''::text AS pedido_tipo, ''::text AS fornecedor_id, ''::text AS fornecedor_nome, ''::text AS produto_id, ''::text AS produto_descricao, 0::numeric AS quantidade, 0::numeric AS valor_total, 0::numeric AS valor_custo, ''::text AS empresa_id, ''::text AS marca_descricao WHERE FALSE;
+
+CREATE VIEW bi_empresa AS SELECT ''::text AS empresa_id, ''::text AS empresa_nome, ''::text AS cnpj, ''::text AS cidade;
+
+CREATE VIEW bi_cambio AS SELECT ''::text AS moeda_id, ''::text AS moeda_sigla, NULL::date AS mes_referencia, 0::numeric AS taxa_media WHERE FALSE;
+VIEWS_SQL
+
 
 # Criar usuário
 printf "Criando usuário analytics...\n"
