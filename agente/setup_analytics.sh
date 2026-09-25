@@ -39,33 +39,15 @@ psql -h "$PGHOST" -p "$PGPORT" -U "$ADMIN_USER" -d "$PGDATABASE" -c "SELECT 1;" 
   exit 1
 }
 
-# Criar arquivo SQL temporário com as views
-TMP_SQL="/tmp/views_$$.sql"
-cat > "$TMP_SQL" << 'EOF'
-DROP VIEW IF EXISTS bi_cambio CASCADE;
-DROP VIEW IF EXISTS bi_compras CASCADE;
-DROP VIEW IF EXISTS bi_empresa CASCADE;
-DROP VIEW IF EXISTS bi_estoque CASCADE;
-DROP VIEW IF EXISTS bi_caixa CASCADE;
-DROP VIEW IF EXISTS bi_pagar CASCADE;
-DROP VIEW IF EXISTS bi_receber CASCADE;
-DROP VIEW IF EXISTS bi_orcamentos CASCADE;
-DROP VIEW IF EXISTS bi_movimento CASCADE;
-
-CREATE VIEW bi_movimento AS SELECT 1 AS id WHERE FALSE;
-CREATE VIEW bi_orcamentos AS SELECT 1 AS id WHERE FALSE;
-CREATE VIEW bi_receber AS SELECT 1 AS id WHERE FALSE;
-CREATE VIEW bi_pagar AS SELECT 1 AS id WHERE FALSE;
-CREATE VIEW bi_caixa AS SELECT 1 AS id WHERE FALSE;
-CREATE VIEW bi_estoque AS SELECT 1 AS id WHERE FALSE;
-CREATE VIEW bi_compras AS SELECT 1 AS id WHERE FALSE;
-CREATE VIEW bi_empresa AS SELECT 1 AS id WHERE FALSE;
-CREATE VIEW bi_cambio AS SELECT 1 AS id WHERE FALSE;
-EOF
-
-printf "\nCriando views...\n"
-psql -h "$PGHOST" -p "$PGPORT" -U "$ADMIN_USER" -d "$PGDATABASE" -f "$TMP_SQL" > /dev/null
-rm -f "$TMP_SQL"
+# Criar views usando arquivo
+printf "Criando views...\n"
+if [[ -f "sql dados/instalar-views.sql" ]]; then
+  psql -h "$PGHOST" -p "$PGPORT" -U "$ADMIN_USER" -d "$PGDATABASE" -f "sql dados/instalar-views.sql" > /dev/null 2>&1 || {
+    echo "Aviso: algumas views podem não ter sido criadas (tabelas podem não existir)"
+  }
+else
+  echo "Aviso: arquivo instalar-views.sql não encontrado"
+fi
 
 # Criar usuário
 printf "Criando usuário analytics...\n"
@@ -112,7 +94,7 @@ chown root:analytics /etc/mgsis-ingest.conf
 
 # Criar cron
 printf "Criando cron...\n"
-cat > /etc/cron.d/mgsis-ingest << CRON
+cat > /etc/cron.d/mgsis-ingest << 'CRON'
 7 * * * * analytics /usr/local/bin/mgsis-ingest.sh --ciclo >> /var/log/mgsis-ingest.log 2>&1
 0 3 * * * analytics /usr/local/bin/mgsis-ingest.sh --recarga-financeira >> /var/log/mgsis-ingest.log 2>&1
 CRON
@@ -125,8 +107,7 @@ chown analytics:analytics /var/log/mgsis-ingest.log
 printf "\n${GREEN}✅ INSTALAÇÃO CONCLUÍDA!${NC}\n\n"
 printf "Banco: %s\n" "$PGDATABASE"
 printf "Usuário: analytics\n"
-printf "Views: 9 criadas\n"
 printf "Cron: ativado\n\n"
 printf "Próximos passos:\n"
-printf "  sudo -u analytics psql -h %s -d %s -c 'SELECT 1 FROM bi_movimento'\n" "$PGHOST" "$PGDATABASE"
+printf "  sudo -u analytics psql -h %s -d %s -c 'SELECT COUNT(*) FROM bi_movimento'\n" "$PGHOST" "$PGDATABASE"
 printf "  sudo tail -f /var/log/mgsis-ingest.log\n\n"
