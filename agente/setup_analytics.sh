@@ -170,40 +170,32 @@ create_analytics_user() {
   separator
   info "Criando usuário analytics no Postgres..."
 
-  local SQL_USER SQL_PERMS
+  local PSQL_OPTS
 
-  # Gera uma senha temporária se não for usar socket
   if [[ -z "$PGHOST" ]]; then
-    # Socket local: sem senha
-    SQL_USER="CREATE ROLE IF NOT EXISTS analytics LOGIN;"
-    info "Usuário será criado SEM SENHA (autenticação peer via socket)"
+    PSQL_OPTS="-U $ADMIN_USER -d $PGDATABASE"
+    info "Conectando via socket local..."
   else
-    # TCP: com senha
-    local temp_pass
-    temp_pass=$(openssl rand -base64 12)
-    SQL_USER="CREATE ROLE IF NOT EXISTS analytics LOGIN PASSWORD '$temp_pass';"
-    info "Usuário será criado com senha temporária: $temp_pass"
+    PSQL_OPTS="-h $PGHOST -p $PGPORT -U $ADMIN_USER -d $PGDATABASE"
+    info "Conectando via TCP ($PGHOST:$PGPORT)..."
   fi
 
-  SQL_PERMS='
-    GRANT CONNECT ON DATABASE '"$PGDATABASE"' TO analytics;
-    GRANT USAGE ON SCHEMA public TO analytics;
-    GRANT SELECT ON bi_movimento, bi_orcamentos, bi_receber, bi_pagar, bi_caixa, bi_estoque TO analytics;
-    ALTER DEFAULT PRIVILEGES IN SCHEMA public REVOKE ALL ON TABLES FROM analytics;
-  '
+  # Criar role
+  info "Criando role analytics..."
+  psql $PSQL_OPTS -c "CREATE ROLE IF NOT EXISTS analytics LOGIN PASSWORD 'analytics';" || {
+    fatal "Falha ao criar role analytics"
+  }
 
-  # Tenta criar via psql
-  if [[ -z "$PGHOST" ]]; then
-    psql -U "$ADMIN_USER" -d "$PGDATABASE" -c "$SQL_USER" >/dev/null 2>&1 || true
-    psql -U "$ADMIN_USER" -d "$PGDATABASE" <<< "$SQL_PERMS" >/dev/null 2>&1 || {
-      fatal "Falha ao configurar permissões do usuário analytics"
-    }
-  else
-    PGPASSWORD="" psql -h "$PGHOST" -p "$PGPORT" -U "$ADMIN_USER" -d "$PGDATABASE" -c "$SQL_USER" >/dev/null 2>&1 || true
-    PGPASSWORD="" psql -h "$PGHOST" -p "$PGPORT" -U "$ADMIN_USER" -d "$PGDATABASE" <<< "$SQL_PERMS" >/dev/null 2>&1 || {
-      fatal "Falha ao configurar permissões do usuário analytics"
-    }
-  fi
+  # Dar permissões
+  info "Concedendo permissões nas 9 views..."
+  psql $PSQL_OPTS << 'SQL' || {
+    fatal "Falha ao conceder permissões"
+  }
+GRANT CONNECT ON DATABASE erpmgsis TO analytics;
+GRANT USAGE ON SCHEMA public TO analytics;
+GRANT SELECT ON bi_movimento, bi_orcamentos, bi_receber, bi_pagar, bi_caixa, bi_estoque, bi_compras, bi_empresa, bi_cambio TO analytics;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public REVOKE ALL ON TABLES FROM analytics;
+SQL
 
   ok "Usuário analytics criado com sucesso"
 }
@@ -212,197 +204,63 @@ create_analytics_user() {
 
 create_views() {
   separator
-  info "Criando views bi_* no banco..."
+  info "Criando 9 views bi_* no banco..."
 
-  # Monta SQL com todas as views. Para este script, vou ler do arquivo externo
-  # ou você pode manter as definições inline aqui.
-
-  local VIEWS_SQL
-  VIEWS_SQL=$(cat << 'ENDVIEWS'
--- bi_movimento
-CREATE OR REPLACE VIEW bi_movimento AS
-SELECT
-    p.pedido_data_fatura AS pedido_data,
-    COALESCE(p.pedido_id::text, '') AS pedido_documento,
-    COALESCE(p.pedido_tipo::text, '') AS pedido_tipo,
-    COALESCE(tp.tipo_preco_descricao, '') AS pedido_canal,
-    COALESCE(p.cliente_id::text, '') AS cliente_id,
-    COALESCE(c.pessoa_nome, '') AS cliente_nome,
-    COALESCE((SELECT cidade.cidade_nome FROM endereco
-              LEFT JOIN cidade ON cidade.cidade_id = endereco.cidade_id
-              WHERE endereco.endereco_padrao = true AND endereco.pessoa_id = p.cliente_id
-              LIMIT 1), '') AS pedido_cidade,
-    COALESCE(i.produto_id::text, '') AS produto_id,
-    COALESCE(pr.produto_descricao, '') AS produto_descricao,
-    COALESCE(i.item_quantidade, 0) AS produto_quantidade,
-    COALESCE(i.item_total, 0) AS produto_valor_total,
-    COALESCE(i.item_custos, 0) AS produto_valor_custo,
-    COALESCE(i.item_desconto, 0) AS item_desconto,
-    COALESCE(sg.subgrupo_id::text, '') AS subgrupo_id,
-    COALESCE(sg.subgrupo_descricao, '') AS subgrupo_descricao,
-    COALESCE(p.vendedor_id::text, '') AS vendedor_id,
-    COALESCE(v.pessoa_nome, '') AS vendedor_nome,
-    COALESCE(p.moeda_id::text, '') AS moeda_id,
-    COALESCE(m.moeda_sigla, '') AS moeda_sigla,
-    COALESCE(p.empresa_id::text, '') AS empresa_id,
-    COALESCE(ma.marca_id::text, '') AS marca_id,
-    COALESCE(ma.marca_descricao, '') AS marca_descricao
-FROM item_pedido i
-JOIN pedido p ON p.pedido_id = i.pedido_id
-LEFT JOIN pessoa c ON c.pessoa_id = p.cliente_id
-LEFT JOIN pessoa v ON v.pessoa_id = p.vendedor_id
-LEFT JOIN produto pr ON pr.produto_id = i.produto_id
-LEFT JOIN tipo_preco tp ON tp.tipo_preco_id = p.tipo_preco_id
-LEFT JOIN subgrupo sg ON sg.subgrupo_id = pr.subgrupo_id
-LEFT JOIN moeda m ON m.moeda_id = p.moeda_id
-LEFT JOIN marca ma ON ma.marca_id = pr.marca_id
-WHERE p.pedido_tipo = 'V' AND p.pedido_data_fatura >= '1990-01-01';
-
--- bi_orcamentos
-CREATE OR REPLACE VIEW bi_orcamentos AS
-SELECT
-    o.orcamento_data AS orcamento_data,
-    COALESCE(o.orcamento_numero::text, '') AS orcamento_numero,
-    COALESCE(c.pessoa_nome, '') AS cliente_nome,
-    COALESCE(c.pessoa_id::text, '') AS cliente_id,
-    COALESCE(o.empresa_id::text, '') AS empresa_id,
-    COUNT(io.item_orcamento_id) AS linhas,
-    COALESCE(SUM(io.item_quantidade), 0) AS quantidade_total,
-    COALESCE(SUM(io.item_total), 0) AS valor_total
-FROM orcamento o
-LEFT JOIN pessoa c ON c.pessoa_id = o.cliente_id
-LEFT JOIN item_orcamento io ON io.orcamento_id = o.orcamento_id
-WHERE o.orcamento_data >= '1990-01-01'
-GROUP BY o.orcamento_id, o.orcamento_data, o.orcamento_numero, c.pessoa_nome, c.pessoa_id, o.empresa_id;
-
--- bi_receber
-CREATE OR REPLACE VIEW bi_receber AS
-SELECT
-    COALESCE(t.titulo_numero::text, '') AS titulo_numero,
-    t.titulo_emissao AS data_emissao,
-    t.titulo_vencimento AS data_vencimento,
-    COALESCE(t.titulo_valor, 0) AS valor_titulo,
-    COALESCE(t.titulo_valor_baixa, 0) AS valor_baixado,
-    COALESCE(CASE WHEN t.titulo_valor_baixa > 0 THEN t.titulo_data_baixa END) AS data_baixa,
-    COALESCE(c.pessoa_nome, '') AS cliente_nome,
-    COALESCE(c.pessoa_id::text, '') AS cliente_id,
-    COALESCE(t.empresa_id::text, '') AS empresa_id,
-    COALESCE(t.juros, 0) AS juros,
-    COALESCE(t.multa, 0) AS multa,
-    COALESCE(t.desconto, 0) AS desconto
-FROM titulo_receber t
-LEFT JOIN pessoa c ON c.pessoa_id = t.cliente_id
-WHERE t.titulo_emissao >= '1990-01-01';
-
--- bi_pagar
-CREATE OR REPLACE VIEW bi_pagar AS
-SELECT
-    COALESCE(t.titulo_numero::text, '') AS titulo_numero,
-    t.titulo_emissao AS data_emissao,
-    t.titulo_vencimento AS data_vencimento,
-    COALESCE(t.titulo_valor, 0) AS valor_titulo,
-    COALESCE(t.titulo_valor_baixa, 0) AS valor_baixado,
-    COALESCE(CASE WHEN t.titulo_valor_baixa > 0 THEN t.titulo_data_baixa END) AS data_baixa,
-    COALESCE(f.pessoa_nome, '') AS fornecedor_nome,
-    COALESCE(f.pessoa_id::text, '') AS fornecedor_id,
-    COALESCE(t.empresa_id::text, '') AS empresa_id,
-    COALESCE(t.juros, 0) AS juros,
-    COALESCE(t.multa, 0) AS multa,
-    COALESCE(t.desconto, 0) AS desconto
-FROM titulo_pagar t
-LEFT JOIN pessoa f ON f.pessoa_id = t.fornecedor_id
-WHERE t.titulo_emissao >= '1990-01-01';
-
--- bi_caixa
-CREATE OR REPLACE VIEW bi_caixa AS
-SELECT
-    COALESCE(m.movimento_numero::text, '') AS movimento_numero,
-    m.movimento_data AS data_movimento,
-    COALESCE(m.movimento_tipo, '') AS tipo_movimento,
-    COALESCE(m.movimento_valor, 0) AS valor,
-    COALESCE(c.caixa_nome, '') AS caixa_nome,
-    COALESCE(c.caixa_id::text, '') AS caixa_id,
-    COALESCE(m.empresa_id::text, '') AS empresa_id,
-    COALESCE(m.descricao, '') AS descricao
-FROM movimento_caixa m
-LEFT JOIN caixa c ON c.caixa_id = m.caixa_id
-WHERE m.movimento_data >= '1990-01-01';
-
--- bi_estoque
-CREATE OR REPLACE VIEW bi_estoque AS
-SELECT
-    COALESCE(p.produto_id::text, '') AS produto_id,
-    COALESCE(p.produto_descricao, '') AS produto_descricao,
-    COALESCE(e.estoque_quantidade, 0) AS quantidade,
-    COALESCE(e.estoque_valor, 0) AS valor_estoque,
-    COALESCE(a.almoxarifado_nome, '') AS almoxarifado_nome,
-    COALESCE(a.almoxarifado_id::text, '') AS almoxarifado_id,
-    COALESCE(m.marca_descricao, '') AS marca_descricao,
-    NOW() AS foto_em
-FROM estoque e
-LEFT JOIN produto p ON p.produto_id = e.produto_id
-LEFT JOIN almoxarifado a ON a.almoxarifado_id = e.almoxarifado_id
-LEFT JOIN marca m ON m.marca_id = p.marca_id;
-
--- bi_compras
-CREATE OR REPLACE VIEW bi_compras AS
-SELECT
-    p.pedido_data_fatura AS pedido_data,
-    COALESCE(p.pedido_id::text, '') AS pedido_documento,
-    COALESCE(p.pedido_tipo::text, '') AS pedido_tipo,
-    COALESCE(p.fornecedor_id::text, '') AS fornecedor_id,
-    COALESCE(f.pessoa_nome, '') AS fornecedor_nome,
-    COALESCE(i.produto_id::text, '') AS produto_id,
-    COALESCE(pr.produto_descricao, '') AS produto_descricao,
-    COALESCE(i.item_quantidade, 0) AS quantidade,
-    COALESCE(i.item_total, 0) AS valor_total,
-    COALESCE(i.item_custos, 0) AS valor_custo,
-    COALESCE(p.empresa_id::text, '') AS empresa_id,
-    COALESCE(m.marca_descricao, '') AS marca_descricao
-FROM item_pedido i
-JOIN pedido p ON p.pedido_id = i.pedido_id
-LEFT JOIN pessoa f ON f.pessoa_id = p.fornecedor_id
-LEFT JOIN produto pr ON pr.produto_id = i.produto_id
-LEFT JOIN marca m ON m.marca_id = pr.marca_id
-WHERE p.pedido_tipo = 'C' AND p.pedido_data_fatura >= '1990-01-01';
-
--- bi_empresa
-CREATE OR REPLACE VIEW bi_empresa AS
-SELECT
-    COALESCE(e.empresa_id::text, '') AS empresa_id,
-    COALESCE(e.empresa_nome, '') AS empresa_nome,
-    COALESCE(e.empresa_cnpj, '') AS cnpj,
-    COALESCE((SELECT cidade_nome FROM endereco
-              LEFT JOIN cidade ON cidade_id = endereco.cidade_id
-              WHERE endereco.pessoa_id = e.pessoa_id AND endereco.endereco_padrao = true
-              LIMIT 1), '') AS cidade
-FROM empresa e;
-
--- bi_cambio
-CREATE OR REPLACE VIEW bi_cambio AS
-SELECT
-    COALESCE(m.moeda_id::text, '') AS moeda_id,
-    COALESCE(m.moeda_sigla, '') AS moeda_sigla,
-    DATE_TRUNC('month', c.cambio_data)::date AS mes_referencia,
-    COALESCE(AVG(c.cambio_taxa), 0) AS taxa_media
-FROM cambio c
-LEFT JOIN moeda m ON m.moeda_id = c.moeda_id
-WHERE c.cambio_data >= '1990-01-01'
-GROUP BY m.moeda_id, m.moeda_sigla, DATE_TRUNC('month', c.cambio_data);
-ENDVIEWS
-)
+  local PSQL_OPTS
 
   if [[ -z "$PGHOST" ]]; then
-    psql -U "$ADMIN_USER" -d "$PGDATABASE" <<< "$VIEWS_SQL" >/dev/null 2>&1 || {
-      fatal "Falha ao criar views"
-    }
+    PSQL_OPTS="-U $ADMIN_USER -d $PGDATABASE"
   else
-    PGPASSWORD="" psql -h "$PGHOST" -p "$PGPORT" -U "$ADMIN_USER" -d "$PGDATABASE" <<< "$VIEWS_SQL" >/dev/null 2>&1 || {
-      fatal "Falha ao criar views"
-    }
+    PSQL_OPTS="-h $PGHOST -p $PGPORT -U $ADMIN_USER -d $PGDATABASE"
   fi
 
-  ok "Views criadas com sucesso"
+  # Criar cada view individualmente com validação
+  info "Criando view bi_movimento..."
+  psql $PSQL_OPTS << 'SQL' || fatal "Falha ao criar bi_movimento"
+CREATE OR REPLACE VIEW bi_movimento AS SELECT p.pedido_data_fatura AS pedido_data, COALESCE(p.pedido_id::text, '') AS pedido_documento, COALESCE(p.pedido_tipo::text, '') AS pedido_tipo, COALESCE(tp.tipo_preco_descricao, '') AS pedido_canal, COALESCE(p.cliente_id::text, '') AS cliente_id, COALESCE(c.pessoa_nome, '') AS cliente_nome, COALESCE((SELECT cidade.cidade_nome FROM endereco LEFT JOIN cidade ON cidade.cidade_id = endereco.cidade_id WHERE endereco.endereco_padrao = true AND endereco.pessoa_id = p.cliente_id LIMIT 1), '') AS pedido_cidade, COALESCE(i.produto_id::text, '') AS produto_id, COALESCE(pr.produto_descricao, '') AS produto_descricao, COALESCE(i.item_quantidade, 0) AS produto_quantidade, COALESCE(i.item_total, 0) AS produto_valor_total, COALESCE(i.item_custos, 0) AS produto_valor_custo, COALESCE(i.item_desconto, 0) AS item_desconto, COALESCE(sg.subgrupo_id::text, '') AS subgrupo_id, COALESCE(sg.subgrupo_descricao, '') AS subgrupo_descricao, COALESCE(p.vendedor_id::text, '') AS vendedor_id, COALESCE(v.pessoa_nome, '') AS vendedor_nome, COALESCE(p.moeda_id::text, '') AS moeda_id, COALESCE(m.moeda_sigla, '') AS moeda_sigla, COALESCE(p.empresa_id::text, '') AS empresa_id, COALESCE(ma.marca_id::text, '') AS marca_id, COALESCE(ma.marca_descricao, '') AS marca_descricao FROM item_pedido i JOIN pedido p ON p.pedido_id = i.pedido_id LEFT JOIN pessoa c ON c.pessoa_id = p.cliente_id LEFT JOIN pessoa v ON v.pessoa_id = p.vendedor_id LEFT JOIN produto pr ON pr.produto_id = i.produto_id LEFT JOIN tipo_preco tp ON tp.tipo_preco_id = p.tipo_preco_id LEFT JOIN subgrupo sg ON sg.subgrupo_id = pr.subgrupo_id LEFT JOIN moeda m ON m.moeda_id = p.moeda_id LEFT JOIN marca ma ON ma.marca_id = pr.marca_id WHERE p.pedido_tipo = 'V' AND p.pedido_data_fatura >= '1990-01-01';
+SQL
+
+  info "Criando view bi_orcamentos..."
+  psql $PSQL_OPTS << 'SQL' || fatal "Falha ao criar bi_orcamentos"
+CREATE OR REPLACE VIEW bi_orcamentos AS SELECT o.orcamento_data AS orcamento_data, COALESCE(o.orcamento_numero::text, '') AS orcamento_numero, COALESCE(c.pessoa_nome, '') AS cliente_nome, COALESCE(c.pessoa_id::text, '') AS cliente_id, COALESCE(o.empresa_id::text, '') AS empresa_id, COUNT(io.item_orcamento_id) AS linhas, COALESCE(SUM(io.item_quantidade), 0) AS quantidade_total, COALESCE(SUM(io.item_total), 0) AS valor_total FROM orcamento o LEFT JOIN pessoa c ON c.pessoa_id = o.cliente_id LEFT JOIN item_orcamento io ON io.orcamento_id = o.orcamento_id WHERE o.orcamento_data >= '1990-01-01' GROUP BY o.orcamento_id, o.orcamento_data, o.orcamento_numero, c.pessoa_nome, c.pessoa_id, o.empresa_id;
+SQL
+
+  info "Criando view bi_receber..."
+  psql $PSQL_OPTS << 'SQL' || fatal "Falha ao criar bi_receber"
+CREATE OR REPLACE VIEW bi_receber AS SELECT COALESCE(t.titulo_numero::text, '') AS titulo_numero, t.titulo_emissao AS data_emissao, t.titulo_vencimento AS data_vencimento, COALESCE(t.titulo_valor, 0) AS valor_titulo, COALESCE(t.titulo_valor_baixa, 0) AS valor_baixado, COALESCE(CASE WHEN t.titulo_valor_baixa > 0 THEN t.titulo_data_baixa END) AS data_baixa, COALESCE(c.pessoa_nome, '') AS cliente_nome, COALESCE(c.pessoa_id::text, '') AS cliente_id, COALESCE(t.empresa_id::text, '') AS empresa_id, COALESCE(t.juros, 0) AS juros, COALESCE(t.multa, 0) AS multa, COALESCE(t.desconto, 0) AS desconto FROM titulo_receber t LEFT JOIN pessoa c ON c.pessoa_id = t.cliente_id WHERE t.titulo_emissao >= '1990-01-01';
+SQL
+
+  info "Criando view bi_pagar..."
+  psql $PSQL_OPTS << 'SQL' || fatal "Falha ao criar bi_pagar"
+CREATE OR REPLACE VIEW bi_pagar AS SELECT COALESCE(t.titulo_numero::text, '') AS titulo_numero, t.titulo_emissao AS data_emissao, t.titulo_vencimento AS data_vencimento, COALESCE(t.titulo_valor, 0) AS valor_titulo, COALESCE(t.titulo_valor_baixa, 0) AS valor_baixado, COALESCE(CASE WHEN t.titulo_valor_baixa > 0 THEN t.titulo_data_baixa END) AS data_baixa, COALESCE(f.pessoa_nome, '') AS fornecedor_nome, COALESCE(f.pessoa_id::text, '') AS fornecedor_id, COALESCE(t.empresa_id::text, '') AS empresa_id, COALESCE(t.juros, 0) AS juros, COALESCE(t.multa, 0) AS multa, COALESCE(t.desconto, 0) AS desconto FROM titulo_pagar t LEFT JOIN pessoa f ON f.pessoa_id = t.fornecedor_id WHERE t.titulo_emissao >= '1990-01-01';
+SQL
+
+  info "Criando view bi_caixa..."
+  psql $PSQL_OPTS << 'SQL' || fatal "Falha ao criar bi_caixa"
+CREATE OR REPLACE VIEW bi_caixa AS SELECT COALESCE(m.movimento_numero::text, '') AS movimento_numero, m.movimento_data AS data_movimento, COALESCE(m.movimento_tipo, '') AS tipo_movimento, COALESCE(m.movimento_valor, 0) AS valor, COALESCE(c.caixa_nome, '') AS caixa_nome, COALESCE(c.caixa_id::text, '') AS caixa_id, COALESCE(m.empresa_id::text, '') AS empresa_id, COALESCE(m.descricao, '') AS descricao FROM movimento_caixa m LEFT JOIN caixa c ON c.caixa_id = m.caixa_id WHERE m.movimento_data >= '1990-01-01';
+SQL
+
+  info "Criando view bi_estoque..."
+  psql $PSQL_OPTS << 'SQL' || fatal "Falha ao criar bi_estoque"
+CREATE OR REPLACE VIEW bi_estoque AS SELECT COALESCE(p.produto_id::text, '') AS produto_id, COALESCE(p.produto_descricao, '') AS produto_descricao, COALESCE(e.estoque_quantidade, 0) AS quantidade, COALESCE(e.estoque_valor, 0) AS valor_estoque, COALESCE(a.almoxarifado_nome, '') AS almoxarifado_nome, COALESCE(a.almoxarifado_id::text, '') AS almoxarifado_id, COALESCE(m.marca_descricao, '') AS marca_descricao, NOW() AS foto_em FROM estoque e LEFT JOIN produto p ON p.produto_id = e.produto_id LEFT JOIN almoxarifado a ON a.almoxarifado_id = e.almoxarifado_id LEFT JOIN marca m ON m.marca_id = p.marca_id;
+SQL
+
+  info "Criando view bi_compras..."
+  psql $PSQL_OPTS << 'SQL' || fatal "Falha ao criar bi_compras"
+CREATE OR REPLACE VIEW bi_compras AS SELECT p.pedido_data_fatura AS pedido_data, COALESCE(p.pedido_id::text, '') AS pedido_documento, COALESCE(p.pedido_tipo::text, '') AS pedido_tipo, COALESCE(p.fornecedor_id::text, '') AS fornecedor_id, COALESCE(f.pessoa_nome, '') AS fornecedor_nome, COALESCE(i.produto_id::text, '') AS produto_id, COALESCE(pr.produto_descricao, '') AS produto_descricao, COALESCE(i.item_quantidade, 0) AS quantidade, COALESCE(i.item_total, 0) AS valor_total, COALESCE(i.item_custos, 0) AS valor_custo, COALESCE(p.empresa_id::text, '') AS empresa_id, COALESCE(m.marca_descricao, '') AS marca_descricao FROM item_pedido i JOIN pedido p ON p.pedido_id = i.pedido_id LEFT JOIN pessoa f ON f.pessoa_id = p.fornecedor_id LEFT JOIN produto pr ON pr.produto_id = i.produto_id LEFT JOIN marca m ON m.marca_id = pr.marca_id WHERE p.pedido_tipo = 'C' AND p.pedido_data_fatura >= '1990-01-01';
+SQL
+
+  info "Criando view bi_empresa..."
+  psql $PSQL_OPTS << 'SQL' || fatal "Falha ao criar bi_empresa"
+CREATE OR REPLACE VIEW bi_empresa AS SELECT COALESCE(e.empresa_id::text, '') AS empresa_id, COALESCE(e.empresa_nome, '') AS empresa_nome, COALESCE(e.empresa_cnpj, '') AS cnpj, COALESCE((SELECT cidade_nome FROM endereco LEFT JOIN cidade ON cidade_id = endereco.cidade_id WHERE endereco.pessoa_id = e.pessoa_id AND endereco.endereco_padrao = true LIMIT 1), '') AS cidade FROM empresa e;
+SQL
+
+  info "Criando view bi_cambio..."
+  psql $PSQL_OPTS << 'SQL' || fatal "Falha ao criar bi_cambio"
+CREATE OR REPLACE VIEW bi_cambio AS SELECT COALESCE(m.moeda_id::text, '') AS moeda_id, COALESCE(m.moeda_sigla, '') AS moeda_sigla, DATE_TRUNC('month', c.cambio_data)::date AS mes_referencia, COALESCE(AVG(c.cambio_taxa), 0) AS taxa_media FROM cambio c LEFT JOIN moeda m ON m.moeda_id = c.moeda_id WHERE c.cambio_data >= '1990-01-01' GROUP BY m.moeda_id, m.moeda_sigla, DATE_TRUNC('month', c.cambio_data);
+SQL
+
+  ok "9 views criadas com sucesso"
 }
 
 # ─── Criação de usuário de sistema ───────────────────────────────────────────
@@ -533,23 +391,22 @@ test_postgres_connection() {
 
 test_views_exist() {
   separator
-  info "Verificando se as views foram criadas..."
+  info "Verificando se as 9 views foram criadas..."
 
-  local views="bi_movimento bi_orcamentos bi_receber bi_pagar bi_caixa bi_estoque"
+  local views="bi_movimento bi_orcamentos bi_receber bi_pagar bi_caixa bi_estoque bi_compras bi_empresa bi_cambio"
+  local PSQL_OPTS
+
+  if [[ -z "$PGHOST" ]]; then
+    PSQL_OPTS="-U $ADMIN_USER -d $PGDATABASE"
+  else
+    PSQL_OPTS="-h $PGHOST -p $PGPORT -U $ADMIN_USER -d $PGDATABASE"
+  fi
 
   for view in $views; do
-    if [[ -z "$PGHOST" ]]; then
-      if psql -U "$ADMIN_USER" -d "$PGDATABASE" -c "SELECT 1 FROM $view LIMIT 1" &>/dev/null; then
-        ok "View $view existe"
-      else
-        warn "View $view não encontrada"
-      fi
+    if psql $PSQL_OPTS -c "SELECT 1 FROM $view LIMIT 1" >/dev/null 2>&1; then
+      ok "View $view existe"
     else
-      if PGPASSWORD="" psql -h "$PGHOST" -p "$PGPORT" -U "$ADMIN_USER" -d "$PGDATABASE" -c "SELECT 1 FROM $view LIMIT 1" &>/dev/null; then
-        ok "View $view existe"
-      else
-        warn "View $view não encontrada"
-      fi
+      warn "View $view não encontrada"
     fi
   done
 }
