@@ -85,6 +85,13 @@ psql -h "$PGHOST" -p "$PGPORT" -U "$ADMIN_USER" -d "$PGDATABASE" -c "ALTER DEFAU
 printf "Criando usuário de sistema...\n"
 useradd --system --no-create-home --shell /usr/sbin/nologin analytics 2>/dev/null || true
 
+# Criar .pgpass para autenticação sem senha
+printf "Configurando autenticação PostgreSQL...\n"
+mkdir -p /var/lib/analytics
+printf "%s:%s:%s:analytics:analytics\n" "$PGHOST" "$PGPORT" "$PGDATABASE" > /var/lib/analytics/.pgpass
+chmod 600 /var/lib/analytics/.pgpass
+chown analytics:analytics /var/lib/analytics/.pgpass
+
 # Instalar agente
 if [[ -f agente/mgsis-ingest.sh ]]; then
   printf "Instalando agente...\n"
