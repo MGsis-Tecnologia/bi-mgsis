@@ -2,7 +2,7 @@
 Description=Ciclo de 1 hora do agente MGSIS Analytics
 
 [Timer]
-OnCalendar=*:07
+OnCalendar=Mon..Sat 06..18:00
 # Espalha o disparo em até 5 min: com vários clientes, evita todos baterem na
 # VPS no mesmo segundo.
 RandomizedDelaySec=300

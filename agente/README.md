@@ -155,7 +155,7 @@ journalctl -u mgsis-ingest.service -f        # acompanha
 Sem systemd, no cron:
 
 ```cron
-7 * * * * analytics /usr/local/bin/mgsis-ingest.sh --ciclo >> /var/log/mgsis-ingest.log 2>&1
+0 6-18 * * 1-6 analytics /usr/local/bin/mgsis-ingest.sh --ciclo >> /var/log/mgsis-ingest.log 2>&1
 ```
 
 ### Por que o ciclo manda o mês anterior junto
@@ -185,7 +185,7 @@ Um título raramente é baixado mais de um ano depois de emitido, então 12 mese
 cobre a quase totalidade. O que passar disso chega na recarga da madrugada:
 
 ```cron
-0 3 * * * analytics /usr/local/bin/mgsis-ingest.sh --recarga-financeira >> /var/log/mgsis-ingest.log 2>&1
+0 3 * * 1-6    analytics /usr/local/bin/mgsis-ingest.sh --recarga-financeira >> /var/log/mgsis-ingest.log 2>&1
 ```
 
 `--recarga-financeira` manda receber e pagar **do primeiro mês do histórico até

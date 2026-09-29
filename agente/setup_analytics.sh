@@ -104,10 +104,13 @@ chmod 640 /etc/mgsis-ingest.conf
 chown root:analytics /etc/mgsis-ingest.conf
 
 # Criar cron
+#   ciclo: de hora em hora das 6h às 18h, de segunda a sábado — a janela em que
+#   o ERP do cliente tem movimento. Fora dela o ciclo só reenviaria o mesmo mês.
+#   recarga financeira: 3 da manhã, também de segunda a sábado.
 printf "Criando cron...\n"
 cat > /etc/cron.d/mgsis-ingest << 'CRON'
-7 * * * 1-6 analytics /usr/local/bin/mgsis-ingest.sh --ciclo >> /var/log/mgsis-ingest.log 2>&1
-0 3 * * * analytics /usr/local/bin/mgsis-ingest.sh --recarga-financeira >> /var/log/mgsis-ingest.log 2>&1
+0 6-18 * * 1-6 analytics /usr/local/bin/mgsis-ingest.sh --ciclo >> /var/log/mgsis-ingest.log 2>&1
+0 3 * * 1-6    analytics /usr/local/bin/mgsis-ingest.sh --recarga-financeira >> /var/log/mgsis-ingest.log 2>&1
 CRON
 
 touch /var/log/mgsis-ingest.log

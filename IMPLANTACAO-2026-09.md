@@ -111,12 +111,12 @@ envio de vendas e de receber **quebra**, e o envio de empresa falha sozinho
   systemctl list-timers mgsis-ingest.timer     # confere o próximo disparo
   ```
 
-  Com cron no lugar do systemd: `7 * * * * analytics /usr/local/bin/mgsis-ingest.sh --ciclo >> /var/log/mgsis-ingest.log 2>&1`
+  Com cron no lugar do systemd: `0 6-18 * * 1-6 analytics /usr/local/bin/mgsis-ingest.sh --ciclo >> /var/log/mgsis-ingest.log 2>&1`
 - [ ] **Recarga da madrugada** (pega baixa de título muito antigo e correção
   retroativa, que a janela de 12 meses do ciclo não alcança):
 
   ```cron
-  0 3 * * * analytics /usr/local/bin/mgsis-ingest.sh --recarga-financeira >> /var/log/mgsis-ingest.log 2>&1
+  0 3 * * 1-6    analytics /usr/local/bin/mgsis-ingest.sh --recarga-financeira >> /var/log/mgsis-ingest.log 2>&1
   ```
 
 ## 4. Reenvio do histórico

@@ -213,7 +213,7 @@ inteiro de pagar (a baixa de um título não respeita o mês em que ele foi emit
 janela de 12 meses não chega no ciclo horário:
 
 ```cron
-0 3 * * * analytics /usr/local/bin/mgsis-ingest.sh --recarga-financeira >> /var/log/mgsis-ingest.log 2>&1
+0 3 * * 1-6    analytics /usr/local/bin/mgsis-ingest.sh --recarga-financeira >> /var/log/mgsis-ingest.log 2>&1
 ```
 
 **Recarga mensal da janela completa.** Correção retroativa fora da janela do

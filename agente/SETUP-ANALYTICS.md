@@ -127,8 +127,8 @@ O script executa nesta ordem:
 8. **Instalar automação**
    - **systemd:** Ativa `mgsis-ingest.timer` que dispara a cada hora
    - **cron:** Cria `/etc/cron.d/mgsis-ingest` com dois agendamentos:
-     - `7 * * * * analytics /usr/local/bin/mgsis-ingest.sh --ciclo` (cada hora)
-     - `0 3 * * * analytics /usr/local/bin/mgsis-ingest.sh --recarga-financeira` (3 da manhã)
+     - `0 6-18 * * 1-6 analytics /usr/local/bin/mgsis-ingest.sh --ciclo` (de hora em hora, das 6h às 18h, seg–sáb)
+     - `0 3 * * 1-6 analytics /usr/local/bin/mgsis-ingest.sh --recarga-financeira` (3 da manhã, seg–sáb)
 
 ## 📝 Exemplo de Execução Interativa
 
@@ -165,8 +165,8 @@ Cole o token de 64 caracteres hexadecimais:
 
 ℹ  Automação — Cron
 ℹ  Vou configurar dois agendamentos:
-  • Cada hora (:07): mgsis-ingest.sh --ciclo
-  • 3 da manhã: mgsis-ingest.sh --recarga-financeira
+  • De hora em hora, 6h às 18h, seg–sáb: mgsis-ingest.sh --ciclo
+  • 3 da manhã, seg–sáb: mgsis-ingest.sh --recarga-financeira
 
 ──────────────────────────────────────────────────────────
 
