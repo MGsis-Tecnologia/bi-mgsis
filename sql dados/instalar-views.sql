@@ -1,17 +1,3 @@
--- ============================================================================
--- Instala as views bi_* de uma vez.
---
--- Use este arquivo se o seu cliente SQL (DBeaver, pgAdmin) reclamar ao rodar
--- os arquivos separados: ele contém SÓ os comandos, sem comentário nenhum
--- dentro deles, que é o que costuma confundir o parser desses programas.
---
--- Pelo terminal, que é o caminho mais seguro:
---   psql -U postgres -d erp_do_cliente -f instalar-views.sql
---
--- A explicação de cada view está no arquivo individual correspondente.
--- ============================================================================
-
--- ── bi_movimento ──
 CREATE OR REPLACE VIEW bi_movimento AS
 SELECT
     p.pedido_data_fatura                          AS pedido_data,
@@ -42,7 +28,7 @@ SELECT
     COALESCE(moeda.moeda_sigla, '')               AS moeda_sigla,
     COALESCE(p.empresa_id::text, '')              AS empresa_id,
     COALESCE(marca.marca_id::text, '')            AS marca_id,
-    COALESCE(marca.marca_descricao, '')           AS marca_descricao    
+    COALESCE(marca.marca_descricao, '')           AS marca_descricao
 FROM item_pedido i
     JOIN      pedido     p          ON p.pedido_id = i.pedido_id
     LEFT JOIN pessoa     c          ON c.pessoa_id = p.cliente_id
@@ -55,7 +41,6 @@ FROM item_pedido i
 WHERE p.pedido_tipo::text IN ('VENDA', 'DEVOLUCAO VENDA')
   AND p.pedido_data_fatura IS NOT NULL;
 
--- ── bi_orcamentos ──
 CREATE OR REPLACE VIEW bi_orcamentos AS
 SELECT
     COALESCE(o.orcamento_id::text, '')              AS orcamento_id,
@@ -90,7 +75,6 @@ FROM orcamento o
 WHERE o.orcamento_tipo = 'ORCAMENTO'
   AND o.orcamento_data IS NOT NULL;
 
--- ── bi_receber ──
 CREATE OR REPLACE VIEW bi_receber AS
 SELECT
     COALESCE(r.receber_documento::text, '')     AS receber_documento,
@@ -132,7 +116,6 @@ FROM receber r
     LEFT JOIN condicao_pagamento ON condicao_pagamento.condicao_pagamento_id = r.condicao_pagamento_id
 WHERE r.receber_data_emissao IS NOT NULL;
 
--- ── bi_pagar ──
 CREATE OR REPLACE VIEW bi_pagar AS
 SELECT
     COALESCE(r.pagar_documento::text, '')      AS pagar_documento,
@@ -161,7 +144,6 @@ FROM pagar r
 WHERE (COALESCE(r.pagar_valor_pago, 0) + COALESCE(r.pagar_valor_documento, 0)) > 0
   AND r.pagar_data_emissao IS NOT NULL;
 
--- ── bi_caixa ──
 CREATE OR REPLACE VIEW bi_caixa AS
 SELECT
     cm.caixa_data_emissao                              AS caixa_data_emissao,
@@ -183,7 +165,6 @@ FROM caixa_movimento cm
     LEFT JOIN centro_custo cc ON cc.centro_custo_id = cm.centro_custo_id
 WHERE cm.caixa_data_emissao IS NOT NULL;
 
--- ── bi_estoque ──
 CREATE OR REPLACE VIEW bi_estoque AS
 SELECT
     COALESCE(e.produto_id::text, '')                AS produto_id,
@@ -204,23 +185,8 @@ WHERE p.produto_inativo = false
 GROUP BY e.produto_id, p.produto_descricao, p.produto_fabricante,
          e.empresa_id, p.moeda_id, m.moeda_sigla;
 
--- -- bi_cambio --
--- Cambio MEDIO MENSAL (substituiu a versao diaria -- colunas mudaram por
--- completo, entao precisa de DROP antes: CREATE OR REPLACE VIEW so aceita
--- coluna nova no FIM, recusa renomear/reordenar as que ja existem. Sem o
--- DROP, quem ja tinha a view diaria instalada recebe erro do Postgres em vez
--- de atualizar. Detalhe de cada coluna e das taxas em bi_cambio.sql.
---
--- moeda_origem e a moeda mais FRACA do par. A orientacao nao vem de assumir
--- qual coluna crua (moeda_id / moeda_destino_id) e a moeda local -- duas
--- versoes anteriores tentaram isso (uma regra fixa de coluna, depois uma
--- regra fixa de "o numero cru sempre significa X") e as duas se mostraram
--- corretas so num cliente, invertidas no proximo. Esta versao testa as DUAS
--- leituras possiveis do numero (ele mesmo e o reciproco) contra a faixa de
--- magnitude ESPERADA do par -- fato de economia (guarani sempre precisa de
--- mais unidades que real ou dolar), nao uma convencao do ERP. Ver a
--- explicacao completa em bi_cambio.sql.
 DROP VIEW IF EXISTS bi_cambio;
+
 CREATE VIEW bi_cambio AS
 WITH cambio_diario AS (
     SELECT
@@ -237,12 +203,12 @@ WITH cambio_diario AS (
     GROUP BY moeda_id, moeda_destino_id, cambio_data
 ),
 forca (moeda, rank) AS (
-    VALUES (3, 1), (1, 2), (2, 3)   -- guarani, real, dolar -- do mais fraco ao mais forte
+    VALUES (3, 1), (1, 2), (2, 3)
 ),
 faixas (fraca, forte, minimo, maximo) AS (
-    VALUES (3, 2, 1000::numeric,  50000::numeric),  -- guaranis por 1 dolar
-           (3, 1, 200::numeric,   10000::numeric),  -- guaranis por 1 real
-           (1, 2, 0.5::numeric,   50::numeric)       -- reais por 1 dolar
+    VALUES (3, 2, 1000::numeric,  50000::numeric),
+           (3, 1, 200::numeric,   10000::numeric),
+           (1, 2, 0.5::numeric,   50::numeric)
 ),
 candidatos AS (
     SELECT
@@ -284,21 +250,6 @@ FROM orientado_diario
 GROUP BY moeda_origem, moeda_destino, DATE_TRUNC('month', cambio_data)
 ORDER BY mes_referencia, moeda_destino;
 
--- ── bi_compras ──
--- Esta é a view do ERP, lida pelo agente. (O arquivo `bi_compras.sql` desta
--- pasta tem OUTRA view de mesmo nome, do lado do Analytics, sobre a tabela
--- `compra_items` já importada — não confunda as duas.)
---
--- CONFIRA `compra_data_emissao`: é a emissão do documento no fornecedor, e o
--- nome da coluna foi deduzido do padrão do ERP (`pagar_data_emissao` etc.), não
--- verificado nesta base. Se o comando falhar em "column does not exist", ache o
--- nome certo com:
---   SELECT column_name FROM information_schema.columns
---    WHERE table_name = 'compra' AND column_name LIKE '%data%';
---
--- Colunas novas entram no FIM da lista de propósito: CREATE OR REPLACE VIEW
--- aceita acrescentar coluna no fim, mas recusa mudar nome ou ordem das que já
--- existem — e aqui a view costuma ser recriada sobre uma já instalada.
 CREATE OR REPLACE VIEW bi_compras AS
 SELECT
     p.compra_data_lancamento                      AS pedido_data,
@@ -318,7 +269,6 @@ SELECT
                                                   AS pedido_emissao,
     COALESCE(subgrupo.subgrupo_id::text, '')      AS subgrupo_id,
     COALESCE(subgrupo.subgrupo_descricao, '')     AS subgrupo_descricao
-
 FROM item_compra i
     JOIN      compra     p          ON p.compra_id = i.compra_id
     LEFT JOIN pessoa     c          ON c.pessoa_id = p.fornecedor_id
@@ -328,14 +278,8 @@ FROM item_compra i
 WHERE p.compra_tipo::text IN ('COMPRA', 'DEVOLUCAO COMPRA', 'TRANSFERENCIA COMPRA', 'EXPORTACAO COMPRA')
   AND p.compra_status_estoque = true;
 
--- ── bi_empresa ──
--- Só dá NOME ao empresa_id que já aparece em toda venda, compra, título e
--- movimento de caixa. Sem ela, o filtro de empresa do Analytics mostra só o
--- código cru. É uma FOTO: vai inteira, com periodo = "tudo". Detalhe em
--- bi_empresa.sql.
 CREATE OR REPLACE VIEW bi_empresa AS
 SELECT
     COALESCE(empresa.empresa_id::text, '') AS empresa_id,
     COALESCE(empresa.empresa_fantasia, '') AS empresa_fantasia
 FROM empresa;
-

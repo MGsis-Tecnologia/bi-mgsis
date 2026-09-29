@@ -39,9 +39,13 @@ psql -h "$PGHOST" -p "$PGPORT" -U "$ADMIN_USER" -d "$PGDATABASE" -c "SELECT 1;" 
   exit 1
 }
 
-# Criar views básicas
+# Criar views: apaga as antigas e instala as reais do instalar-views.sql, que
+# deve estar na MESMA pasta deste .sh. O DROP vem antes porque CREATE OR REPLACE
+# VIEW recusa trocar as colunas de uma view que já existe com outro formato.
+VIEWS_SQL="$(dirname "$(readlink -f "$0")")/instalar-views.sql"
+[[ -f "$VIEWS_SQL" ]] || { echo "Não achei $VIEWS_SQL — copie o instalar-views.sql para a mesma pasta do setup"; exit 1; }
 printf "Criando views...\n"
-psql -h "$PGHOST" -p "$PGPORT" -U "$ADMIN_USER" -d "$PGDATABASE" << 'VIEWS_SQL' 2>/dev/null
+psql -h "$PGHOST" -p "$PGPORT" -U "$ADMIN_USER" -d "$PGDATABASE" -v ON_ERROR_STOP=1 << 'VIEWS_SQL'
 DROP VIEW IF EXISTS bi_cambio CASCADE;
 DROP VIEW IF EXISTS bi_compras CASCADE;
 DROP VIEW IF EXISTS bi_empresa CASCADE;
@@ -51,32 +55,15 @@ DROP VIEW IF EXISTS bi_pagar CASCADE;
 DROP VIEW IF EXISTS bi_receber CASCADE;
 DROP VIEW IF EXISTS bi_orcamentos CASCADE;
 DROP VIEW IF EXISTS bi_movimento CASCADE;
-
-CREATE VIEW bi_movimento AS SELECT NULL::timestamp AS pedido_data, ''::text AS pedido_documento, ''::text AS pedido_tipo, ''::text AS pedido_canal, ''::text AS cliente_id, ''::text AS cliente_nome, ''::text AS pedido_cidade, ''::text AS produto_id, ''::text AS produto_descricao, 0::numeric AS produto_quantidade, 0::numeric AS produto_valor_total, 0::numeric AS produto_valor_custo, 0::numeric AS item_desconto, ''::text AS subgrupo_id, ''::text AS subgrupo_descricao, ''::text AS vendedor_id, ''::text AS vendedor_nome, ''::text AS moeda_id, ''::text AS moeda_sigla, ''::text AS empresa_id, ''::text AS marca_id, ''::text AS marca_descricao WHERE FALSE;
-
-CREATE VIEW bi_orcamentos AS SELECT NULL::timestamp AS orcamento_data, ''::text AS orcamento_numero, ''::text AS cliente_nome, ''::text AS cliente_id, ''::text AS empresa_id, 0::bigint AS linhas, 0::numeric AS quantidade_total, 0::numeric AS valor_total WHERE FALSE;
-
-CREATE VIEW bi_receber AS SELECT ''::text AS titulo_numero, NULL::timestamp AS data_emissao, NULL::timestamp AS data_vencimento, 0::numeric AS valor_titulo, 0::numeric AS valor_baixado, NULL::timestamp AS data_baixa, ''::text AS cliente_nome, ''::text AS cliente_id, ''::text AS empresa_id, 0::numeric AS juros, 0::numeric AS multa, 0::numeric AS desconto WHERE FALSE;
-
-CREATE VIEW bi_pagar AS SELECT ''::text AS titulo_numero, NULL::timestamp AS data_emissao, NULL::timestamp AS data_vencimento, 0::numeric AS valor_titulo, 0::numeric AS valor_baixado, NULL::timestamp AS data_baixa, ''::text AS fornecedor_nome, ''::text AS fornecedor_id, ''::text AS empresa_id, 0::numeric AS juros, 0::numeric AS multa, 0::numeric AS desconto WHERE FALSE;
-
-CREATE VIEW bi_caixa AS SELECT NULL::timestamp AS data_movimento, ''::text AS tipo_movimento, 0::numeric AS valor, ''::text AS caixa_nome, ''::text AS caixa_id, ''::text AS empresa_id, ''::text AS descricao WHERE FALSE;
-
-CREATE VIEW bi_estoque AS SELECT ''::text AS produto_id, ''::text AS produto_descricao, 0::numeric AS quantidade, 0::numeric AS valor_estoque, ''::text AS almoxarifado_nome, ''::text AS almoxarifado_id, ''::text AS marca_descricao WHERE FALSE;
-
-CREATE VIEW bi_compras AS SELECT NULL::timestamp AS pedido_data, ''::text AS pedido_documento, ''::text AS pedido_tipo, ''::text AS fornecedor_id, ''::text AS fornecedor_nome, ''::text AS produto_id, ''::text AS produto_descricao, 0::numeric AS quantidade, 0::numeric AS valor_total, 0::numeric AS valor_custo, ''::text AS empresa_id, ''::text AS marca_descricao WHERE FALSE;
-
-CREATE VIEW bi_empresa AS SELECT ''::text AS empresa_id, ''::text AS empresa_nome, ''::text AS cnpj, ''::text AS cidade;
-
-CREATE VIEW bi_cambio AS SELECT ''::text AS moeda_id, ''::text AS moeda_sigla, NULL::date AS mes_referencia, 0::numeric AS taxa_media WHERE FALSE;
 VIEWS_SQL
+psql -h "$PGHOST" -p "$PGPORT" -U "$ADMIN_USER" -d "$PGDATABASE" -v ON_ERROR_STOP=1 -f "$VIEWS_SQL"
 
 
 # Criar usuário
 printf "Criando usuário analytics...\n"
-psql -h "$PGHOST" -p "$PGPORT" -U "$ADMIN_USER" -d "$PGDATABASE" -c "DROP ROLE IF EXISTS analytics CASCADE;" 2>/dev/null || true
-psql -h "$PGHOST" -p "$PGPORT" -U "$ADMIN_USER" -d "$PGDATABASE" -c "CREATE ROLE analytics LOGIN PASSWORD 'analytics';"
-psql -h "$PGHOST" -p "$PGPORT" -U "$ADMIN_USER" -d "$PGDATABASE" -c "GRANT CONNECT ON DATABASE $PGDATABASE TO analytics;"
+psql -h "$PGHOST" -p "$PGPORT" -U "$ADMIN_USER" -d "$PGDATABASE" -c "DO \$\$ BEGIN IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'analytics') THEN CREATE ROLE analytics; END IF; END \$\$;"
+psql -h "$PGHOST" -p "$PGPORT" -U "$ADMIN_USER" -d "$PGDATABASE" -c "ALTER ROLE analytics LOGIN PASSWORD 'analytics';"
+psql -h "$PGHOST" -p "$PGPORT" -U "$ADMIN_USER" -d "$PGDATABASE" -c "GRANT CONNECT ON DATABASE \"$PGDATABASE\" TO analytics;"
 psql -h "$PGHOST" -p "$PGPORT" -U "$ADMIN_USER" -d "$PGDATABASE" -c "GRANT USAGE ON SCHEMA public TO analytics;"
 psql -h "$PGHOST" -p "$PGPORT" -U "$ADMIN_USER" -d "$PGDATABASE" -c "GRANT SELECT ON bi_movimento, bi_orcamentos, bi_receber, bi_pagar, bi_caixa, bi_estoque, bi_compras, bi_empresa, bi_cambio TO analytics;"
 psql -h "$PGHOST" -p "$PGPORT" -U "$ADMIN_USER" -d "$PGDATABASE" -c "ALTER DEFAULT PRIVILEGES IN SCHEMA public REVOKE ALL ON TABLES FROM analytics;"
@@ -119,7 +106,7 @@ chown root:analytics /etc/mgsis-ingest.conf
 # Criar cron
 printf "Criando cron...\n"
 cat > /etc/cron.d/mgsis-ingest << 'CRON'
-7 * * * * analytics /usr/local/bin/mgsis-ingest.sh --ciclo >> /var/log/mgsis-ingest.log 2>&1
+7 * * * 1-6 analytics /usr/local/bin/mgsis-ingest.sh --ciclo >> /var/log/mgsis-ingest.log 2>&1
 0 3 * * * analytics /usr/local/bin/mgsis-ingest.sh --recarga-financeira >> /var/log/mgsis-ingest.log 2>&1
 CRON
 
@@ -133,5 +120,5 @@ printf "Banco: %s\n" "$PGDATABASE"
 printf "Usuário: analytics\n"
 printf "Cron: ativado\n\n"
 printf "Próximos passos:\n"
-printf "  sudo -u analytics psql -h %s -d %s -c 'SELECT COUNT(*) FROM bi_movimento'\n" "$PGHOST" "$PGDATABASE"
+printf "  sudo -u analytics env PGPASSWORD=analytics psql -h %s -d %s -c 'SELECT COUNT(*) FROM bi_movimento'\n" "$PGHOST" "$PGDATABASE"
 printf "  sudo tail -f /var/log/mgsis-ingest.log\n\n"
