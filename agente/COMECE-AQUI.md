@@ -264,7 +264,7 @@ R: Sim! O setup é seguro — só cria usuário, views e agente. Nenhum dado do 
 R: Copie novo `mgsis-ingest.sh` para `/usr/local/bin/`. A configuração fica intacta.
 
 **P: Posso desativar a automação depois?**
-R: Sim. Systemd: `sudo systemctl disable mgsis-ingest.timer`. Cron: `sudo rm /etc/cron.d/mgsis-ingest`.
+R: Sim. Systemd: `sudo systemctl disable mgsis-ingest.timer`. Cron: `sudo crontab -e` e apague as duas linhas do agente.
 
 ## 📞 Suporte
 

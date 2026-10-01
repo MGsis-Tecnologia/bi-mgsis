@@ -24,7 +24,7 @@ sudo -u analytics mgsis-ingest.sh --inicial 2022-01
 
 ```bash
 sudo tail -f /var/log/mgsis-ingest.log
-sudo cat /etc/cron.d/mgsis-ingest
+sudo crontab -l
 ```
 
 ## 🔧 Troubleshooting Rápido

@@ -103,15 +103,43 @@ CONF
 chmod 640 /etc/mgsis-ingest.conf
 chown root:analytics /etc/mgsis-ingest.conf
 
-# Criar cron
+# Agendamento
 #   ciclo: de hora em hora das 6h às 18h, de segunda a sábado — a janela em que
 #   o ERP do cliente tem movimento. Fora dela o ciclo só reenviaria o mesmo mês.
 #   recarga financeira: 3 da manhã, também de segunda a sábado.
-printf "Criando cron...\n"
-cat > /etc/cron.d/mgsis-ingest << 'CRON'
-0 6-18 * * 1-6 analytics /usr/local/bin/mgsis-ingest.sh --ciclo >> /var/log/mgsis-ingest.log 2>&1
-0 3 * * 1-6    analytics /usr/local/bin/mgsis-ingest.sh --recarga-financeira >> /var/log/mgsis-ingest.log 2>&1
+#
+# Vai na crontab do ROOT (a que `crontab -e` abre), e não em /etc/cron.d: é a
+# padronização escolhida para a operação. Por isso as linhas não têm campo de
+# usuário — crontab pessoal não tem esse campo, e deixar `analytics` ali faria
+# o cron procurar um comando chamado "analytics" e falhar em todo disparo.
+#
+# O agente roda como root, então nenhuma das permissões abaixo o limita; as
+# chamadas manuais com `sudo -u analytics` dos guias seguem funcionando, porque
+# token, log e trava continuam legíveis pelos dois.
+printf "Instalando agendamento...\n"
+# Instalação repetida não duplica: tira as linhas antigas do agente antes, e
+# remove o /etc/cron.d de instalações anteriores — se os dois ficassem, cada
+# período seria enviado duas vezes.
+rm -f /etc/cron.d/mgsis-ingest
+if command -v crontab >/dev/null 2>&1; then
+  {
+    crontab -l 2>/dev/null | grep -v 'mgsis-ingest\.sh' || true
+    cat << 'CRON'
+0 6-18 * * 1-6 /usr/local/bin/mgsis-ingest.sh --ciclo >> /var/log/mgsis-ingest.log 2>&1
+0 3 * * 1-6 /usr/local/bin/mgsis-ingest.sh --recarga-financeira >> /var/log/mgsis-ingest.log 2>&1
 CRON
+  } | crontab -
+  printf "Agendamento na crontab do root (confira com: sudo crontab -l)\n"
+else
+  # Sem o comando `crontab` (imagem enxuta), cai no /etc/cron.d — mesma
+  # programação, mesmo usuário root, só que no crontab de sistema, que TEM
+  # campo de usuário.
+  printf "AVISO: comando 'crontab' não encontrado — usando /etc/cron.d\n"
+  cat > /etc/cron.d/mgsis-ingest << 'CRON'
+0 6-18 * * 1-6 root /usr/local/bin/mgsis-ingest.sh --ciclo >> /var/log/mgsis-ingest.log 2>&1
+0 3 * * 1-6    root /usr/local/bin/mgsis-ingest.sh --recarga-financeira >> /var/log/mgsis-ingest.log 2>&1
+CRON
+fi
 
 touch /var/log/mgsis-ingest.log
 chmod 640 /var/log/mgsis-ingest.log

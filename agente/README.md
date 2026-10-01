@@ -152,10 +152,11 @@ systemctl list-timers mgsis-ingest.timer     # confere o próximo disparo
 journalctl -u mgsis-ingest.service -f        # acompanha
 ```
 
-Sem systemd, no cron:
+Sem systemd, na crontab do root (`sudo crontab -e` — crontab pessoal não tem
+campo de usuário, por isso a linha vai direto para o comando):
 
 ```cron
-0 6-18 * * 1-6 analytics /usr/local/bin/mgsis-ingest.sh --ciclo >> /var/log/mgsis-ingest.log 2>&1
+0 6-18 * * 1-6 /usr/local/bin/mgsis-ingest.sh --ciclo >> /var/log/mgsis-ingest.log 2>&1
 ```
 
 ### Por que o ciclo manda o mês anterior junto
@@ -185,7 +186,7 @@ Um título raramente é baixado mais de um ano depois de emitido, então 12 mese
 cobre a quase totalidade. O que passar disso chega na recarga da madrugada:
 
 ```cron
-0 3 * * 1-6    analytics /usr/local/bin/mgsis-ingest.sh --recarga-financeira >> /var/log/mgsis-ingest.log 2>&1
+0 3 * * 1-6 /usr/local/bin/mgsis-ingest.sh --recarga-financeira >> /var/log/mgsis-ingest.log 2>&1
 ```
 
 `--recarga-financeira` manda receber e pagar **do primeiro mês do histórico até
@@ -209,7 +210,7 @@ sudo -u analytics mgsis-ingest.sh --periodo 2024-03
 Vale agendar uma recarga da janela completa uma vez por mês, de madrugada:
 
 ```cron
-0 3 1 * * analytics /usr/local/bin/mgsis-ingest.sh --inicial 2022-01 >> /var/log/mgsis-ingest.log 2>&1
+0 3 1 * * /usr/local/bin/mgsis-ingest.sh --inicial 2022-01 >> /var/log/mgsis-ingest.log 2>&1
 ```
 
 ## A proteção que você não deve desligar

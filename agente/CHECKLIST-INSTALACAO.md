@@ -81,7 +81,7 @@ Acompanhe cada seção:
 - [ ] ✓ Simulação funcionou
 
 ### Automação (Cron)
-- [ ] Cron criado em `/etc/cron.d/mgsis-ingest` com dois agendamentos
+- [ ] Agendamento criado na crontab do root (`sudo crontab -l`) com duas linhas
 - [ ] Log criado em `/var/log/mgsis-ingest.log`
 
 ## 🧪 Testes Pós-Instalação
@@ -155,11 +155,11 @@ Vá para https://analytics.mgsis.com:
 ### 6. Verificar automação (Cron)
 
 ```bash
-sudo cat /etc/cron.d/mgsis-ingest
+sudo crontab -l
 sudo tail -50 /var/log/mgsis-ingest.log
 ```
 
-- [ ] Arquivo cron existe com dois agendamentos
+- [ ] `sudo crontab -l` mostra as duas linhas do agente
 - [ ] Log mostra execuções programadas
 
 ## 📊 Carga Inicial (Opcional)

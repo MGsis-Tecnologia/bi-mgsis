@@ -126,9 +126,14 @@ O script executa nesta ordem:
 
 8. **Instalar automação**
    - **systemd:** Ativa `mgsis-ingest.timer` que dispara a cada hora
-   - **cron:** Cria `/etc/cron.d/mgsis-ingest` com dois agendamentos:
-     - `0 6-18 * * 1-6 analytics /usr/local/bin/mgsis-ingest.sh --ciclo` (de hora em hora, das 6h às 18h, seg–sáb)
-     - `0 3 * * 1-6 analytics /usr/local/bin/mgsis-ingest.sh --recarga-financeira` (3 da manhã, seg–sáb)
+   - **cron:** Põe dois agendamentos na crontab do root (a que `sudo crontab -e`
+     abre). Sem campo de usuário — crontab pessoal não tem esse campo:
+     - `0 6-18 * * 1-6 /usr/local/bin/mgsis-ingest.sh --ciclo` (de hora em hora, das 6h às 18h, seg–sáb)
+     - `0 3 * * 1-6 /usr/local/bin/mgsis-ingest.sh --recarga-financeira` (3 da manhã, seg–sáb)
+
+     Uma instalação repetida substitui as linhas antigas do agente em vez de
+     duplicá-las, e remove o `/etc/cron.d/mgsis-ingest` de instalações
+     anteriores — com os dois no ar, cada período seria enviado duas vezes.
 
 ## 📝 Exemplo de Execução Interativa
 
@@ -217,8 +222,8 @@ Confirma? (s/n) s
 ℹ  Teste de simulação (sem enviar dados)...
 ✓  Simulação funcionou
 
-ℹ  Instalando cron...
-✓  Cron instalado em /etc/cron.d/mgsis-ingest
+ℹ  Instalando agendamento...
+✓  Agendamento na crontab do root (confira com: sudo crontab -l)
 ✓  Arquivo de log criado em /var/log/mgsis-ingest.log
 
 ╔════════════════════════════════════════════════════════════╗
@@ -276,7 +281,7 @@ sudo tail -f /var/log/mgsis-ingest.log
 ### Verificar agendamento (Cron)
 
 ```bash
-sudo cat /etc/cron.d/mgsis-ingest
+sudo crontab -l
 ```
 
 ## ⚙️ Configuração Manual Posterior
