@@ -510,8 +510,28 @@ fi
 # Sem `flock` na máquina, o agente SEGUE sem trava, avisando. A alternativa —
 # tratar a ausência do comando como "já tem outra execução" — faria o cron
 # sair com sucesso e não enviar nada, para sempre, sem sinal nenhum.
+#
+# O arquivo de trava NÃO é apagado no fim, e não deve ser: quem solta a trava é
+# o fim do processo (vale até para kill -9 e queda de energia), não a remoção do
+# arquivo. Apagar enquanto alguém roda criaria um inode novo, a execução
+# seguinte travaria ESSE, e as duas passariam juntas.
+#
+# Como o arquivo sobrevive entre execuções, o dono dele importa: rodado uma vez
+# como root, ele nasce 0644 root:root e o cron — que roda como `analytics` — não
+# consegue mais abri-lo para escrita, morrendo antes de enviar qualquer coisa.
+# Daí as duas linhas abaixo: criar com permissão ampla (é um arquivo de 0 byte,
+# não guarda nada) e, quando houver poder para isso, consertar um que já tenha
+# nascido restrito.
 if command -v flock >/dev/null 2>&1; then
-  exec 9>"${LOCK_FILE:-/var/lock/mgsis-ingest.lock}"
+  LOCK="${LOCK_FILE:-/var/lock/mgsis-ingest.lock}"
+  [[ -e "$LOCK" ]] || (umask 000; : > "$LOCK") 2>/dev/null || true
+  [[ $EUID -eq 0 && -e "$LOCK" ]] && chmod 666 "$LOCK" 2>/dev/null || true
+  if ! exec 9>"$LOCK"; then
+    erro "sem permissão para abrir a trava $LOCK."
+    erro "Confira o dono com 'ls -l $LOCK' — costuma ser arquivo criado por outro"
+    erro "usuário. Com nada em execução: sudo chmod 666 $LOCK"
+    exit 73
+  fi
   flock -n 9 || { log "outra execução em andamento — saindo"; exit 0; }
 else
   log "AVISO: 'flock' não encontrado — seguindo SEM trava contra execução simultânea."
