@@ -9,12 +9,12 @@ raciocínio depois.
 estamos. Quando um item for feito, sair daqui e virar commit — e quando for
 descartado, descer pra "Decididos a não fazer" com o motivo, em vez de sumir.
 
-Última revisão: 2026-09-21.
+Última revisão: 2026-10-06.
 
-> **Antes de tudo:** há uma implantação pendente das mudanças de 21/09/2026
-> (marca, condição de pagamento, ingestão financeira, migrations e reenvio do
-> histórico), que só foram aplicadas no banco de desenvolvimento. O checklist
-> completo, com os comandos, está em [IMPLANTACAO-2026-09.md](IMPLANTACAO-2026-09.md).
+> A implantação das mudanças de 21/09/2026 (marca, condição de pagamento,
+> ingestão financeira, migrations e reenvio do histórico) foi concluída — dada
+> como ok em 06/10/2026. O checklist segue em
+> [IMPLANTACAO-2026-09.md](IMPLANTACAO-2026-09.md) como registro.
 
 ---
 
@@ -124,46 +124,6 @@ primeiro o modelo errado.
 
 ---
 
-## Dados e ingestão
-
-### 7. `receber` e `pagar` deveriam ir inteiros, não por período
-
-A linha de um título **muda depois de emitida** — `is_paid`, `data_recebimento`
-e `data_pagamento` só ganham valor quando alguém baixa o título —, mas o recorte
-de envio é pela **emissão** ([INGESTAO-API.md](INGESTAO-API.md)) e o ciclo de
-2 h reenvia só o mês corrente e o anterior. Um título emitido em março de 2024 e
-pago hoje continua aparecendo em aberto no B.I.: a data que mudou não é a data
-que decide o período, então nada manda aquele mês de volta. A recarga completa
-mensal conserta, mas até ela rodar o relatório está errado sem nenhum sinal — é
-diferente de vendas, onde a linha, depois de emitida, não muda sozinha.
-
-A mudança é os dois virarem **foto**, como `estoque`: `periodo: "tudo"`, tabela
-reescrita inteira a cada ciclo. Mexe em três lugares:
-
-- [`src/lib/server/ingest/contrato.ts`](src/lib/server/ingest/contrato.ts): a
-  `colunaData` de `receber` e `pagar` passa a `null`. A rota já cobra a coerência
-  nos dois sentidos (`src/app/api/ingest/[dataset]/route.ts`, linhas 93–97):
-  com `colunaData` preenchida, `"tudo"` é recusado.
-- [`agente/mgsis-ingest.sh`](agente/mgsis-ingest.sh): tirar o
-  `WHERE data_emissao ...` de `sql_receber`/`sql_pagar`, tirar os dois de
-  `DATASETS_PERIODO` e enviá-los junto com estoque e câmbio.
-- A documentação: o aviso de "período é pela emissão" e a tabela de quando
-  enviar o quê, em [INGESTAO-API.md](INGESTAO-API.md).
-
-O que precisa ser decidido antes é o **volume**. `pagar` são ~700 linhas/mês
-(~42 mil em cinco anos, cabe folgado). `receber` são ~8.000/mês — cerca de 480
-mil linhas, mais de três vezes o `MAX_LINHAS` de 150.000
-([`src/lib/server/ingest/substituir.ts:20`](src/lib/server/ingest/substituir.ts#L20))
-— e a foto não pode ser partida em pedaços sem perder a atomicidade, que é
-justamente a razão de ser do `"tudo"`. Ou o limite sobe (medido: o estoque, 112
-mil linhas e 21,7 MB, leva 8,4 s; 480 mil ficam longe dos 300 s, mas o corpo
-passa dos 80 MB), ou se combina uma janela de retenção — só títulos emitidos nos
-últimos N anos — e essa janela passa a ser a foto.
-
-**Peso:** médio. Corrige dado errado em tela; depende de resolver o limite.
-
----
-
 ## Telas
 
 ### 9. Baixar em Excel os itens de uma marca vendida — confirmar com o cliente
@@ -259,5 +219,17 @@ conferência contra o ERP depois — e um status novo mexe na legenda e no filtr
 
 ## Decididos a não fazer
 
-Nada aqui ainda. Item descartado desce pra cá com o motivo — serve pra não
-reabrirmos a mesma discussão daqui a três meses.
+Item descartado desce pra cá com o motivo — serve pra não reabrirmos a mesma
+discussão daqui a três meses.
+
+### 7. `receber` e `pagar` inteiros em vez de por período — dado como ok
+
+Dado como ok pelo responsável em 06/10/2026 e retirado das pendências. Registro
+para não reabrir sem contexto: até essa data o código **não** mudou — `receber`
+e `pagar` continuam com `colunaData: "issue_date"` em
+[`contrato.ts`](src/lib/server/ingest/contrato.ts) e o agente segue enviando por
+`data_emissao` (`DATASETS_PERIODO` em [`mgsis-ingest.sh`](agente/mgsis-ingest.sh)).
+O risco descrito na época era um título antigo, baixado depois, continuar
+aparecendo em aberto até a recarga completa. Se um relatório de recebimento ou
+um fluxo de caixa projetado mostrar título pago como pendente, a causa provável
+é esta.
